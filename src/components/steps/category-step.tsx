@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardBody, CardHeader, Button, Badge} from "@heroui/react";
+import { useEffect, useState } from "react"
+import { Card, CardBody, CardHeader, Button, Badge } from "@heroui/react"
 import { ChevronRight } from "lucide-react"
 
 const CATEGORIES = {
@@ -44,13 +44,23 @@ const CATEGORIES = {
 }
 
 interface CategoryStepProps {
-  formData: any
-  onUpdate: (data: any) => void
+  readonly formData: any
+  readonly onUpdate: (data: any) => void
 }
 
 export function CategoryStep({ formData, onUpdate }: CategoryStepProps) {
   const [selectedCategory, setSelectedCategory] = useState(formData.category || "")
   const [selectedSubcategory, setSelectedSubcategory] = useState(formData.subcategory || "")
+
+  // 🔄 sincronizar cuando formData cambie desde afuera
+  useEffect(() => {
+    if (formData.category !== selectedCategory) {
+      setSelectedCategory(formData.category || "")
+    }
+    if (formData.subcategory !== selectedSubcategory) {
+      setSelectedSubcategory(formData.subcategory || "")
+    }
+  }, [formData])
 
   const handleCategorySelect = (category: string) => {
     setSelectedCategory(category)
@@ -74,8 +84,8 @@ export function CategoryStep({ formData, onUpdate }: CategoryStepProps) {
               key={category}
               className={`cursor-pointer transition-all duration-200 ${
                 selectedCategory === category
-                  ? "border-accent bg-accent/10 shadow-md"
-                  : "hover:border-accent/50 hover:bg-accent/5"
+                  ? "border-purple-600 bg-purple-100 shadow-md"
+                  : "hover:border-purple-400 hover:bg-purple-50"
               }`}
               onClick={() => handleCategorySelect(category)}
             >
@@ -102,13 +112,16 @@ export function CategoryStep({ formData, onUpdate }: CategoryStepProps) {
           <Card>
             <CardHeader>
               <h1 className="text-base">{selectedCategory}</h1>
-              <h2 className="text-sm text-muted-foreground">Elige la opción que mejor describa tu reclamo</h2>
+              <h2 className="text-sm text-muted-foreground">
+                Elige la opción que mejor describa tu reclamo
+              </h2>
             </CardHeader>
             <CardBody>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {CATEGORIES[selectedCategory as keyof typeof CATEGORIES].map((subcategory) => (
                   <Button
                     key={subcategory}
+                    color={selectedSubcategory === subcategory ? "primary" : "default"}
                     variant={selectedSubcategory === subcategory ? "solid" : "bordered"}
                     className="justify-start h-auto p-3 text-left"
                     onPress={() => handleSubcategorySelect(subcategory)}
@@ -124,14 +137,20 @@ export function CategoryStep({ formData, onUpdate }: CategoryStepProps) {
 
       {/* Selection Summary */}
       {selectedCategory && selectedSubcategory && (
-        <Card className="bg-primary/5 border-primary/20">
+        <Card className="bg-purple-50 border-purple-200">
           <CardBody className="p-4">
             <div className="flex items-center space-x-2">
-              <Badge variant="flat">{selectedCategory}</Badge>
+              <Badge variant="flat" color="secondary">
+                {selectedCategory}
+              </Badge>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              <Badge variant="flat">{selectedSubcategory}</Badge>
+              <Badge variant="flat" color="primary">
+                {selectedSubcategory}
+              </Badge>
             </div>
-            <p className="text-sm text-muted-foreground mt-2">Has seleccionado esta categoría para tu reclamo</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Has seleccionado esta categoría para tu reclamo
+            </p>
           </CardBody>
         </Card>
       )}
