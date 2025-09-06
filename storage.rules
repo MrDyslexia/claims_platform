@@ -1,0 +1,10 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Bloquear acceso directo desde clientes. El backend expide URLs firmadas.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
