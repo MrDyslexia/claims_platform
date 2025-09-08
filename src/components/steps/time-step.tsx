@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardBody, Badge, Chip} from "@heroui/react";
+import { Card, CardBody, Chip} from "@heroui/react";
 import { Clock, Calendar, AlertTriangle, CircleCheck } from "lucide-react"
 
 const TIME_OPTIONS = [

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardBody, CardHeader, Button, Badge, Input, Tab, Tabs, ButtonGroup} from "@heroui/react";
+import { Card, CardBody, CardHeader, Button, Badge, Input, ButtonGroup} from "@heroui/react";
 import { Plus, X, Users, Building, User } from "lucide-react"
 
 interface InvolvedStepProps {
