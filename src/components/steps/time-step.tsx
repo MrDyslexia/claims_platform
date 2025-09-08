@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardBody, Badge} from "@heroui/react";
-import { Clock, Calendar, AlertTriangle } from "lucide-react"
+import { Card, CardBody, Badge, Chip} from "@heroui/react";
+import { Clock, Calendar, AlertTriangle, CircleCheck } from "lucide-react"
 
 const TIME_OPTIONS = [
   {
@@ -66,9 +66,9 @@ export function TimeStep({ formData, onUpdate }: TimeStepProps) {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="p-4 overflow-hidden">
         <h3 className="text-lg font-semibold mb-2">¿Cuánto tiempo lleva ocurriendo este problema?</h3>
-        <p className="text-muted-foreground mb-6">
+        <p className="text-muted-foreground">
           Selecciona el período de tiempo que mejor describa la duración del problema
         </p>
       </div>
@@ -87,6 +87,7 @@ export function TimeStep({ formData, onUpdate }: TimeStepProps) {
                   : "hover:border-accent/50 hover:bg-accent/5 hover:scale-102"
               }`}
               onClick={() => handleTimeSelect(timeOption.id)}
+              isPressable
             >
               <CardBody className="p-6">
                 <div className="flex items-start space-x-4">
@@ -99,9 +100,9 @@ export function TimeStep({ formData, onUpdate }: TimeStepProps) {
                   </div>
                   {isSelected && (
                     <div className="flex-shrink-0">
-                      <Badge variant="flat" className="bg-accent">
+                      <Chip variant="flat" color="primary" startContent={<CircleCheck className="h-4 w-4" />}>
                         Seleccionado
-                      </Badge>
+                      </Chip>
                     </div>
                   )}
                 </div>

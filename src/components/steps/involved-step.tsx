@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardBody, CardHeader, Button, Badge, Input} from "@heroui/react";
+import { Card, CardBody, CardHeader, Button, Badge, Input, Tab, Tabs, ButtonGroup} from "@heroui/react";
 import { Plus, X, Users, Building, User } from "lucide-react"
 
 interface InvolvedStepProps {
@@ -62,9 +62,9 @@ export function InvolvedStep({ formData, onUpdate }: InvolvedStepProps) {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="p-4 overflow-hidden">
         <h3 className="text-lg font-semibold mb-2">Personas, empresas o entidades involucradas</h3>
-        <p className="text-muted-foreground mb-6">
+        <p className="text-muted-foreground">
           Agrega todas las partes que consideres relevantes para este reclamo
         </p>
       </div>
@@ -72,17 +72,14 @@ export function InvolvedStep({ formData, onUpdate }: InvolvedStepProps) {
       {/* Add New Party */}
       <Card>
         <CardHeader>
-          <h1 className="text-base">Agregar involucrado</h1>
-          <h2>Especifica el nombre y tipo de cada parte involucrada</h2>
-        </CardHeader>
-        <CardBody className="space-y-4">
-          <div className="flex gap-2">
+          <ButtonGroup className="flex">
             <Button
               type="button"
               variant={partyType === "person" ? "flat" : "solid"}
               size="sm"
-              onClick={() => setPartyType("person")}
-              className="flex items-center space-x-1"
+              onPress={() => setPartyType("person")}
+              className="flex items-center"
+              color={partyType === "person" ? "primary" : undefined}
             >
               <User className="h-4 w-4" />
               <span>Persona</span>
@@ -91,8 +88,9 @@ export function InvolvedStep({ formData, onUpdate }: InvolvedStepProps) {
               type="button"
               variant={partyType === "company" ? "flat" : "solid"}
               size="sm"
-              onClick={() => setPartyType("company")}
-              className="flex items-center space-x-1"
+              onPress={() => setPartyType("company")}
+              className="flex items-center"
+              color={partyType === "company" ? "primary" : undefined}
             >
               <Building className="h-4 w-4" />
               <span>Empresa</span>
@@ -101,14 +99,16 @@ export function InvolvedStep({ formData, onUpdate }: InvolvedStepProps) {
               type="button"
               variant={partyType === "entity" ? "flat" : "solid"}
               size="sm"
-              onClick={() => setPartyType("entity")}
-              className="flex items-center space-x-1"
+              onPress={() => setPartyType("entity")}
+              className="flex items-center"
+              color={partyType === "entity" ? "primary" : undefined}
             >
               <Users className="h-4 w-4" />
               <span>Entidad</span>
             </Button>
-          </div>
-
+          </ButtonGroup>
+        </CardHeader>
+        <CardBody className="space-y-4 justify-start">
           <div className="flex gap-2">
             <Input
               placeholder={`Nombre de la ${getTypeLabel(partyType).toLowerCase()}...`}
@@ -117,7 +117,7 @@ export function InvolvedStep({ formData, onUpdate }: InvolvedStepProps) {
               onKeyPress={(e) => e.key === "Enter" && addParty()}
               className="flex-1"
             />
-            <Button onClick={addParty} disabled={!newParty.trim()}>
+            <Button onPress={addParty} disabled={!newParty.trim()}>
               <Plus className="h-4 w-4" />
             </Button>
           </div>
@@ -149,7 +149,7 @@ export function InvolvedStep({ formData, onUpdate }: InvolvedStepProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => removeParty(party.id)}
+                      onPress={() => removeParty(party.id)}
                       className="text-destructive hover:text-destructive"
                     >
                       <X className="h-4 w-4" />

@@ -1,9 +1,16 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardBody, Badge} from "@heroui/react";
-import { Users, Building, UserCheck, Crown, Shield, Briefcase } from "lucide-react"
-
+import { useState } from "react";
+import { Card, CardBody, Badge, Chip } from "@heroui/react";
+import {
+  Users,
+  Building,
+  UserCheck,
+  Crown,
+  Shield,
+  Briefcase,
+  CircleCheckBig,
+} from "lucide-react";
 const RELATIONSHIPS = [
   {
     id: "cliente",
@@ -47,37 +54,47 @@ const RELATIONSHIPS = [
     icon: Shield,
     color: "bg-gray-500/10 text-gray-700 border-gray-200",
   },
-]
+];
 
 interface RelationshipStepProps {
-  readonly formData: any
-  readonly onUpdate: (data: any) => void
+  readonly formData: any;
+  readonly onUpdate: (data: any) => void;
 }
 
-export function RelationshipStep({ formData, onUpdate }: RelationshipStepProps) {
-  const [selectedRelationship, setSelectedRelationship] = useState(formData.relationship || "")
+export function RelationshipStep({
+  formData,
+  onUpdate,
+}: RelationshipStepProps) {
+  const [selectedRelationship, setSelectedRelationship] = useState(
+    formData.relationship || ""
+  );
 
   const handleRelationshipSelect = (relationshipId: string) => {
-    setSelectedRelationship(relationshipId)
-    onUpdate({ ...formData, relationship: relationshipId })
-  }
+    console.log("[v0] Selected relationship:", relationshipId);
+    setSelectedRelationship(relationshipId);
+    onUpdate({ ...formData, relationship: relationshipId });
+  };
 
-  const selectedRelationshipData = RELATIONSHIPS.find((r) => r.id === selectedRelationship)
+  const selectedRelationshipData = RELATIONSHIPS.find(
+    (r) => r.id === selectedRelationship
+  );
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-2">¿Cuál es tu relación con la empresa?</h3>
-        <p className="text-muted-foreground mb-6">
-          Esta información nos ayuda a dirigir tu reclamo al departamento correcto
+      <div className="px-4 overflow-hidden">
+        <h3 className="text-lg font-semibold mb-2">
+          ¿Cuál es tu relación con la empresa?
+        </h3>
+        <p className="text-muted-foreground">
+          Esta información nos ayuda a dirigir tu reclamo al departamento
+          correcto
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {RELATIONSHIPS.map((relationship) => {
-          const Icon = relationship.icon
-          const isSelected = selectedRelationship === relationship.id
-
+          const Icon = relationship.icon;
+          const isSelected = selectedRelationship === relationship.id;
           return (
             <Card
               key={relationship.id}
@@ -86,6 +103,7 @@ export function RelationshipStep({ formData, onUpdate }: RelationshipStepProps) 
                   ? "border-accent bg-accent/10 shadow-md scale-105"
                   : "hover:border-accent/50 hover:bg-accent/5 hover:scale-102"
               }`}
+              isPressable
               onClick={() => handleRelationshipSelect(relationship.id)}
             >
               <CardBody className="p-6">
@@ -94,20 +112,28 @@ export function RelationshipStep({ formData, onUpdate }: RelationshipStepProps) 
                     <Icon className="h-6 w-6" />
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-semibold text-lg">{relationship.title}</h4>
-                    <p className="text-sm text-muted-foreground mt-1">{relationship.description}</p>
+                    <h4 className="font-semibold text-lg">
+                      {relationship.title}
+                    </h4>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {relationship.description}
+                    </p>
                   </div>
                   {isSelected && (
                     <div className="flex-shrink-0">
-                      <Badge variant="flat" className="bg-accent">
+                      <Chip
+                        color="success"
+                        startContent={<CircleCheckBig size={18} />}
+                        variant="bordered"
+                      >
                         Seleccionado
-                      </Badge>
+                      </Chip>
                     </div>
                   )}
                 </div>
               </CardBody>
             </Card>
-          )
+          );
         })}
       </div>
 
@@ -117,13 +143,17 @@ export function RelationshipStep({ formData, onUpdate }: RelationshipStepProps) 
             <div className="flex items-center space-x-3">
               <selectedRelationshipData.icon className="h-5 w-5 text-primary" />
               <div>
-                <p className="font-medium">Relación seleccionada: {selectedRelationshipData.title}</p>
-                <p className="text-sm text-muted-foreground">{selectedRelationshipData.description}</p>
+                <p className="font-medium">
+                  Relación seleccionada: {selectedRelationshipData.title}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {selectedRelationshipData.description}
+                </p>
               </div>
             </div>
           </CardBody>
         </Card>
       )}
     </div>
-  )
+  );
 }

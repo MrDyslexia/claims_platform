@@ -1,45 +1,53 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardBody, CardHeader, Button, Badge, Textarea, } from "@heroui/react";
-import { FileText, AlertCircle, CheckCircle } from "lucide-react"
+import { useState } from "react";
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  Badge,
+  Textarea,
+} from "@heroui/react";
+import { FileText, AlertCircle, CheckCircle } from "lucide-react";
 
 interface DescriptionStepProps {
-  formData: any
-  onUpdate: (data: any) => void
+  readonly formData: any;
+  readonly onUpdate: (data: any) => void;
 }
 
 export function DescriptionStep({ formData, onUpdate }: DescriptionStepProps) {
-  const [description, setDescription] = useState(formData.description || "")
-  const minLength = 100
-  const recommendedLength = 300
-  const isValid = description.length >= minLength
+  const [description, setDescription] = useState(formData.description || "");
+  const minLength = 100;
+  const recommendedLength = 300;
+  const isValid = description.length >= minLength;
 
   const handleDescriptionChange = (value: string) => {
-    setDescription(value)
-    onUpdate({ ...formData, description: value })
-  }
+    setDescription(value);
+    onUpdate({ ...formData, description: value });
+  };
 
   const getStatusColor = () => {
-    if (description.length < minLength) return "text-red-600"
-    if (description.length < recommendedLength) return "text-orange-600"
-    return "text-green-600"
-  }
+    if (description.length < minLength) return "text-red-600";
+    if (description.length < recommendedLength) return "text-orange-600";
+    return "text-green-600";
+  };
 
   const getStatusIcon = () => {
-    if (description.length < minLength) return AlertCircle
-    return CheckCircle
-  }
+    if (description.length < minLength) return AlertCircle;
+    return CheckCircle;
+  };
 
-  const StatusIcon = getStatusIcon()
+  const StatusIcon = getStatusIcon();
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-2">Descripción detallada del hecho</h3>
+      <div className="p-4 overflow-hidden">
+        <h3 className="text-lg font-semibold mb-2">
+          Descripción detallada del hecho
+        </h3>
         <p className="text-muted-foreground mb-6">
-          Relata de manera detallada y completa lo ocurrido. Incluye fechas, lugares, circunstancias y cualquier
-          información relevante.
+          Relata de manera detallada y completa lo ocurrido. Incluye fechas,
+          lugares, circunstancias y cualquier información relevante.
         </p>
       </div>
 
@@ -50,7 +58,8 @@ export function DescriptionStep({ formData, onUpdate }: DescriptionStepProps) {
             <span>Relato detallado</span>
           </h1>
           <h2>
-            Describe los hechos de manera cronológica y detallada (mínimo {minLength} caracteres)
+            Describe los hechos de manera cronológica y detallada (mínimo{" "}
+            {minLength} caracteres)
           </h2>
         </CardHeader>
         <CardBody className="space-y-4">
@@ -71,20 +80,28 @@ export function DescriptionStep({ formData, onUpdate }: DescriptionStepProps) {
           </div>
 
           <div className="flex items-center justify-between">
-            <div className={`flex items-center space-x-2 text-sm ${getStatusColor()}`}>
+            <div
+              className={`flex items-center space-x-2 text-sm ${getStatusColor()}`}
+            >
               <StatusIcon className="h-4 w-4" />
               <span>
                 {description.length} caracteres
-                {description.length < minLength && ` (faltan ${minLength - description.length})`}
+                {description.length < minLength &&
+                  ` (faltan ${minLength - description.length})`}
               </span>
             </div>
-            <Badge variant={isValid ? "flat" : "faded"} className={isValid ? "bg-green-500" : ""}>
+            <Badge
+              variant={isValid ? "flat" : "faded"}
+              className={isValid ? "bg-green-500" : ""}
+            >
               {isValid ? "Válido" : "Muy corto"}
             </Badge>
           </div>
 
           <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg">
-            <p className="font-medium mb-2">💡 Consejos para una buena descripción:</p>
+            <p className="font-medium mb-2">
+              💡 Consejos para una buena descripción:
+            </p>
             <ul className="list-disc list-inside space-y-1">
               <li>Sé específico con fechas, horarios y ubicaciones</li>
               <li>Describe los hechos en orden cronológico</li>
@@ -103,9 +120,12 @@ export function DescriptionStep({ formData, onUpdate }: DescriptionStepProps) {
             <div className="flex items-start space-x-3">
               <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
               <div>
-                <p className="font-medium text-green-700">Descripción registrada correctamente</p>
+                <p className="font-medium text-green-700">
+                  Descripción registrada correctamente
+                </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Has proporcionado una descripción detallada de {description.length} caracteres
+                  Has proporcionado una descripción detallada de{" "}
+                  {description.length} caracteres
                 </p>
               </div>
             </div>
@@ -113,5 +133,5 @@ export function DescriptionStep({ formData, onUpdate }: DescriptionStepProps) {
         </Card>
       )}
     </div>
-  )
+  );
 }

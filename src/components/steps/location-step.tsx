@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Card, CardBody, CardHeader, Button, Input} from "@heroui/react";
-import { Search, MapPin, Globe } from "lucide-react"
+import { Search, MapPin, Globe, CircleCheckBig } from "lucide-react"
 
 const COUNTRIES = [
   "Argentina",
@@ -67,9 +67,9 @@ export function LocationStep({ formData, onUpdate }: LocationStepProps) {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="px-4 overflow-hidden">
         <h3 className="text-lg font-semibold mb-2">¿En qué país ocurrió el hecho?</h3>
-        <p className="text-muted-foreground mb-6">
+        <p className="text-muted-foreground">
           Selecciona el país donde tuvo lugar la situación que deseas reportar
         </p>
       </div>
@@ -120,7 +120,8 @@ export function LocationStep({ formData, onUpdate }: LocationStepProps) {
                 key={country}
                 variant={selectedCountry === country ? "flat" : "bordered"}
                 className="justify-start h-auto p-3 text-left"
-                onClick={() => handleCountrySelect(country)}
+                onPress={() => handleCountrySelect(country)}
+                startContent={selectedCountry === country ? <CircleCheckBig className="h-5 w-5 text-primary" /> : null}
               >
                 {country}
               </Button>

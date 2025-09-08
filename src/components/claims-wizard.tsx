@@ -225,13 +225,15 @@ export function ClaimsWizard() {
       {/* Main Content Area */}
       <Card className="min-h-[400px]">
         <CardHeader>
-          <h1 className="flex items-center space-x-2">
+          <div>
+            <h1 className="flex items-center space-x-2">
             {currentStepData?.icon && (
               <currentStepData.icon className="h-6 w-6 text-accent" />
             )}
             <span>{currentStepData?.title}</span>
           </h1>
           <h2 className="text-base mt-1">{currentStepData?.description}</h2>
+          </div>
         </CardHeader>
         <CardBody className="space-y-6">{renderStepContent()}</CardBody>
       </Card>

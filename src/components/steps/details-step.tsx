@@ -33,9 +33,9 @@ export function DetailsStep({ formData, onUpdate }: DetailsStepProps) {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="p-4 overflow-hidden">
         <h3 className="text-lg font-semibold mb-2">Información adicional</h3>
-        <p className="text-muted-foreground mb-6">
+        <p className="text-muted-foreground">
           Proporciona detalles adicionales que consideres relevantes para tu reclamo (máximo 240 caracteres)
         </p>
       </div>

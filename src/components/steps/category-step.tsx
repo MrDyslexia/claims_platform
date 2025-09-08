@@ -1,8 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Card, CardBody, CardHeader, Button, Badge } from "@heroui/react"
-import { ChevronRight } from "lucide-react"
+import { Accordion, AccordionItem, Checkbox, CheckboxGroup } from "@heroui/react"
 
 const CATEGORIES = {
   "Servicio al Cliente": [
@@ -71,89 +70,30 @@ export function CategoryStep({ formData, onUpdate }: CategoryStepProps) {
   const handleSubcategorySelect = (subcategory: string) => {
     setSelectedSubcategory(subcategory)
     onUpdate({ ...formData, category: selectedCategory, subcategory })
+    console.log("[v0] Selected subcategory:", subcategory)
   }
 
   return (
     <div className="space-y-6">
       {/* Category Selection */}
-      <div>
+      <div className="px-4 overflow-hidden">
         <h3 className="text-lg font-semibold mb-4">Selecciona la categoría principal</h3>
-        <div className="grid gap-3">
-          {Object.keys(CATEGORIES).map((category) => (
-            <Card
-              key={category}
-              className={`cursor-pointer transition-all duration-200 ${
-                selectedCategory === category
-                  ? "border-purple-600 bg-purple-100 shadow-md"
-                  : "hover:border-purple-400 hover:bg-purple-50"
-              }`}
-              onClick={() => handleCategorySelect(category)}
-            >
-              <CardBody className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">{category}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {CATEGORIES[category as keyof typeof CATEGORIES].length} subcategorías disponibles
-                    </p>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                </div>
-              </CardBody>
-            </Card>
+        <Accordion variant="bordered">
+          {(Object.keys(CATEGORIES) as Array<keyof typeof CATEGORIES>).map((category) => (
+            <AccordionItem key={category} value={category} title={category} onPress={() => handleCategorySelect(category)}>
+              <CheckboxGroup
+          value={selectedCategory === category ? [selectedSubcategory] : []}
+              >
+          {CATEGORIES[category].map((subcategory) => (
+            <Checkbox key={subcategory} value={subcategory} onChange={() => handleSubcategorySelect(subcategory)} disabled={selectedCategory !== category}>
+              {subcategory}
+            </Checkbox>
           ))}
-        </div>
+              </CheckboxGroup>
+            </AccordionItem>
+          ))}
+        </Accordion>
       </div>
-
-      {/* Subcategory Selection */}
-      {selectedCategory && (
-        <div>
-          <h3 className="text-lg font-semibold mb-4">Selecciona la subcategoría específica</h3>
-          <Card>
-            <CardHeader>
-              <h1 className="text-base">{selectedCategory}</h1>
-              <h2 className="text-sm text-muted-foreground">
-                Elige la opción que mejor describa tu reclamo
-              </h2>
-            </CardHeader>
-            <CardBody>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {CATEGORIES[selectedCategory as keyof typeof CATEGORIES].map((subcategory) => (
-                  <Button
-                    key={subcategory}
-                    color={selectedSubcategory === subcategory ? "primary" : "default"}
-                    variant={selectedSubcategory === subcategory ? "solid" : "bordered"}
-                    className="justify-start h-auto p-3 text-left"
-                    onPress={() => handleSubcategorySelect(subcategory)}
-                  >
-                    {subcategory}
-                  </Button>
-                ))}
-              </div>
-            </CardBody>
-          </Card>
-        </div>
-      )}
-
-      {/* Selection Summary */}
-      {selectedCategory && selectedSubcategory && (
-        <Card className="bg-purple-50 border-purple-200">
-          <CardBody className="p-4">
-            <div className="flex items-center space-x-2">
-              <Badge variant="flat" color="secondary">
-                {selectedCategory}
-              </Badge>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              <Badge variant="flat" color="primary">
-                {selectedSubcategory}
-              </Badge>
-            </div>
-            <p className="text-sm text-muted-foreground mt-2">
-              Has seleccionado esta categoría para tu reclamo
-            </p>
-          </CardBody>
-        </Card>
-      )}
     </div>
   )
 }
