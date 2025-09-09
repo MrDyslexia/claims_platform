@@ -1,0 +1,8 @@
+preload = []
+
+test = true
+
+[run]
+  # Allow Bun to watch TS files
+  hot = true
+
