@@ -1,12 +1,16 @@
 {
-  "name": "next-app-template",
+  "name": "claimplataform",
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev --turbopack -p 5002 -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint --fix"
+    "lint": "eslint --fix",
+    "auth:dev": "node switch-auth-mode.js dev",
+    "auth:prod": "node switch-auth-mode.js prod",
+    "dev:admin": "npm run auth:dev && next dev",
+    "dev:supervisor": "node -e \"fs.writeFileSync('auth-context.dev.tsx', fs.readFileSync('auth-context.dev.tsx', 'utf8').replace(/defaultRole: \\\"admin\\\"/, 'defaultRole: \\\"supervisor\\\"'), 'utf8')\" && npm run dev:admin"
   },
   "dependencies": {
     "@heroui/accordion": "2.2.23",
@@ -62,6 +66,7 @@
     "react-dom": "18.3.1"
   },
   "devDependencies": {
+    "@eslint/compat": "^1.4.0",
     "@next/eslint-plugin-next": "15.3.4",
     "@react-types/shared": "3.30.0",
     "@tailwindcss/postcss": "4.1.11",

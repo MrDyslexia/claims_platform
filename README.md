@@ -51,3 +51,27 @@ After modifying the `.npmrc` file, you need to run `pnpm install` again to ensur
 ## License
 
 Licensed under the [MIT license](https://github.com/heroui-inc/next-app-template/blob/main/LICENSE).
+
+# Auth Context para Desarrollo
+
+Este archivo (`auth-context.dev.tsx`) es una versión para desarrollo del contexto de autenticación.
+
+## Características
+
+- ✅ **Autenticación automática** al cargar la aplicación
+- ✅ **Usuario predefinido** según configuración
+- ✅ **Sin necesidad de login** durante desarrollo
+- ✅ **Banner visual** indicando modo desarrollo
+- ✅ **Fácil configuración** modificando constantes
+
+## Configuración
+
+Modifica las constantes en `DEV_CONFIG`:
+
+```typescript
+const DEV_CONFIG = {
+  defaultRole: "admin", // "admin" | "supervisor" | "analista" | "usuario_basico"
+  defaultEmail: "dev-admin@empresa.com",
+  autoAuthenticate: true,
+  simulateLoading: false,
+};

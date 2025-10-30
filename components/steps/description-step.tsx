@@ -1,18 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Card,
-  CardBody,
-  CardHeader,
-  Badge,
-  Textarea,
-} from "@heroui/react";
+import { Card, CardBody, CardHeader, Badge, Textarea } from "@heroui/react";
 import { FileText, AlertCircle, CheckCircle } from "lucide-react";
 
 interface DescriptionStepProps {
-  readonly formData: any;
-  readonly onUpdate: (data: any) => void;
+  readonly formData: Record<string, any>;
+  readonly onUpdate: (data: Record<string, any>) => void;
 }
 
 export function DescriptionStep({ formData, onUpdate }: DescriptionStepProps) {
@@ -23,17 +17,19 @@ export function DescriptionStep({ formData, onUpdate }: DescriptionStepProps) {
 
   const handleDescriptionChange = (value: string) => {
     setDescription(value);
-    onUpdate({ ...formData, description: value });
+    onUpdate({ description: value });
   };
 
   const getStatusColor = () => {
     if (description.length < minLength) return "text-red-600";
     if (description.length < recommendedLength) return "text-orange-600";
+
     return "text-green-600";
   };
 
   const getStatusIcon = () => {
     if (description.length < minLength) return AlertCircle;
+
     return CheckCircle;
   };
 
@@ -65,6 +61,7 @@ export function DescriptionStep({ formData, onUpdate }: DescriptionStepProps) {
         <CardBody className="space-y-4">
           <div className="relative">
             <Textarea
+              className="min-h-48 resize-none"
               placeholder="Describe detalladamente lo ocurrido. Incluye:
 • Fecha y hora específica del incidente
 • Lugar donde ocurrió
@@ -75,7 +72,6 @@ export function DescriptionStep({ formData, onUpdate }: DescriptionStepProps) {
 • Números de referencia, códigos o documentos relevantes..."
               value={description}
               onChange={(e) => handleDescriptionChange(e.target.value)}
-              className="min-h-48 resize-none"
             />
           </div>
 
@@ -91,8 +87,8 @@ export function DescriptionStep({ formData, onUpdate }: DescriptionStepProps) {
               </span>
             </div>
             <Badge
-              variant={isValid ? "flat" : "faded"}
               className={isValid ? "bg-green-500" : ""}
+              variant={isValid ? "flat" : "faded"}
             >
               {isValid ? "Válido" : "Muy corto"}
             </Badge>

@@ -1,28 +1,29 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardBody, CardHeader, Badge, Textarea} from "@heroui/react";
-import { MessageSquare, AlertCircle } from "lucide-react"
+import { useState } from "react";
+import { Card, CardBody, CardHeader, Badge, Textarea } from "@heroui/react";
+import { MessageSquare, AlertCircle } from "lucide-react";
 
 interface DetailsStepProps {
-  readonly formData: any
-  readonly onUpdate: (data: any) => void
+  readonly formData: Record<string, any>;
+  readonly onUpdate: (data: Record<string, any>) => void;
 }
 
 export function DetailsStep({ formData, onUpdate }: DetailsStepProps) {
-  const [details, setDetails] = useState(formData.details || "")
-  const maxLength = 240
-  const remainingChars = maxLength - details.length
+  const [details, setDetails] = useState(formData.details || "");
+  const maxLength = 240;
+  const remainingChars = maxLength - details.length;
 
   const handleDetailsChange = (value: string) => {
     if (value.length <= maxLength) {
-      setDetails(value)
-      onUpdate({ ...formData, details: value })
+      setDetails(value);
+      onUpdate({ details: value });
     }
-  }
+  };
 
   // Extracted variant logic from nested ternary
   let badgeVariant: "shadow" | "flat" | "faded" | "solid" | undefined;
+
   if (remainingChars < 20) {
     badgeVariant = "shadow";
   } else if (remainingChars < 50) {
@@ -36,7 +37,8 @@ export function DetailsStep({ formData, onUpdate }: DetailsStepProps) {
       <div className="p-4 overflow-hidden">
         <h3 className="text-lg font-semibold mb-2">Información adicional</h3>
         <p className="text-muted-foreground">
-          Proporciona detalles adicionales que consideres relevantes para tu reclamo (máximo 240 caracteres)
+          Proporciona detalles adicionales que consideres relevantes para tu
+          reclamo (máximo 240 caracteres)
         </p>
       </div>
 
@@ -46,22 +48,21 @@ export function DetailsStep({ formData, onUpdate }: DetailsStepProps) {
             <MessageSquare className="h-5 w-5" />
             <span>Detalles adicionales</span>
           </h1>
-          <h2>Información complementaria que ayude a contextualizar tu reclamo</h2>
+          <h2>
+            Información complementaria que ayude a contextualizar tu reclamo
+          </h2>
         </CardHeader>
         <CardBody className="space-y-4">
           <div className="relative">
             <Textarea
+              className="min-h-32 resize-none"
+              maxLength={maxLength}
               placeholder="Escribe aquí cualquier información adicional que consideres importante para tu reclamo..."
               value={details}
               onChange={(e) => handleDetailsChange(e.target.value)}
-              className="min-h-32 resize-none"
-              maxLength={maxLength}
             />
             <div className="absolute bottom-3 right-3">
-              <Badge
-                variant={badgeVariant}
-                className="text-xs"
-              >
+              <Badge className="text-xs" variant={badgeVariant}>
                 {remainingChars} restantes
               </Badge>
             </div>
@@ -94,7 +95,9 @@ export function DetailsStep({ formData, onUpdate }: DetailsStepProps) {
               <MessageSquare className="h-5 w-5 text-primary mt-0.5" />
               <div>
                 <p className="font-medium">Información adicional registrada</p>
-                <p className="text-sm text-muted-foreground mt-1">"{details}"</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  &ldquo;{details}&rdquo;
+                </p>
                 <p className="text-xs text-muted-foreground mt-2">
                   {details.length} de {maxLength} caracteres utilizados
                 </p>
@@ -104,5 +107,5 @@ export function DetailsStep({ formData, onUpdate }: DetailsStepProps) {
         </Card>
       )}
     </div>
-  )
+  );
 }
