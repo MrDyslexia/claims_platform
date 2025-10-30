@@ -1,7 +1,7 @@
 // Database types based on SQL schema
 
 export interface Usuario {
-  id: number;
+  id_usuario: number;
   nombre: string;
   apellido: string;
   email: string;
@@ -46,12 +46,19 @@ export interface UsuarioSesion {
 
 export interface Empresa {
   id_empresa: number;
+  razon_social: string;
+  contacto_nombre?: string;
+  contacto_cargo?: string;
+  contacto_email?: string;
+  contacto_telefono?: string;
   nombre: string;
   rut?: string;
   direccion?: string;
   telefono?: string;
   email?: string;
   activo: boolean;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 export interface TipoDenuncia {
@@ -70,7 +77,7 @@ export interface EstadoDenuncia {
 }
 
 export interface Denuncia {
-  [x: string]: string | number | Date | boolean | undefined;
+  [x: string]: any;
   id_denuncia: number;
   codigo_acceso: string;
   id_empresa: number;
@@ -134,6 +141,7 @@ export interface KpiDenunciasDiario {
   denuncias_cerradas: number;
   tiempo_promedio_resolucion?: number;
 }
+
 export interface Auditoria {
   id: number;
   usuario_id: number;

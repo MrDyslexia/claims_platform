@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 "use client";
 
 import type { Usuario, Rol, Empresa } from "@/lib/types/database";
@@ -73,11 +72,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: "admin@example.com",
           roles: [{ id_rol: 1, nombre: "Administrador", activo: true }],
           permissions: [
+            "view_dashboard",
             "view_claims",
             "edit_claims",
             "manage_users",
             "view_reports",
             "manage_companies",
+            "manage_settings",
+            "view_audit",
           ],
         };
       case "analista":
@@ -92,10 +94,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id_empresa: 1,
             nombre: "TechCorp Solutions",
             rut: "76.123.456-7",
+            razon_social: "TechCorp Solutions SpA",
             activo: true,
+            created_at: undefined,
+            updated_at: undefined,
           },
           roles: [{ id_rol: 3, nombre: "Analista", activo: true }],
-          permissions: ["view_claims", "view_reports", "view_analytics"],
+          permissions: [
+            "view_dashboard",
+            "view_claims",
+            "view_reports",
+            "view_analytics",
+          ],
         };
       case "supervisor":
         return {
@@ -109,10 +119,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id_empresa: 1,
             nombre: "TechCorp Solutions",
             rut: "76.123.456-7",
+            razon_social: "TechCorp Solutions SpA",
             activo: true,
+            created_at: undefined,
+            updated_at: undefined,
           },
           roles: [{ id_rol: 2, nombre: "Supervisor", activo: true }],
           permissions: [
+            "view_dashboard",
             "view_claims",
             "edit_claims",
             "resolve_claims",
@@ -131,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const login = async (email: string, _password: string) => {
+  const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 1000));

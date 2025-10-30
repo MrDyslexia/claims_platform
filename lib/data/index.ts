@@ -1,10 +1,16 @@
 // Import all data
-import { mockUsers, mockUserRoles, mockRoles, mockPermisos, mockRolePermisos } from "./users"
-import { mockCompanies } from "./companies"
-import { mockClaimTypes } from "./claim-types"
-import { mockClaimStatuses } from "./claim-statuses"
-import { mockClaims } from "./claims"
-import { mockAuditLogs } from "./audit-logs"
+import {
+  mockUsers,
+  mockUserRoles,
+  mockRoles,
+  mockPermisos,
+  mockRolePermisos,
+} from "./users";
+import { mockCompanies } from "./companies";
+import { mockClaimTypes } from "./claim-types";
+import { mockClaimStatuses } from "./claim-statuses";
+import { mockClaims } from "./claims";
+import { mockAuditLogs } from "./audit-logs";
 
 // Re-export all data
 export {
@@ -18,61 +24,69 @@ export {
   mockClaimStatuses,
   mockClaims,
   mockAuditLogs,
-}
+};
 
 // Helper functions to get data with relationships
 export function getUserWithRoles(userId: number) {
-  const user = mockUsers.find((u) => u.id === userId)
-  if (!user) return null
+  const user = mockUsers.find((u) => u.id_usuario === userId);
 
-  const userRoleIds = mockUserRoles.filter((ur) => ur.usuario_id === userId).map((ur) => ur.rol_id)
+  if (!user) return null;
 
-  const roles = mockRoles.filter((r) => userRoleIds.includes(r.id))
+  const userRoleIds = mockUserRoles
+    .filter((ur) => ur.usuario_id === userId)
+    .map((ur) => ur.rol_id);
 
-  return { ...user, roles }
+  const roles = mockRoles.filter((r) => userRoleIds.includes(r.id_rol));
+
+  return { ...user, roles };
 }
 
 export function getClaimWithDetails(claimId: number) {
-  const claim = mockClaims.find((c) => c.id === claimId)
-  if (!claim) return null
+  const claim = mockClaims.find((c) => c.id_denuncia === claimId);
 
-  const company = mockCompanies.find((c) => c.id === claim.empresa_id)
-  const type = mockClaimTypes.find((t) => t.id === claim.tipo_denuncia_id)
-  const status = mockClaimStatuses.find((s) => s.id === claim.estado_denuncia_id)
+  if (!claim) return null;
 
-  return { ...claim, company, type, status }
+  const company = mockCompanies.find((c) => c.id_empresa === claim.id_empresa);
+  const type = mockClaimTypes.find((t) => t.id_tipo === claim.id_tipo);
+  const status = mockClaimStatuses.find((s) => s.id_estado === claim.id_estado);
+
+  return { ...claim, company, type, status };
 }
 
 export function getClaimWithRelations(claimId: number) {
-  const claim = mockClaims.find((c) => c.id === claimId)
-  if (!claim) return null
+  const claim = mockClaims.find((c) => c.id_denuncia === claimId);
 
-  const empresa = mockCompanies.find((c) => c.id === claim.empresa_id)
-  const tipo = mockClaimTypes.find((t) => t.id === claim.tipo_denuncia_id)
-  const estadoObj = mockClaimStatuses.find((s) => s.id === claim.estado_denuncia_id)
-  const asignadoA = mockUsers.find((u) => u.id === claim.asignado_a)
+  if (!claim) return null;
+
+  const empresa = mockCompanies.find((c) => c.id_empresa === claim.id_empresa);
+  const tipo = mockClaimTypes.find((t) => t.id_tipo === claim.id_tipo);
+  const estadoObj = mockClaimStatuses.find(
+    (s) => s.id_estado === claim.id_estado,
+  );
 
   // Mock comments
   const comentarios = [
     {
       id: 1,
       denuncia_id: claimId,
-      usuario_id: claim.asignado_a || 1,
+      usuario_id: 1,
       comentario: "Revisando el caso, necesitamos más información del cliente.",
       es_interno: true,
-      fecha_creacion: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      usuario: asignadoA,
+      fecha_creacion: new Date(
+        Date.now() - 2 * 24 * 60 * 60 * 1000,
+      ).toISOString(),
     },
     {
       id: 2,
       denuncia_id: claimId,
-      usuario_id: claim.asignado_a || 1,
+      usuario_id: 1,
       comentario: "Cliente contactado, esperando respuesta.",
       es_interno: false,
-      fecha_creacion: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-      usuario: asignadoA,
+      fecha_creacion: new Date(
+        Date.now() - 1 * 24 * 60 * 60 * 1000,
+      ).toISOString(),
     },
-  ]
+  ];
 
   // Mock history
   const historial = [
@@ -81,19 +95,35 @@ export function getClaimWithRelations(claimId: number) {
       denuncia_id: claimId,
       estado_anterior: "pendiente",
       estado_nuevo: "en_revision",
-      usuario_id: claim.asignado_a || 1,
+      usuario_id: 1,
       comentario: "Caso asignado y en revisión",
-      fecha_cambio: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+      fecha_cambio: new Date(
+        Date.now() - 3 * 24 * 60 * 60 * 1000,
+      ).toISOString(),
     },
-  ]
+  ];
 
   return {
     ...claim,
     empresa,
     tipo,
     estadoObj,
-    asignadoA,
     comentarios,
     historial,
-  }
+  };
+}
+
+// Helper to get company name by ID
+export function getCompanyById(id: number) {
+  return mockCompanies.find((c) => c.id_empresa === id);
+}
+
+// Helper to get claim type by ID
+export function getClaimTypeById(id: number) {
+  return mockClaimTypes.find((t) => t.id_tipo === id);
+}
+
+// Helper to get claim status by ID
+export function getClaimStatusById(id: number) {
+  return mockClaimStatuses.find((s) => s.id_estado === id);
 }

@@ -1,8 +1,8 @@
-import type { Empresa } from "@/lib/types/database"
+import type { Empresa } from "@/lib/types/database";
 
 export const mockCompanies: Empresa[] = [
   {
-    id: 1,
+    id_empresa: 1,
     nombre: "TechCorp S.A.",
     rut: "76.123.456-7",
     razon_social: "TechCorp Sociedad Anónima",
@@ -18,7 +18,7 @@ export const mockCompanies: Empresa[] = [
     updated_at: new Date("2024-01-01"),
   },
   {
-    id: 2,
+    id_empresa: 2,
     nombre: "Retail Plus",
     rut: "77.234.567-8",
     razon_social: "Retail Plus Limitada",
@@ -34,7 +34,7 @@ export const mockCompanies: Empresa[] = [
     updated_at: new Date("2024-01-15"),
   },
   {
-    id: 3,
+    id_empresa: 3,
     nombre: "Servicios Financieros ABC",
     rut: "78.345.678-9",
     razon_social: "ABC Servicios Financieros S.A.",
@@ -50,7 +50,7 @@ export const mockCompanies: Empresa[] = [
     updated_at: new Date("2024-02-01"),
   },
   {
-    id: 4,
+    id_empresa: 4,
     nombre: "Constructora del Sur",
     rut: "79.456.789-0",
     razon_social: "Constructora del Sur SpA",
@@ -66,7 +66,7 @@ export const mockCompanies: Empresa[] = [
     updated_at: new Date("2024-02-15"),
   },
   {
-    id: 5,
+    id_empresa: 5,
     nombre: "Alimentos Naturales",
     rut: "80.567.890-1",
     razon_social: "Alimentos Naturales Limitada",
@@ -81,4 +81,4 @@ export const mockCompanies: Empresa[] = [
     created_at: new Date("2024-03-01"),
     updated_at: new Date("2024-09-15"),
   },
-]
+];
