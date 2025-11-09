@@ -1,8 +1,5 @@
-preload = []
-
-test = true
+[test]
+run = true
 
 [run]
-  # Allow Bun to watch TS files
-  hot = true
-
+hot = true

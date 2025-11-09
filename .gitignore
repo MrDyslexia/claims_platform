@@ -3,3 +3,6 @@
 /sql
 .env.example
 .env
+/docs
+*.md
+/scripts
