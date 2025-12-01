@@ -18,6 +18,7 @@ export const mockClaims: Denuncia[] = [
     ciudad: "Santiago",
     fecha_creacion: new Date("2024-09-20"),
     fecha_actualizacion: new Date("2024-10-05"),
+    asignado_a: 3, // Carlos - Supervisor
   },
   {
     id_denuncia: 2,
@@ -36,13 +37,14 @@ export const mockClaims: Denuncia[] = [
     ciudad: "Valparaíso",
     fecha_creacion: new Date("2024-09-25"),
     fecha_actualizacion: new Date("2024-10-06"),
+    asignado_a: 2, // María - Analista
   },
   {
     id_denuncia: 3,
     codigo_acceso: "REC-2024-003",
     id_empresa: 1,
     id_tipo: 4,
-    id_estado: 5,
+    id_estado: 4,
     prioridad: "media",
     descripcion:
       "La bodega del sector norte no cuenta con señalización adecuada y hay equipos en mal estado que representan un riesgo.",
@@ -54,6 +56,7 @@ export const mockClaims: Denuncia[] = [
     ciudad: "Santiago",
     fecha_creacion: new Date("2024-08-25"),
     fecha_actualizacion: new Date("2024-09-30"),
+    asignado_a: 3, // Carlos - Supervisor (RESUELTO)
   },
   {
     id_denuncia: 4,
@@ -72,6 +75,7 @@ export const mockClaims: Denuncia[] = [
     ciudad: "Concepción",
     fecha_creacion: new Date("2024-10-01"),
     fecha_actualizacion: new Date("2024-10-01"),
+    asignado_a: 4, // Ana - Auditor
   },
   {
     id_denuncia: 5,
@@ -90,11 +94,12 @@ export const mockClaims: Denuncia[] = [
     ciudad: "Santiago",
     fecha_creacion: new Date("2024-10-02"),
     fecha_actualizacion: new Date("2024-10-07"),
+    asignado_a: 2, // María
   },
   {
     id_denuncia: 6,
     codigo_acceso: "REC-2024-006",
-    id_empresa: 4,
+    id_empresa: 1,
     id_tipo: 7,
     id_estado: 2,
     prioridad: "media",
@@ -108,13 +113,14 @@ export const mockClaims: Denuncia[] = [
     ciudad: "Las Condes",
     fecha_creacion: new Date("2024-10-03"),
     fecha_actualizacion: new Date("2024-10-06"),
+    asignado_a: 3, // Carlos - Supervisor (EN REVISIÓN)
   },
   {
     id_denuncia: 7,
     codigo_acceso: "REC-2024-007",
     id_empresa: 1,
     id_tipo: 5,
-    id_estado: 6,
+    id_estado: 1,
     prioridad: "baja",
     descripcion:
       "Un gerente contrató a un familiar directo sin seguir el proceso de selección estándar.",
@@ -126,6 +132,7 @@ export const mockClaims: Denuncia[] = [
     ciudad: "Santiago",
     fecha_creacion: new Date("2024-07-20"),
     fecha_actualizacion: new Date("2024-09-15"),
+    asignado_a: 3, // Carlos - Supervisor (PENDIENTE)
   },
   {
     id_denuncia: 8,
@@ -144,5 +151,6 @@ export const mockClaims: Denuncia[] = [
     ciudad: "Viña del Mar",
     fecha_creacion: new Date("2024-09-22"),
     fecha_actualizacion: new Date("2024-10-07"),
+    asignado_a: 4, // Ana
   },
 ];

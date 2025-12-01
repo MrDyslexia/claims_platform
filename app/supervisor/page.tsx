@@ -17,32 +17,42 @@ import { mockClaims, getClaimWithRelations } from "@/lib/data";
 export default function SupervisorDashboard() {
   const { user } = useAuth();
 
+  // Validar que el usuario esté cargado
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-default-500">Cargando...</p>
+      </div>
+    );
+  }
+
   // Filter claims for supervisor's company
   const companyClaims = mockClaims.filter(
-    (c) => c.empresa_id === user?.empresa_id,
+    (c) => c.id_empresa === user.empresa_id,
   );
-  const assignedClaims = companyClaims.filter((c) => c.asignado_a === user?.id);
+  const assignedClaims = companyClaims.filter(
+    (c) => c.asignado_a === user.id_usuario,
+  );
 
-  const pendingClaims = assignedClaims.filter((c) => c.estado === "pendiente");
-  const inProgressClaims = assignedClaims.filter(
-    (c) => c.estado === "en_revision",
-  );
-  const resolvedClaims = assignedClaims.filter((c) => c.estado === "resuelto");
+  const pendingClaims = assignedClaims.filter((c) => c.id_estado === 1); // pendiente
+  const inProgressClaims = assignedClaims.filter((c) => c.id_estado === 2); // en_revision
+  const resolvedClaims = assignedClaims.filter((c) => c.id_estado === 4); // resuelto
   const criticalClaims = assignedClaims.filter((c) => c.prioridad === "alta");
 
   const recentClaims = assignedClaims
     .slice(0, 5)
-    .map((claim) => getClaimWithRelations(claim.id));
+    .map((claim) => getClaimWithRelations(claim.id_denuncia))
+    .filter((claim) => claim !== null); // Filtrar nulls
 
-  const getStatusColor = (estado: string) => {
-    switch (estado) {
-      case "pendiente":
+  const getStatusColor = (estadoId: number) => {
+    switch (estadoId) {
+      case 1: // pendiente
         return "warning";
-      case "en_revision":
+      case 2: // en_revision
         return "primary";
-      case "resuelto":
+      case 4: // resuelto
         return "success";
-      case "cerrado":
+      case 5: // cerrado
         return "default";
       default:
         return "default";
@@ -52,6 +62,7 @@ export default function SupervisorDashboard() {
   const getPriorityColor = (prioridad: string) => {
     switch (prioridad) {
       case "alta":
+      case "critica":
         return "danger";
       case "media":
         return "warning";
@@ -70,7 +81,8 @@ export default function SupervisorDashboard() {
           Dashboard Supervisor
         </h1>
         <p className="text-default-500">
-          Gestión de reclamos de {user?.empresa?.nombre}
+          Gestión de reclamos
+          {user.empresa?.nombre ? ` de ${user.empresa.nombre}` : ""}
         </p>
       </div>
 
@@ -164,54 +176,64 @@ export default function SupervisorDashboard() {
           </div>
 
           <div className="space-y-4">
-            {recentClaims.map((claim) => (
-              <Link
-                key={claim.id}
-                className="block p-4 rounded-lg border border-divider hover:border-primary transition-colors"
-                href={`/supervisor/claims/${claim.id}`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="font-mono text-sm text-default-500">
-                        {claim.codigo}
-                      </span>
-                      <Chip
-                        color={getStatusColor(claim.estado)}
-                        size="sm"
-                        variant="flat"
-                      >
-                        {claim.estado}
-                      </Chip>
-                      <Chip
-                        color={getPriorityColor(claim.prioridad)}
-                        size="sm"
-                        variant="flat"
-                      >
-                        {claim.prioridad}
-                      </Chip>
-                    </div>
-                    <h4 className="font-semibold text-foreground mb-1">
-                      {claim.tipo?.nombre}
-                    </h4>
-                    <p className="text-sm text-default-500 line-clamp-2">
-                      {claim.descripcion}
-                    </p>
-                    <div className="flex items-center gap-4 mt-3 text-xs text-default-400">
-                      <div className="flex items-center gap-1">
-                        <User className="w-3 h-3" />
-                        <span>{claim.denunciante_nombre}</span>
+            {recentClaims.length === 0 ? (
+              <p className="text-center text-default-500 py-8">
+                No hay reclamos asignados
+              </p>
+            ) : (
+              recentClaims.map((claim) => (
+                <Link
+                  key={claim.id_denuncia}
+                  className="block p-4 rounded-lg border border-divider hover:border-primary transition-colors"
+                  href={`/supervisor/claims/${claim.id_denuncia}`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="font-mono text-sm text-default-500">
+                          {claim.codigo_acceso}
+                        </span>
+                        <Chip
+                          color={getStatusColor(claim.id_estado)}
+                          size="sm"
+                          variant="flat"
+                        >
+                          {claim.estadoObj?.nombre || "Pendiente"}
+                        </Chip>
+                        <Chip
+                          color={getPriorityColor(claim.prioridad)}
+                          size="sm"
+                          variant="flat"
+                        >
+                          {claim.prioridad}
+                        </Chip>
                       </div>
-                      <span>•</span>
-                      <span>
-                        {new Date(claim.fecha_creacion).toLocaleDateString()}
-                      </span>
+                      <h4 className="font-semibold text-foreground mb-1">
+                        {claim.tipo?.nombre || "Sin tipo"}
+                      </h4>
+                      <p className="text-sm text-default-500 line-clamp-2">
+                        {claim.descripcion}
+                      </p>
+                      <div className="flex items-center gap-4 mt-3 text-xs text-default-400">
+                        <div className="flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          <span>
+                            {claim.anonimo
+                              ? "Anónimo"
+                              : claim.nombre_denunciante || "Sin nombre"}
+                          </span>
+                        </div>
+                        <span>•</span>
+                        <span>
+                          {new Date(claim.fecha_creacion).toLocaleDateString()}
+                        </span>
+                      </div>
                     </div>
+                    <FileText className="w-5 h-5 text-default-400" />
                   </div>
-                  <FileText className="w-5 h-5 text-default-400" />
-                </div>
-              </Link>
-            ))}
+                </Link>
+              ))
+            )}
           </div>
         </CardBody>
       </Card>

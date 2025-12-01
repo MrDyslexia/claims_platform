@@ -50,7 +50,71 @@ export function getClaimWithDetails(claimId: number) {
   const type = mockClaimTypes.find((t) => t.id_tipo === claim.id_tipo);
   const status = mockClaimStatuses.find((s) => s.id_estado === claim.id_estado);
 
-  return { ...claim, company, type, status };
+  // Mock status history
+  const statusHistory = [
+    {
+      id: 1,
+      denuncia_id: claimId,
+      de_estado_id: 1,
+      a_estado_id: 2,
+      motivo: "Caso asignado y en revisión",
+      fecha_cambio: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+    },
+    {
+      id: 2,
+      denuncia_id: claimId,
+      de_estado_id: 2,
+      a_estado_id: 3,
+      motivo: "En investigación - solicitando información adicional",
+      fecha_cambio: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    },
+    {
+      id: 3,
+      denuncia_id: claimId,
+      de_estado_id: 3,
+      a_estado_id: claim.id_estado,
+      motivo: "Estado actual del caso",
+      fecha_cambio: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    },
+  ];
+
+  // Mock comments
+  const comments = [
+    {
+      id: 1,
+      contenido:
+        "Revisando el caso, hemos identificado los puntos principales de la denuncia.",
+      autor_nombre: "Equipo de Soporte",
+      fecha_creacion: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    },
+    {
+      id: 2,
+      contenido:
+        "Se ha contactado con el departamento correspondiente para obtener más información.",
+      autor_nombre: "Equipo de Soporte",
+      fecha_creacion: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    },
+    {
+      id: 3,
+      contenido:
+        "Se espera recibir documentación adicional en los próximos días.",
+      autor_nombre: "Equipo de Soporte",
+      fecha_creacion: new Date(Date.now() - 6 * 60 * 60 * 1000),
+    },
+  ];
+
+  return {
+    ...claim,
+    company: {
+      nombre: company?.nombre || "Empresa Desconocida",
+      email_contacto: company?.email,
+      telefono_contacto: company?.telefono,
+    },
+    type,
+    status,
+    statusHistory,
+    comments,
+  };
 }
 
 export function getClaimWithRelations(claimId: number) {

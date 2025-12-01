@@ -246,13 +246,9 @@ export default function AnalystDashboard() {
                   data={claimsByStatus}
                   dataKey="cantidad"
                   fill="#8884d8"
-                  label={({
-                    estado,
-                    percent,
-                  }: {
-                    estado: string;
-                    percent: number;
-                  }) => `${estado} ${(percent * 100).toFixed(0)}%`}
+                  label={(entry: any) =>
+                    `${entry.estado} ${(entry.percent * 100).toFixed(0)}%`
+                  }
                   labelLine={false}
                   outerRadius={80}
                 >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardBody, CardHeader, Badge, Textarea } from "@heroui/react";
 import { MessageSquare, AlertCircle } from "lucide-react";
 
@@ -13,6 +13,11 @@ export function DetailsStep({ formData, onUpdate }: DetailsStepProps) {
   const [details, setDetails] = useState(formData.details || "");
   const maxLength = 240;
   const remainingChars = maxLength - details.length;
+
+  // 🔄 Sincronizar cuando formData cambie desde afuera
+  useEffect(() => {
+    setDetails(formData.details || "");
+  }, [formData.details]);
 
   const handleDetailsChange = (value: string) => {
     if (value.length <= maxLength) {

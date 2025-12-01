@@ -3,33 +3,84 @@
 import type React from "react";
 
 import { Card, CardBody, Input, Button } from "@heroui/react";
-import { Search, FileText, Clock, CheckCircle } from "lucide-react";
+import { Search, FileText, Clock, CheckCircle, Lock } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function TrackClaimPage() {
   const router = useRouter();
   const [claimCode, setClaimCode] = useState("");
+  const [accessKey, setAccessKey] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setIsLoading(true);
 
     if (!claimCode.trim()) {
       setError("Por favor ingresa un código de reclamo");
+      setIsLoading(false);
 
       return;
     }
 
-    // Validate format (should be like: CLM-2024-001)
-    if (!/^CLM-\d{4}-\d{3}$/.test(claimCode.trim())) {
-      setError("Formato de código inválido. Debe ser como: CLM-2024-001");
+    if (!accessKey.trim()) {
+      setError("Por favor ingresa tu clave de acceso");
+      setIsLoading(false);
 
       return;
     }
 
-    router.push(`/track/${claimCode.trim()}`);
+    // Validate format (should be like: 2024-XXXXXXX)
+    if (!/^\d{4}-\d{4,}$/.test(claimCode.trim())) {
+      setError(
+        "Formato de código inválido. Debe ser como: 2024-XXXX (al menos 4 dígitos después del guión)",
+      );
+      setIsLoading(false);
+
+      return;
+    }
+
+    try {
+      // Llamar a la función lookupDenuncia del backend
+      const response = await fetch(`${API_BASE_URL}/denuncias/lookup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          numero: claimCode.trim(),
+          clave: accessKey.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          setError("Reclamo no encontrado");
+        } else if (response.status === 401) {
+          setError("Clave de acceso inválida");
+        } else {
+          const errorData = await response.json();
+
+          setError(errorData.error || "Error al consultar el reclamo");
+        }
+        setIsLoading(false);
+
+        return;
+      }
+
+      // Si la consulta es exitosa, navegar a la página de detalle
+      router.push(
+        `/track/${claimCode.trim()}?key=${encodeURIComponent(accessKey.trim())}`,
+      );
+    } catch {
+      setError("Error al conectar con el servidor");
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -47,24 +98,44 @@ export default function TrackClaimPage() {
         <Card className="mb-12">
           <CardBody className="p-8">
             <form className="space-y-6" onSubmit={handleSubmit}>
-              <div>
-                <Input
-                  description="Ingresa el código que recibiste al enviar tu reclamo"
-                  errorMessage={error}
-                  isInvalid={!!error}
-                  label="Código de Reclamo"
-                  placeholder="CLM-2024-001"
-                  size="lg"
-                  startContent={<Search className="w-4 h-4 text-default-400" />}
-                  value={claimCode}
-                  variant="bordered"
-                  onChange={(e) => setClaimCode(e.target.value)}
-                />
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <Input
+                    description="Ingresa el código que recibiste en el correo al enviar tu reclamo"
+                    errorMessage={error}
+                    isInvalid={!!error}
+                    label="Código de Reclamo"
+                    placeholder="2025-XXXXXXX"
+                    size="lg"
+                    startContent={
+                      <Search className="w-4 h-4 text-default-400" />
+                    }
+                    value={claimCode}
+                    variant="bordered"
+                    onChange={(e) => setClaimCode(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <Input
+                    description="Ingresa la clave de acceso enviada a tu correo"
+                    label="Clave de Acceso"
+                    placeholder="Ingresa tu clave de acceso"
+                    size="lg"
+                    startContent={<Lock className="w-4 h-4 text-default-400" />}
+                    type="password"
+                    value={accessKey}
+                    variant="bordered"
+                    onChange={(e) => setAccessKey(e.target.value)}
+                  />
+                </div>
               </div>
 
               <Button
                 className="w-full"
                 color="primary"
+                disabled={isLoading}
+                isLoading={isLoading}
                 size="lg"
                 startContent={<Search className="w-5 h-5" />}
                 type="submit"

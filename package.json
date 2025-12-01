@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack -p 5002 -H 0.0.0.0",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 5002 -H 0.0.0.0",
     "lint": "eslint --fix",
     "auth:dev": "node switch-auth-mode.js dev",
     "auth:prod": "node switch-auth-mode.js prod",
@@ -57,13 +57,15 @@
     "@react-aria/ssr": "3.9.10",
     "@react-aria/visually-hidden": "3.8.27",
     "clsx": "2.1.1",
+    "date-fns": "^4.1.0",
     "framer-motion": "11.18.2",
     "intl-messageformat": "10.7.16",
     "lucide-react": "^0.544.0",
     "next": "15.3.1",
     "next-themes": "0.4.6",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "recharts": "^3.3.0"
   },
   "devDependencies": {
     "@eslint/compat": "^1.4.0",

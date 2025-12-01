@@ -1,113 +1,55 @@
 "use client";
-import type { Denuncia } from "@/lib/types/database";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import {
-  Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
+  Avatar,
+  Button,
   Card,
   CardBody,
-  Input,
-  Button,
   Chip,
-  Dropdown,
-  DropdownTrigger,
-  DropdownMenu,
-  DropdownItem,
-  Pagination,
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  useDisclosure,
-  Tabs,
-  Tab,
-  Avatar,
   Divider,
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownTrigger,
+  Input,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  Pagination,
+  Spinner,
+  Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableColumn,
+  TableHeader,
+  TableRow,
+  Tabs,
   Textarea,
+  useDisclosure,
 } from "@heroui/react";
 import {
-  Search,
-  Filter,
-  Download,
-  Eye,
-  Plus,
-  FileText,
-  User,
+  AlertCircle,
   Building2,
   Calendar,
+  CheckCircle2,
+  Clock,
+  Download,
+  FileText,
+  Filter,
   MapPin,
   MessageSquare,
   Paperclip,
-  Clock,
-  CheckCircle2,
+  Plus,
+  Search,
   Send,
+  User,
 } from "lucide-react";
 
-// Mock data
-const mockClaims: (Denuncia & {
-  empresa: string;
-  tipo: string;
-  estado: string;
-})[] = [
-  {
-    id_denuncia: 1,
-    codigo_acceso: "RC-2024-001",
-    id_empresa: 1,
-    empresa: "Empresa ABC",
-    id_tipo: 1,
-    tipo: "Acoso Laboral",
-    id_estado: 2,
-    estado: "En Proceso",
-    descripcion: "Situación de acoso por parte de supervisor directo",
-    fecha_creacion: new Date("2024-10-07"),
-    fecha_actualizacion: new Date("2024-10-07"),
-    anonimo: false,
-    nombre_denunciante: "Juan Pérez",
-    email_denunciante: "juan@example.com",
-    pais: "Chile",
-    prioridad: "alta",
-  },
-  {
-    id_denuncia: 2,
-    codigo_acceso: "RC-2024-002",
-    id_empresa: 2,
-    empresa: "Empresa XYZ",
-    id_tipo: 2,
-    tipo: "Discriminación",
-    id_estado: 1,
-    estado: "Nuevo",
-    descripcion: "Discriminación por género en proceso de promoción",
-    fecha_creacion: new Date("2024-10-07"),
-    fecha_actualizacion: new Date("2024-10-07"),
-    anonimo: true,
-    pais: "Argentina",
-    prioridad: "critica",
-  },
-  {
-    id_denuncia: 3,
-    codigo_acceso: "RC-2024-003",
-    id_empresa: 1,
-    empresa: "Empresa ABC",
-    id_tipo: 3,
-    tipo: "Fraude",
-    id_estado: 3,
-    estado: "En Revisión",
-    descripcion: "Posible fraude en proceso de licitación",
-    fecha_creacion: new Date("2024-10-06"),
-    fecha_actualizacion: new Date("2024-10-06"),
-    anonimo: false,
-    nombre_denunciante: "María González",
-    email_denunciante: "maria@example.com",
-    pais: "Chile",
-    prioridad: "media",
-  },
-];
+import { useGetAllClaims, createComment, type Reclamo } from "@/lib/api/claims";
 
 const priorityColors = {
   baja: "default",
@@ -116,34 +58,156 @@ const priorityColors = {
   critica: "danger",
 } as const;
 
-const statusColors = {
-  Nuevo: "primary",
+const statusColors: Record<string, any> = {
+  Pendiente: "primary",
   "En Proceso": "warning",
   "En Revisión": "secondary",
   Resuelto: "success",
   Cerrado: "default",
-} as const;
+};
 
 export default function ClaimsPage() {
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const [selectedClaim, setSelectedClaim] = useState<
-    (Denuncia & { empresa: string; tipo: string; estado: string }) | null
-  >(null);
+  // Obtener token de localStorage
+  const [token, setToken] = useState<string | null>(null);
+  const { data, loading, error, refetch } = useGetAllClaims(token);
+  const [selectedClaim, setSelectedClaim] = useState<Reclamo | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [newComment, setNewComment] = useState("");
+  const [isCommentInternal, setIsCommentInternal] = useState(false);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
   const rowsPerPage = 10;
 
-  const filteredClaims = mockClaims.filter((claim) => {
+  // Helper para formatear fechas de forma segura
+  const formatDate = (dateString: string | Date | null | undefined): string => {
+    try {
+      // Si no hay fecha, usar la fecha actual
+      const date = dateString ? new Date(dateString) : new Date();
+
+      // Verificar si la fecha es válida
+      if (isNaN(date.getTime())) {
+        // Si la fecha es inválida, usar la fecha actual
+        return new Date().toLocaleString("es-CL", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      return date.toLocaleString("es-CL", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      // En caso de error, retornar la fecha actual
+      return new Date().toLocaleString("es-CL", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
+  };
+
+  // Helper para formatear solo fecha (sin hora)
+  const formatDateOnly = (
+    dateString: string | Date | null | undefined,
+  ): string => {
+    try {
+      // Si no hay fecha, usar la fecha actual
+      const date = dateString ? new Date(dateString) : new Date();
+
+      // Verificar si la fecha es válida
+      if (isNaN(date.getTime())) {
+        // Si la fecha es inválida, usar la fecha actual
+        return new Date().toLocaleDateString("es-CL", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        });
+      }
+
+      return date.toLocaleDateString("es-CL", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+    } catch {
+      // En caso de error, retornar la fecha actual
+      return new Date().toLocaleDateString("es-CL", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+    }
+  };
+
+  // Cargar token de localStorage al montar
+  React.useEffect(() => {
+    const storedToken = localStorage.getItem("auth_token");
+
+    setToken(storedToken);
+  }, []);
+
+  const handleSendComment = async () => {
+    if (!newComment.trim()) {
+      setCommentError("El comentario no puede estar vacío");
+
+      return;
+    }
+
+    if (!selectedClaim) {
+      setCommentError("No hay reclamo seleccionado");
+
+      return;
+    }
+
+    setIsSubmittingComment(true);
+    setCommentError(null);
+
+    try {
+      const result = await createComment(
+        selectedClaim.id,
+        token || "",
+        newComment.trim(),
+        isCommentInternal,
+      );
+
+      // Agregar el nuevo comentario a la lista
+      if (selectedClaim.comentarios) {
+        selectedClaim.comentarios.push(result.comentario);
+      }
+
+      // Limpiar el formulario
+      setNewComment("");
+      setIsCommentInternal(false);
+    } catch (err) {
+      setCommentError(
+        err instanceof Error ? err.message : "Error al enviar comentario",
+      );
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  const filteredClaims = (data?.reclamos || []).filter((claim) => {
     const matchesSearch =
-      claim.codigo_acceso.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      claim.tipo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      claim.empresa.toLowerCase().includes(searchQuery.toLowerCase());
+      claim.numero.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      claim.tipo.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      claim.empresa.nombre.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus =
-      filterStatus === "all" || claim.estado === filterStatus;
+      filterStatus === "all" || claim.estado.nombre === filterStatus;
     const matchesPriority =
       filterPriority === "all" || claim.prioridad === filterPriority;
 
@@ -156,18 +220,9 @@ export default function ClaimsPage() {
     page * rowsPerPage,
   );
 
-  const handleViewClaim = (
-    claim: Denuncia & { empresa: string; tipo: string; estado: string },
-  ) => {
+  const handleViewClaim = (claim: Reclamo) => {
     setSelectedClaim(claim);
     onOpen();
-  };
-
-  const handleAddComment = () => {
-    if (newComment.trim()) {
-      console.log("[v0] Adding comment:", newComment);
-      setNewComment("");
-    }
   };
 
   return (
@@ -184,6 +239,33 @@ export default function ClaimsPage() {
           Nuevo Reclamo
         </Button>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <Card className="bg-red-50 border border-red-200">
+          <CardBody className="flex flex-row items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-red-800 font-medium">{error}</p>
+              {error.includes("token") && (
+                <p className="text-red-600 text-sm mt-1">
+                  Por favor, inicie sesión para acceder a esta página.
+                </p>
+              )}
+            </div>
+            {!error.includes("token") && (
+              <Button
+                className="bg-red-100 text-red-700 hover:bg-red-200"
+                size="sm"
+                variant="flat"
+                onClick={() => refetch()}
+              >
+                Reintentar
+              </Button>
+            )}
+          </CardBody>
+        </Card>
+      )}
 
       {/* Filters */}
       <Card>
@@ -211,7 +293,7 @@ export default function ClaimsPage() {
                 onAction={(key) => setFilterStatus(key as string)}
               >
                 <DropdownItem key="all">Todos</DropdownItem>
-                <DropdownItem key="Nuevo">Nuevo</DropdownItem>
+                <DropdownItem key="Pendiente">Pendiente</DropdownItem>
                 <DropdownItem key="En Proceso">En Proceso</DropdownItem>
                 <DropdownItem key="En Revisión">En Revisión</DropdownItem>
                 <DropdownItem key="Resuelto">Resuelto</DropdownItem>
@@ -243,89 +325,101 @@ export default function ClaimsPage() {
             <Button
               startContent={<Download className="h-4 w-4" />}
               variant="bordered"
+              onClick={() => refetch()}
             >
-              Exportar
+              Actualizar
             </Button>
           </div>
         </CardBody>
       </Card>
 
-      <Card>
-        <CardBody className="p-0">
-          <Table
-            aria-label="Claims table"
-            bottomContent={
-              <div className="flex w-full justify-center py-2">
-                <Pagination
-                  isCompact
-                  showControls
-                  showShadow
-                  color="primary"
-                  page={page}
-                  total={pages}
-                  onChange={setPage}
-                />
-              </div>
-            }
-          >
-            <TableHeader>
-              <TableColumn>CÓDIGO</TableColumn>
-              <TableColumn>TIPO</TableColumn>
-              <TableColumn>EMPRESA</TableColumn>
-              <TableColumn>ESTADO</TableColumn>
-              <TableColumn>PRIORIDAD</TableColumn>
-              <TableColumn>FECHA</TableColumn>
-            </TableHeader>
-            <TableBody>
-              {items.map((claim) => (
-                <TableRow
-                  key={claim.id_denuncia}
-                  className="cursor-pointer hover:bg-default-100"
-                  onClick={() => handleViewClaim(claim)}
-                >
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-purple-600" />
-                      <span className="font-medium">{claim.codigo_acceso}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>{claim.tipo}</TableCell>
-                  <TableCell>{claim.empresa}</TableCell>
-                  <TableCell>
-                    <Chip
-                      color={
-                        statusColors[
-                          claim.estado as keyof typeof statusColors
-                        ] || "default"
-                      }
-                      size="sm"
-                      variant="flat"
-                    >
-                      {claim.estado}
-                    </Chip>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      color={
-                        priorityColors[
-                          claim.prioridad as keyof typeof priorityColors
-                        ]
-                      }
-                      size="sm"
-                      variant="flat"
-                    >
-                      {claim.prioridad}
-                    </Chip>
-                  </TableCell>
-                  <TableCell>
-                    {claim.fecha_creacion.toLocaleDateString()}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardBody>
-      </Card>
+      {/* Loading State */}
+      {loading && (
+        <Card>
+          <CardBody className="flex flex-row items-center justify-center gap-3 py-8">
+            <Spinner size="lg" />
+            <span className="text-lg text-muted-foreground">
+              Cargando reclamos...
+            </span>
+          </CardBody>
+        </Card>
+      )}
+
+      {/* Claims Table */}
+      {!loading && (
+        <Card>
+          <CardBody className="p-0">
+            <Table
+              aria-label="Claims table"
+              bottomContent={
+                <div className="flex w-full justify-center py-2">
+                  <Pagination
+                    isCompact
+                    showControls
+                    showShadow
+                    color="primary"
+                    page={page}
+                    total={pages}
+                    onChange={setPage}
+                  />
+                </div>
+              }
+            >
+              <TableHeader>
+                <TableColumn>CÓDIGO</TableColumn>
+                <TableColumn>TIPO</TableColumn>
+                <TableColumn>EMPRESA</TableColumn>
+                <TableColumn>ESTADO</TableColumn>
+                <TableColumn>PRIORIDAD</TableColumn>
+                <TableColumn>FECHA</TableColumn>
+              </TableHeader>
+              <TableBody>
+                {items.map((claim) => (
+                  <TableRow
+                    key={claim.id}
+                    className="cursor-pointer hover:bg-default-100"
+                    onClick={() => handleViewClaim(claim)}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-purple-600" />
+                        <span className="font-medium">{claim.numero}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{claim.tipo.nombre}</TableCell>
+                    <TableCell>{claim.empresa.nombre}</TableCell>
+                    <TableCell>
+                      <Chip
+                        color={statusColors[claim.estado.nombre] || "default"}
+                        size="sm"
+                        variant="flat"
+                      >
+                        {claim.estado.nombre}
+                      </Chip>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        color={
+                          priorityColors[
+                            claim.prioridad as keyof typeof priorityColors
+                          ]
+                        }
+                        size="sm"
+                        variant="flat"
+                      >
+                        {claim.prioridad}
+                      </Chip>
+                    </TableCell>
+                    <TableCell>
+                      {formatDateOnly(claim.fecha_creacion)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardBody>
+        </Card>
+      )}
 
       <Modal
         isOpen={isOpen}
@@ -339,18 +433,17 @@ export default function ClaimsPage() {
               <ModalHeader className="flex flex-col gap-1">
                 <div className="flex items-center gap-3">
                   <h2 className="text-2xl font-bold">
-                    {selectedClaim?.codigo_acceso}
+                    {selectedClaim?.numero}
                   </h2>
                   <Chip
                     color={
-                      statusColors[
-                        selectedClaim?.estado as keyof typeof statusColors
-                      ] || "default"
+                      statusColors[selectedClaim?.estado.nombre || ""] ||
+                      "default"
                     }
                     size="lg"
                     variant="flat"
                   >
-                    {selectedClaim?.estado}
+                    {selectedClaim?.estado.nombre}
                   </Chip>
                   <Chip
                     color={
@@ -365,7 +458,7 @@ export default function ClaimsPage() {
                   </Chip>
                 </div>
                 <p className="text-sm text-muted-foreground font-normal">
-                  {selectedClaim?.tipo}
+                  {selectedClaim?.tipo.nombre}
                 </p>
               </ModalHeader>
               <ModalBody>
@@ -382,6 +475,9 @@ export default function ClaimsPage() {
                           </h3>
                         </div>
                         <p className="text-foreground leading-relaxed">
+                          {selectedClaim?.asunto}
+                        </p>
+                        <p className="text-foreground leading-relaxed mt-2">
                           {selectedClaim?.descripcion}
                         </p>
                       </CardBody>
@@ -399,36 +495,61 @@ export default function ClaimsPage() {
                             title={
                               <div className="flex items-center gap-2">
                                 <MessageSquare className="h-4 w-4" />
-                                <span>Comentarios</span>
+                                <span>
+                                  Comentarios (
+                                  {selectedClaim?.comentarios.length || 0})
+                                </span>
                               </div>
                             }
                           >
                             <div className="p-4 space-y-4">
                               <div className="space-y-3">
-                                <div className="flex gap-3 p-3 bg-default-50 dark:bg-default-100/50 rounded-lg">
-                                  <Avatar
-                                    className="flex-shrink-0"
-                                    name="Sistema"
-                                    size="sm"
-                                  />
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className="font-medium text-sm">
-                                        Sistema
-                                      </span>
-                                      <span className="text-xs text-muted-foreground">
-                                        {selectedClaim?.fecha_creacion.toLocaleString()}
-                                      </span>
+                                {selectedClaim?.comentarios.map((comment) => (
+                                  <div
+                                    key={comment.id}
+                                    className="flex gap-3 p-3 bg-default-50 dark:bg-default-100/50 rounded-lg"
+                                  >
+                                    <Avatar
+                                      className="flex-shrink-0"
+                                      name={comment.autor.nombre}
+                                      size="sm"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className="font-medium text-sm">
+                                          {comment.autor.nombre}
+                                        </span>
+                                        {comment.es_interno && (
+                                          <Chip
+                                            color="warning"
+                                            size="sm"
+                                            variant="flat"
+                                          >
+                                            Interno
+                                          </Chip>
+                                        )}
+                                        <span className="text-xs text-muted-foreground">
+                                          {formatDate(comment.fecha_creacion)}
+                                        </span>
+                                      </div>
+                                      <p className="text-sm text-foreground">
+                                        {comment.contenido}
+                                      </p>
                                     </div>
-                                    <p className="text-sm text-foreground">
-                                      Reclamo creado
-                                    </p>
                                   </div>
-                                </div>
+                                ))}
                               </div>
                               <Divider />
                               <div className="space-y-2">
+                                {commentError && (
+                                  <div className="bg-red-50 border border-red-200 rounded-lg p-2">
+                                    <p className="text-sm text-red-700">
+                                      {commentError}
+                                    </p>
+                                  </div>
+                                )}
                                 <Textarea
+                                  disabled={isSubmittingComment}
                                   minRows={3}
                                   placeholder="Agregar un comentario..."
                                   value={newComment}
@@ -436,17 +557,30 @@ export default function ClaimsPage() {
                                     setNewComment(e.target.value)
                                   }
                                 />
-                                <div className="flex justify-end gap-2">
-                                  <Button size="sm" variant="bordered">
-                                    Comentario Interno
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button
+                                    disabled={isSubmittingComment}
+                                    size="sm"
+                                    variant="bordered"
+                                    onClick={() =>
+                                      setIsCommentInternal(!isCommentInternal)
+                                    }
+                                  >
+                                    {isCommentInternal ? "Interno" : "Público"}
                                   </Button>
                                   <Button
                                     color="primary"
+                                    disabled={
+                                      isSubmittingComment || !newComment.trim()
+                                    }
+                                    isLoading={isSubmittingComment}
                                     size="sm"
                                     startContent={<Send className="h-4 w-4" />}
-                                    onPress={handleAddComment}
+                                    onClick={handleSendComment}
                                   >
-                                    Enviar
+                                    {isSubmittingComment
+                                      ? "Enviando..."
+                                      : "Enviar"}
                                   </Button>
                                 </div>
                               </div>
@@ -457,14 +591,48 @@ export default function ClaimsPage() {
                             title={
                               <div className="flex items-center gap-2">
                                 <Paperclip className="h-4 w-4" />
-                                <span>Adjuntos</span>
+                                <span>
+                                  Adjuntos (
+                                  {selectedClaim?.adjuntos.length || 0})
+                                </span>
                               </div>
                             }
                           >
-                            <div className="p-4">
-                              <p className="text-sm text-muted-foreground">
-                                No hay adjuntos disponibles
-                              </p>
+                            <div className="p-4 space-y-3">
+                              {(selectedClaim?.adjuntos.length || 0) > 0 ? (
+                                selectedClaim?.adjuntos.map((adjunto) => (
+                                  <Card
+                                    key={adjunto.id}
+                                    className="bg-default-50"
+                                  >
+                                    <CardBody className="flex flex-row items-center justify-between">
+                                      <div className="flex items-center gap-3">
+                                        <Paperclip className="h-4 w-4 text-muted-foreground" />
+                                        <div className="flex-1">
+                                          <p className="font-medium text-sm">
+                                            {adjunto.nombre}
+                                          </p>
+                                          <p className="text-xs text-muted-foreground">
+                                            {(adjunto.tamano / 1024).toFixed(2)}{" "}
+                                            KB • {adjunto.mime_type}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <Button
+                                        isIconOnly
+                                        size="sm"
+                                        variant="light"
+                                      >
+                                        <Download className="h-4 w-4" />
+                                      </Button>
+                                    </CardBody>
+                                  </Card>
+                                ))
+                              ) : (
+                                <p className="text-sm text-muted-foreground">
+                                  No hay adjuntos disponibles
+                                </p>
+                              )}
                             </div>
                           </Tab>
                           <Tab
@@ -472,28 +640,40 @@ export default function ClaimsPage() {
                             title={
                               <div className="flex items-center gap-2">
                                 <Clock className="h-4 w-4" />
-                                <span>Historial</span>
+                                <span>
+                                  Historial (
+                                  {selectedClaim?.historial_estado.length || 0})
+                                </span>
                               </div>
                             }
                           >
                             <div className="p-4">
                               <div className="space-y-4">
-                                <div className="flex gap-3">
-                                  <div className="flex flex-col items-center">
-                                    <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-full">
-                                      <CheckCircle2 className="h-4 w-4 text-purple-600" />
+                                {selectedClaim?.historial_estado.map((item) => (
+                                  <div key={item.id} className="flex gap-3">
+                                    <div className="flex flex-col items-center">
+                                      <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-full">
+                                        <CheckCircle2 className="h-4 w-4 text-purple-600" />
+                                      </div>
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="font-medium text-sm">
+                                        {item.estado_anterior?.nombre} →{" "}
+                                        {item.estado_nuevo.nombre}
+                                      </p>
+                                      {item.motivo && (
+                                        <p className="text-xs text-muted-foreground">
+                                          Motivo: {item.motivo}
+                                        </p>
+                                      )}
+                                      <p className="text-xs text-muted-foreground">
+                                        {formatDate(item.fecha_cambio)}{" "}
+                                        {item.usuario &&
+                                          `- ${item.usuario.nombre}`}
+                                      </p>
                                     </div>
                                   </div>
-                                  <div className="flex-1">
-                                    <p className="font-medium text-sm">
-                                      {selectedClaim?.estado}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {selectedClaim?.fecha_creacion.toLocaleString()}{" "}
-                                      - Sistema
-                                    </p>
-                                  </div>
-                                </div>
+                                ))}
                               </div>
                             </div>
                           </Tab>
@@ -517,7 +697,7 @@ export default function ClaimsPage() {
                               Empresa
                             </p>
                             <p className="text-sm font-medium">
-                              {selectedClaim?.empresa}
+                              {selectedClaim?.empresa.nombre}
                             </p>
                           </div>
                         </div>
@@ -528,7 +708,7 @@ export default function ClaimsPage() {
                               Fecha de Creación
                             </p>
                             <p className="text-sm font-medium">
-                              {selectedClaim?.fecha_creacion.toLocaleDateString()}
+                              {formatDateOnly(selectedClaim?.fecha_creacion)}
                             </p>
                           </div>
                         </div>
@@ -539,7 +719,7 @@ export default function ClaimsPage() {
                               País
                             </p>
                             <p className="text-sm font-medium">
-                              {selectedClaim?.pais}
+                              {selectedClaim?.denunciante.pais || "N/A"}
                             </p>
                           </div>
                         </div>
@@ -547,7 +727,7 @@ export default function ClaimsPage() {
                     </Card>
 
                     {/* Complainant Info */}
-                    {!selectedClaim?.anonimo && (
+                    {!selectedClaim?.denunciante.anonimo && (
                       <Card>
                         <CardBody className="space-y-3">
                           <h3 className="font-semibold mb-2">
@@ -560,7 +740,7 @@ export default function ClaimsPage() {
                                 Nombre
                               </p>
                               <p className="text-sm font-medium">
-                                {selectedClaim?.nombre_denunciante}
+                                {selectedClaim?.denunciante.nombre || "N/A"}
                               </p>
                             </div>
                           </div>
@@ -571,10 +751,30 @@ export default function ClaimsPage() {
                                 Email
                               </p>
                               <p className="text-sm font-medium">
-                                {selectedClaim?.email_denunciante}
+                                {selectedClaim?.denunciante.email || "N/A"}
                               </p>
                             </div>
                           </div>
+                          <div className="flex items-start gap-2">
+                            <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-xs text-muted-foreground">
+                                Teléfono
+                              </p>
+                              <p className="text-sm font-medium">
+                                {selectedClaim?.denunciante.telefono || "N/A"}
+                              </p>
+                            </div>
+                          </div>
+                        </CardBody>
+                      </Card>
+                    )}
+                    {selectedClaim?.denunciante.anonimo && (
+                      <Card className="bg-blue-50 border border-blue-200">
+                        <CardBody>
+                          <p className="text-sm text-blue-800">
+                            ℹ️ Este reclamo fue presentado de manera anónima
+                          </p>
                         </CardBody>
                       </Card>
                     )}

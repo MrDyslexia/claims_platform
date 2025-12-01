@@ -1,4 +1,4 @@
-import type { Auditoria } from "@/lib/types/database"
+import type { Auditoria } from "@/lib/types/database";
 
 export const mockAuditLogs: Auditoria[] = [
   {
@@ -105,4 +105,4 @@ export const mockAuditLogs: Auditoria[] = [
     user_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
     created_at: new Date("2024-09-30T15:20:00"),
   },
-]
+];

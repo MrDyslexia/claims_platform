@@ -10,6 +10,7 @@ export interface Usuario {
   activo: boolean;
   fecha_creacion: Date;
   ultimo_acceso?: Date;
+  empresa_id?: number;
 }
 
 export interface Rol {

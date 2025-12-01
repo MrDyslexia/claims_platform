@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardBody, CardHeader, Button, Input } from "@heroui/react";
 import { Search, MapPin, Globe, CircleCheckBig } from "lucide-react";
 
@@ -19,6 +19,11 @@ export function LocationStep({
     formData.country || "",
   );
   const [searchTerm, setSearchTerm] = useState("");
+
+  // 🔄 Sincronizar cuando formData cambie desde afuera
+  useEffect(() => {
+    setSelectedCountry(formData.country || "");
+  }, [formData.country]);
 
   const filteredCountries = countries.filter((country) =>
     country.toLowerCase().includes(searchTerm.toLowerCase()),

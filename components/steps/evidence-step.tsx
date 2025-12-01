@@ -23,6 +23,18 @@ export function EvidenceStep({ formData, onUpdate }: EvidenceStepProps) {
   const maxFiles = 10;
   const maxFileSize = 10 * 1024 * 1024; // 10MB
 
+  // 🔄 Sincronizar cuando formData cambie desde afuera
+  // Solo sincronizar si formData.evidence existe y tiene diferente longitud
+  useEffect(() => {
+    if (
+      formData.evidence &&
+      Array.isArray(formData.evidence) &&
+      formData.evidence.length !== files.length
+    ) {
+      setFiles(formData.evidence);
+    }
+  }, [formData.evidence?.length]);
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files || []);
 
@@ -64,10 +76,6 @@ export function EvidenceStep({ formData, onUpdate }: EvidenceStepProps) {
     setFiles(updatedFiles);
     onUpdate({ evidence: updatedFiles });
   };
-
-  useEffect(() => {
-    setFiles(formData.evidence || []);
-  }, [formData.evidence]);
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return "0 Bytes";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardBody, CardHeader, Badge, Textarea } from "@heroui/react";
 import { FileText, AlertCircle, CheckCircle } from "lucide-react";
 
@@ -14,6 +14,11 @@ export function DescriptionStep({ formData, onUpdate }: DescriptionStepProps) {
   const minLength = 100;
   const recommendedLength = 300;
   const isValid = description.length >= minLength;
+
+  // 🔄 Sincronizar cuando formData cambie desde afuera
+  useEffect(() => {
+    setDescription(formData.description || "");
+  }, [formData.description]);
 
   const handleDescriptionChange = (value: string) => {
     setDescription(value);

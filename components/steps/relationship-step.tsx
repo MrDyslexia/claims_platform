@@ -2,7 +2,7 @@
 
 import type { RelationshipMetadata } from "@/lib/form-metadata";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardBody, Chip } from "@heroui/react";
 import {
   Users,
@@ -62,6 +62,11 @@ export function RelationshipStep({
   const [selectedRelationship, setSelectedRelationship] = useState<string>(
     formData.relationship || "",
   );
+
+  // 🔄 Sincronizar cuando formData cambie desde afuera
+  useEffect(() => {
+    setSelectedRelationship(formData.relationship || "");
+  }, [formData.relationship]);
 
   const handleRelationshipSelect = (relationship: RelationshipMetadata) => {
     setSelectedRelationship(relationship.id);

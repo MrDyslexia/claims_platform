@@ -3,8 +3,8 @@
 
 import type React from "react";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Drawer,
   DrawerContent,
@@ -28,10 +28,20 @@ export default function LoginDrawer({
   onOpenChange,
 }: LoginDrawerProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { login, isLoading, getPrimaryRole } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [targetRoute, setTargetRoute] = useState<string | null>(null);
+
+  // Efecto para cerrar el drawer cuando la ruta cambie a la ruta objetivo
+  useEffect(() => {
+    if (targetRoute && pathname === targetRoute) {
+      onOpenChange(false);
+      setTargetRoute(null);
+    }
+  }, [pathname, targetRoute, onOpenChange]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,23 +58,41 @@ export default function LoginDrawer({
 
       const role = getPrimaryRole();
 
+      // Determinar la ruta correspondiente según el rol
+      let route = "/";
+
       switch (role) {
         case "admin":
-          router.push("/admin");
+          route = "/admin";
           break;
         case "analista":
-          router.push("/analyst");
+          route = "/analyst";
           break;
         case "supervisor":
-          router.push("/supervisor");
+          route = "/supervisor";
           break;
         default:
-          router.push("/");
+          route = "/";
       }
-      // Cerrar el drawer después de iniciar sesión
-      onOpenChange(false);
+
+      // Guardar la ruta objetivo para monitorearla
+      setTargetRoute(route);
+
+      // Realizar la navegación
+      router.push(route);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al iniciar sesión");
+      const errorMessage =
+        err instanceof Error ? err.message : "Error al iniciar sesión";
+
+      if (errorMessage.includes("Failed to fetch")) {
+        setError(
+          "No se pudo conectar con el servidor. Verifique que el backend esté ejecutándose.",
+        );
+      } else if (errorMessage.includes("invalid credentials")) {
+        setError("Credenciales inválidas. Verifique su email y contraseña.");
+      } else {
+        setError(errorMessage);
+      }
     }
   };
 

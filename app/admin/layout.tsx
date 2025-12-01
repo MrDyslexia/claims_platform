@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { ProtectedRoute } from "@/components/protected-route"
-import { AdminSidebar } from "@/components/admin-sidebar"
+import { ProtectedRoute } from "@/components/protected-route";
+import { AdminSidebar } from "@/components/admin-sidebar";
 
 export default function AdminLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <ProtectedRoute>
@@ -24,5 +24,5 @@ export default function AdminLayout({
         </main>
       </div>
     </ProtectedRoute>
-  )
+  );
 }

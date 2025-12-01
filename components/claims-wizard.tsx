@@ -9,6 +9,12 @@ import {
   Chip,
   Divider,
   Spinner,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Input,
 } from "@heroui/react";
 import {
   ChevronLeft,
@@ -121,6 +127,9 @@ export function ClaimsWizard() {
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [submissionResult, setSubmissionResult] =
     useState<SubmissionResult | null>(null);
+  const [showEmailPrompt, setShowEmailPrompt] = useState(false);
+  const [anonymousEmail, setAnonymousEmail] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -324,7 +333,7 @@ export function ClaimsWizard() {
     setFormData((prev) => ({ ...prev, ...data }));
   };
 
-  const buildSubmissionPayload = () => {
+  const buildSubmissionPayload = (emailForNotification?: string) => {
     const description = String(formData.description ?? "").trim();
 
     if (description.length < 20) {
@@ -356,6 +365,11 @@ export function ClaimsWizard() {
       }
     }
 
+    // Si es anónimo, usar el email proporcionado para notificación
+    const emailToUse = formData.isAnonymous
+      ? (emailForNotification ?? "")
+      : (formData.email ?? "");
+
     const payload = {
       category: formData.category,
       categoryName: formData.categoryName,
@@ -384,7 +398,7 @@ export function ClaimsWizard() {
       isAnonymous: Boolean(formData.isAnonymous),
       fullName: formData.fullName ?? "",
       rut: formData.rut ?? "",
-      email: formData.email ?? "",
+      email: emailToUse,
       phone: formData.phone ?? "",
       metadataVersion: metadata.generatedAt ?? null,
     };
@@ -395,7 +409,15 @@ export function ClaimsWizard() {
   const handleSubmit = async () => {
     if (isSubmitting) return;
 
-    const payload = buildSubmissionPayload();
+    // Si es anónimo y no tenemos email, mostrar prompt
+    if (formData.isAnonymous && !anonymousEmail) {
+      setShowEmailPrompt(true);
+      setEmailError(null);
+
+      return;
+    }
+
+    const payload = buildSubmissionPayload(anonymousEmail);
 
     if (!payload) return;
 
@@ -419,12 +441,27 @@ export function ClaimsWizard() {
       const data = (await response.json()) as SubmissionResult;
 
       setSubmissionResult(data);
-      setCurrentStep(STEPS.length);
-      setFormData((prev) => ({
-        ...prev,
+      setShowEmailPrompt(false);
+
+      // Guardar temporalmente el resultado antes de limpiar
+      const resultData = {
         numero: data.numero,
         clave: data.clave,
-      }));
+        estado: data.estado,
+      };
+
+      // Limpiar todo el formulario para permitir nueva denuncia
+      setFormData({});
+      setAnonymousEmail("");
+      setCurrentStep(1);
+
+      // Restaurar solo el resultado para mostrarlo
+      setTimeout(() => {
+        setFormData({
+          numero: resultData.numero,
+          clave: resultData.clave,
+        });
+      }, 100);
     } catch (error: unknown) {
       const message =
         error instanceof Error
@@ -435,6 +472,34 @@ export function ClaimsWizard() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleEmailSubmit = () => {
+    // Validar email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const trimmedEmail = anonymousEmail.trim();
+
+    if (!trimmedEmail) {
+      setEmailError("El correo electrónico es requerido");
+
+      return;
+    }
+
+    if (!emailRegex.test(trimmedEmail)) {
+      setEmailError("Ingresa un correo electrónico válido");
+
+      return;
+    }
+
+    setEmailError(null);
+    // Continuar con el envío
+    handleSubmit();
+  };
+
+  const handleCancelEmailPrompt = () => {
+    setShowEmailPrompt(false);
+    setAnonymousEmail("");
+    setEmailError(null);
   };
 
   const renderStepContent = () => {
@@ -508,6 +573,63 @@ export function ClaimsWizard() {
 
   return (
     <div className="space-y-6">
+      {/* Modal para solicitar email en denuncias anónimas */}
+      <Modal
+        backdrop="blur"
+        isOpen={showEmailPrompt}
+        placement="center"
+        onClose={handleCancelEmailPrompt}
+      >
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            <h3 className="text-lg font-semibold">
+              Correo para notificaciones
+            </h3>
+          </ModalHeader>
+          <ModalBody>
+            <p className="text-sm text-gray-600 mb-4">
+              Aunque tu denuncia es anónima, necesitamos un correo electrónico
+              para enviarte el <strong>número de seguimiento</strong> y la{" "}
+              <strong>clave de acceso</strong>.
+            </p>
+            <p className="text-sm text-gray-600 mb-4">
+              Este correo <strong>NO</strong> se guardará en tu denuncia ni se
+              compartirá con nadie. Solo se usará para enviarte las credenciales
+              de seguimiento.
+            </p>
+            <Input
+              classNames={{
+                input: "text-base",
+              }}
+              errorMessage={emailError}
+              isInvalid={!!emailError}
+              label="Correo electrónico"
+              placeholder="tu-correo@ejemplo.com"
+              type="email"
+              value={anonymousEmail}
+              variant="bordered"
+              onValueChange={setAnonymousEmail}
+            />
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              disabled={isSubmitting}
+              variant="bordered"
+              onPress={handleCancelEmailPrompt}
+            >
+              Cancelar
+            </Button>
+            <Button
+              color="primary"
+              disabled={isSubmitting}
+              onPress={handleEmailSubmit}
+            >
+              {isSubmitting ? "Enviando..." : "Continuar"}
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
       {metadataError && (
         <Card className="border-yellow-300 bg-yellow-50">
           <CardBody className="text-sm text-yellow-800">
@@ -526,161 +648,210 @@ export function ClaimsWizard() {
 
       {submissionResult && (
         <Card className="border-green-300 bg-green-50">
-          <CardBody>
-            <h3 className="mb-2 font-semibold text-green-700">
-              Reclamo registrado correctamente
+          <CardBody className="p-8">
+            <div className="flex items-center justify-center mb-4">
+              <div className="bg-green-100 rounded-full p-3">
+                <Shield className="h-12 w-12 text-green-600" />
+              </div>
+            </div>
+            <h3 className="mb-4 text-center font-bold text-green-700 text-xl">
+              ¡Reclamo registrado correctamente!
             </h3>
-            <p className="text-sm text-green-700">
-              Número de seguimiento: <strong>{submissionResult.numero}</strong>
-            </p>
-            <p className="text-sm text-green-700">
-              Clave de verificación: <strong>{submissionResult.clave}</strong>
-            </p>
-            <p className="mt-2 text-xs text-green-700">
-              Conserva estos datos para consultar el estado de tu reclamo.
-            </p>
+            <div className="bg-white rounded-lg p-6 mb-4">
+              <p className="text-sm text-gray-600 mb-3">
+                Tu denuncia ha sido registrada y recibirás un correo electrónico
+                con esta información:
+              </p>
+              <div className="space-y-3">
+                <div className="border-l-4 border-green-500 pl-4">
+                  <p className="text-xs text-gray-500">Número de seguimiento</p>
+                  <p className="text-lg font-mono font-bold text-gray-800">
+                    {submissionResult.numero}
+                  </p>
+                </div>
+                <div className="border-l-4 border-green-500 pl-4">
+                  <p className="text-xs text-gray-500">Clave de verificación</p>
+                  <p className="text-lg font-mono font-bold text-gray-800">
+                    {submissionResult.clave}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                <p className="text-xs text-yellow-800">
+                  <strong>⚠️ Importante:</strong> Conserva estos datos en un
+                  lugar seguro. Los necesitarás para consultar el estado de tu
+                  reclamo.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-center gap-3">
+              <Button
+                color="primary"
+                size="lg"
+                variant="solid"
+                onPress={() => {
+                  setSubmissionResult(null);
+                  setFormData({});
+                  setAnonymousEmail("");
+                  setCurrentStep(1);
+                  setSubmissionError(null);
+                }}
+              >
+                Registrar nueva denuncia
+              </Button>
+            </div>
           </CardBody>
         </Card>
       )}
 
-      <Card>
-        <CardBody className="p-6">
-          <div className="flex gap-2">
-            <div className="flex items-center space-x-2">
-              {currentStepData?.icon && (
-                <currentStepData.icon
-                  className="h-8 w-8 text-accent"
-                  color="#7828C8"
-                />
-              )}
-            </div>
-            <div className="flex items-center space-x-2">
-              <h1 className="mt-1 text-base">
-                {currentStepData?.title}: {currentStepData?.description}
-              </h1>
-            </div>
-            <Chip
-              className="absolute right-4 top-4"
-              color="secondary"
-              size="md"
-              variant="faded"
-            >
-              {currentStep} / {STEPS.length}
-            </Chip>
-          </div>
-          <Progress
-            aria-label="Progreso del formulario"
-            color="secondary"
-            value={progress}
-          />
-          <Divider className="my-4" />
-          <div className="grid grid-cols-3 gap-2 md:grid-cols-9">
-            {STEPS.map((step) => {
-              const Icon = step.icon;
-              const isActive = step.id === currentStep;
-              const isCompleted = step.id < currentStep;
-              const isDisabled = !isStepAccessible(step.id);
-              let buttonClassName = "";
-
-              if (isActive) {
-                buttonClassName =
-                  "border-purple-600 bg-purple-100 text-purple-700 font-semibold";
-              } else if (isCompleted) {
-                buttonClassName =
-                  "border-green-600 bg-green-100 text-green-700 hover:bg-green-200 font-medium";
-              } else {
-                buttonClassName =
-                  "border-gray-300 bg-white hover:bg-gray-100 text-gray-500 hover:text-gray-700";
-              }
-
-              return (
-                <button
-                  key={step.id}
-                  className={`flex flex-col items-center rounded-lg border-2 p-3 transition-all duration-200 ${buttonClassName} ${isDisabled ? "opacity-50 cursor-not-allowed pointer-events-none" : ""}`}
-                  onClick={() => {
-                    if (!isDisabled) handleStepClick(step.id);
-                  }}
+      {!submissionResult && (
+        <>
+          <Card>
+            <CardBody className="p-6">
+              <div className="flex gap-2">
+                <div className="flex items-center space-x-2">
+                  {currentStepData?.icon && (
+                    <currentStepData.icon
+                      className="h-8 w-8 text-accent"
+                      color="#7828C8"
+                    />
+                  )}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <h1 className="mt-1 text-base">
+                    {currentStepData?.title}: {currentStepData?.description}
+                  </h1>
+                </div>
+                <Chip
+                  className="absolute right-4 top-4"
+                  color="secondary"
+                  size="md"
+                  variant="faded"
                 >
-                  <Icon className="mb-1 h-5 w-5" />
-                  <span className="text-xs font-medium leading-tight text-center">
-                    {step.title}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </CardBody>
-      </Card>
+                  {currentStep} / {STEPS.length}
+                </Chip>
+              </div>
+              <Progress
+                aria-label="Progreso del formulario"
+                color="secondary"
+                value={progress}
+              />
+              <Divider className="my-4" />
+              <div className="grid grid-cols-3 gap-2 md:grid-cols-9">
+                {STEPS.map((step) => {
+                  const Icon = step.icon;
+                  const isActive = step.id === currentStep;
+                  const isCompleted = step.id < currentStep;
+                  const isDisabled = !isStepAccessible(step.id);
+                  let buttonClassName = "";
 
-      <Card className="min-h-[400px]">
-        <CardHeader>
-          <div>
-            <h1 className="flex items-center space-x-2">
-              {currentStepData?.icon && (
-                <currentStepData.icon className="h-6 w-6 text-accent" />
-              )}
-              <span>{currentStepData?.title}</span>
-            </h1>
-            <h2 className="mt-1 text-base">{currentStepData?.description}</h2>
-          </div>
-        </CardHeader>
-        <CardBody className="space-y-6">{renderStepContent()}</CardBody>
-      </Card>
+                  if (isActive) {
+                    buttonClassName =
+                      "border-purple-600 bg-purple-100 text-purple-700 font-semibold";
+                  } else if (isCompleted) {
+                    buttonClassName =
+                      "border-green-600 bg-green-100 text-green-700 hover:bg-green-200 font-medium";
+                  } else {
+                    buttonClassName =
+                      "border-gray-300 bg-white hover:bg-gray-100 text-gray-500 hover:text-gray-700";
+                  }
 
-      <Card>
-        <CardBody className="p-6">
-          <div className="flex justify-between">
-            <Button
-              className="flex items-center space-x-2"
-              disabled={currentStep === 1 || isSubmitting}
-              variant="bordered"
-              onPress={handlePrevious}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              <span>Anterior</span>
-            </Button>
+                  return (
+                    <button
+                      key={step.id}
+                      className={`flex flex-col items-center rounded-lg border-2 p-3 transition-all duration-200 ${buttonClassName} ${isDisabled ? "opacity-50 cursor-not-allowed pointer-events-none" : ""}`}
+                      onClick={() => {
+                        if (!isDisabled) handleStepClick(step.id);
+                      }}
+                    >
+                      <Icon className="mb-1 h-5 w-5" />
+                      <span className="text-xs font-medium leading-tight text-center">
+                        {step.title}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </CardBody>
+          </Card>
 
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-              <Shield className="h-4 w-4" />
-              <span>Información segura y confidencial</span>
-            </div>
+          <Card className="min-h-[400px]">
+            <CardHeader>
+              <div>
+                <h1 className="flex items-center space-x-2">
+                  {currentStepData?.icon && (
+                    <currentStepData.icon className="h-6 w-6 text-accent" />
+                  )}
+                  <span>{currentStepData?.title}</span>
+                </h1>
+                <h2 className="mt-1 text-base">
+                  {currentStepData?.description}
+                </h2>
+              </div>
+            </CardHeader>
+            <CardBody className="space-y-6">{renderStepContent()}</CardBody>
+          </Card>
 
-            {currentStep === STEPS.length ? (
-              <Button
-                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
-                disabled={isSubmitting}
-                variant="solid"
-                onPress={handleSubmit}
-              >
-                <Send className="h-4 w-4" />
-                <span>{isSubmitting ? "Enviando..." : "Enviar Reclamo"}</span>
-              </Button>
-            ) : (
-              <div className="flex flex-col items-end gap-1">
+          <Card>
+            <CardBody className="p-6">
+              <div className="flex justify-between">
                 <Button
-                  className={`flex items-center space-x-2 ${
-                    !canProceedFrom(currentStep)
-                      ? "bg-gray-300 text-gray-500 cursor-not-allowed opacity-60"
-                      : ""
-                  }`}
-                  color={canProceedFrom(currentStep) ? "primary" : "default"}
-                  disabled={metadataLoading || !canProceedFrom(currentStep)}
-                  variant="solid"
-                  onPress={handleNext}
+                  className="flex items-center space-x-2"
+                  disabled={currentStep === 1 || isSubmitting}
+                  variant="bordered"
+                  onPress={handlePrevious}
                 >
-                  <span>Siguiente</span>
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronLeft className="h-4 w-4" />
+                  <span>Anterior</span>
                 </Button>
-                {!canProceedFrom(currentStep) && (
-                  <span className="text-xs text-orange-600 font-medium">
-                    {getValidationMessage()}
-                  </span>
+
+                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                  <Shield className="h-4 w-4" />
+                  <span>Información segura y confidencial</span>
+                </div>
+
+                {currentStep === STEPS.length ? (
+                  <Button
+                    className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+                    disabled={isSubmitting}
+                    variant="solid"
+                    onPress={handleSubmit}
+                  >
+                    <Send className="h-4 w-4" />
+                    <span>
+                      {isSubmitting ? "Enviando..." : "Enviar Reclamo"}
+                    </span>
+                  </Button>
+                ) : (
+                  <div className="flex flex-col items-end gap-1">
+                    <Button
+                      className={`flex items-center space-x-2 ${
+                        !canProceedFrom(currentStep)
+                          ? "bg-gray-300 text-gray-500 cursor-not-allowed opacity-60"
+                          : ""
+                      }`}
+                      color={
+                        canProceedFrom(currentStep) ? "primary" : "default"
+                      }
+                      disabled={metadataLoading || !canProceedFrom(currentStep)}
+                      variant="solid"
+                      onPress={handleNext}
+                    >
+                      <span>Siguiente</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                    {!canProceedFrom(currentStep) && (
+                      <span className="text-xs text-orange-600 font-medium">
+                        {getValidationMessage()}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-        </CardBody>
-      </Card>
+            </CardBody>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

@@ -1,71 +1,30 @@
 "use client";
 
+import type { DashboardResponse } from "@/lib/types/dashboard";
+
+import { useEffect, useState } from "react";
 import {
+  Accordion,
+  AccordionItem,
+  Avatar,
   Card,
   CardBody,
   CardHeader,
   Chip,
   Progress,
-  Accordion,
-  AccordionItem,
-  Avatar,
+  Spinner,
 } from "@heroui/react";
 import {
-  FileText,
-  Clock,
-  CheckCircle2,
-  TrendingUp,
   AlertTriangle,
-  Users,
   Building2,
+  CheckCircle2,
+  Clock,
+  FileText,
+  TrendingUp,
+  Users,
 } from "lucide-react";
 
-import {
-  mockClaims,
-  getClaimTypeById,
-  getClaimStatusById,
-  getCompanyById,
-} from "@/lib/data";
-
-// Mock data for dashboard
-const stats = [
-  {
-    title: "Total Reclamos",
-    value: "1,234",
-    change: "+12%",
-    trend: "up",
-    icon: FileText,
-    color: "text-blue-600",
-    bgColor: "bg-blue-100 dark:bg-blue-900/30",
-  },
-  {
-    title: "En Proceso",
-    value: "45",
-    change: "+5%",
-    trend: "up",
-    icon: Clock,
-    color: "text-orange-600",
-    bgColor: "bg-orange-100 dark:bg-orange-900/30",
-  },
-  {
-    title: "Resueltos",
-    value: "1,089",
-    change: "+18%",
-    trend: "up",
-    icon: CheckCircle2,
-    color: "text-green-600",
-    bgColor: "bg-green-100 dark:bg-green-900/30",
-  },
-  {
-    title: "Críticos",
-    value: "8",
-    change: "-3%",
-    trend: "down",
-    icon: AlertTriangle,
-    color: "text-red-600",
-    bgColor: "bg-red-100 dark:bg-red-900/30",
-  },
-];
+import { fetchDashboardData } from "@/lib/api/dashboard";
 
 const priorityColors = {
   baja: "default",
@@ -82,9 +41,92 @@ const priorityIconColors = {
 } as const;
 
 export default function AdminDashboard() {
-  const recentClaims = mockClaims
-    .sort((a, b) => b.fecha_creacion.getTime() - a.fecha_creacion.getTime())
-    .slice(0, 5);
+  const [dashData, setDashData] = useState<DashboardResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchDashboardData()
+      .then((data) => {
+        setDashData(data);
+        setError(null);
+      })
+      .catch((err) => {
+        setError(err.message || "Error al cargar los datos del dashboard");
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Spinner label="Cargando dashboard..." size="lg" />
+      </div>
+    );
+  }
+
+  if (error || !dashData?.success) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Card className="max-w-md">
+          <CardBody className="text-center p-6">
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2">
+              Error al cargar datos
+            </h2>
+            <p className="text-muted-foreground">
+              {error || "No se pudieron obtener los datos del dashboard"}
+            </p>
+          </CardBody>
+        </Card>
+      </div>
+    );
+  }
+
+  const { stats, distribucion_estados, metricas_rapidas, reclamos_recientes } =
+    dashData.data;
+
+  // Construir stats con datos reales
+  const trendCriticas: "up" | "down" = stats.criticas > 0 ? "up" : "down";
+
+  const statsCards = [
+    {
+      title: "Total Reclamos",
+      value: stats.total_denuncias.toLocaleString(),
+      change: "+12%",
+      trend: "up" as const,
+      icon: FileText,
+      color: "text-blue-600",
+      bgColor: "bg-blue-100 dark:bg-blue-900/30",
+    },
+    {
+      title: "En Proceso",
+      value: stats.en_proceso.toLocaleString(),
+      change: "+5%",
+      trend: "up" as const,
+      icon: Clock,
+      color: "text-orange-600",
+      bgColor: "bg-orange-100 dark:bg-orange-900/30",
+    },
+    {
+      title: "Resueltos",
+      value: stats.resueltas.toLocaleString(),
+      change: "+18%",
+      trend: "up" as const,
+      icon: CheckCircle2,
+      color: "text-green-600",
+      bgColor: "bg-green-100 dark:bg-green-900/30",
+    },
+    {
+      title: "Críticos",
+      value: stats.criticas.toLocaleString(),
+      change: stats.criticas > 0 ? "+3%" : "0%",
+      trend: trendCriticas,
+      icon: AlertTriangle,
+      color: "text-red-600",
+      bgColor: "bg-red-100 dark:bg-red-900/30",
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -98,7 +140,7 @@ export default function AdminDashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => {
+        {statsCards.map((stat) => {
           const Icon = stat.icon;
 
           return (
@@ -144,109 +186,109 @@ export default function AdminDashboard() {
                 </p>
               </div>
               <Chip color="primary" variant="flat">
-                {recentClaims.length} nuevos
+                {reclamos_recientes.length} nuevos
               </Chip>
             </div>
           </CardHeader>
           <CardBody>
             <Accordion selectionMode="multiple" variant="splitted">
-              {recentClaims.map((claim) => {
-                const tipo = getClaimTypeById(claim.id_tipo);
-                const estado = getClaimStatusById(claim.id_estado);
-                const empresa = getCompanyById(claim.id_empresa);
-
-                return (
-                  <AccordionItem
-                    key={claim.id_denuncia}
-                    aria-label={`Reclamo ${claim.codigo_acceso}`}
-                    startContent={
-                      <Avatar
-                        isBordered
-                        classNames={{
-                          base: "bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/30 dark:to-purple-800/30",
-                          icon: "text-purple-600 dark:text-purple-400",
-                        }}
-                        color={priorityIconColors[claim.prioridad]}
-                        icon={<FileText className="h-5 w-5" />}
-                        radius="lg"
-                      />
-                    }
-                    subtitle={
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs text-muted-foreground">
-                          {tipo?.nombre || "Sin tipo"}
-                        </span>
-                        <span className="text-xs text-muted-foreground">•</span>
-                        <Chip
-                          color={priorityColors[claim.prioridad]}
-                          size="sm"
-                          variant="flat"
-                        >
-                          {claim.prioridad}
-                        </Chip>
-                        <Chip size="sm" variant="bordered">
-                          {estado?.nombre || "Sin estado"}
-                        </Chip>
-                      </div>
-                    }
-                    title={
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">
-                          {claim.codigo_acceso}
-                        </span>
-                      </div>
-                    }
-                  >
-                    <div className="space-y-3 px-1 pb-2">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-1">
-                          Descripción
-                        </p>
-                        <p className="text-sm">{claim.descripcion}</p>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">
-                            Empresa
-                          </p>
-                          <p className="text-sm">
-                            {empresa?.nombre || "Sin empresa"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">
-                            Fecha de Creación
-                          </p>
-                          <p className="text-sm">
-                            {claim.fecha_creacion.toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-
-                      {claim.nombre_denunciante && (
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">
-                            Denunciante
-                          </p>
-                          <p className="text-sm">{claim.nombre_denunciante}</p>
-                          {claim.email_denunciante && (
-                            <p className="text-xs text-muted-foreground">
-                              {claim.email_denunciante}
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      {claim.es_anonimo && (
-                        <Chip color="default" size="sm" variant="flat">
-                          Denuncia Anónima
-                        </Chip>
-                      )}
+              {reclamos_recientes.map((claim) => (
+                <AccordionItem
+                  key={claim.id_denuncia}
+                  aria-label={`Reclamo ${claim.codigo_acceso}`}
+                  startContent={
+                    <Avatar
+                      isBordered
+                      classNames={{
+                        base: "bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/30 dark:to-purple-800/30",
+                        icon: "text-purple-600 dark:text-purple-400",
+                      }}
+                      color={priorityIconColors[claim.prioridad]}
+                      icon={<FileText className="h-5 w-5" />}
+                      radius="lg"
+                    />
+                  }
+                  subtitle={
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-muted-foreground">
+                        {claim.tipo_nombre}
+                      </span>
+                      <span className="text-xs text-muted-foreground">•</span>
+                      <Chip
+                        color={priorityColors[claim.prioridad]}
+                        size="sm"
+                        variant="flat"
+                      >
+                        {claim.prioridad}
+                      </Chip>
+                      <Chip size="sm" variant="bordered">
+                        {claim.estado_nombre}
+                      </Chip>
                     </div>
-                  </AccordionItem>
-                );
-              })}
+                  }
+                  title={
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">
+                        {claim.codigo_acceso}
+                      </span>
+                    </div>
+                  }
+                >
+                  <div className="space-y-3 px-1 pb-2">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-1">
+                        Descripción
+                      </p>
+                      <p className="text-sm line-clamp-3">
+                        {claim.descripcion}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">
+                          Empresa
+                        </p>
+                        <p className="text-sm">{claim.empresa_nombre}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">
+                          Fecha de Creación
+                        </p>
+                        <p className="text-sm">
+                          {claim.fecha_creacion
+                            ? new Date(claim.fecha_creacion).toLocaleDateString(
+                                "es-CL",
+                              )
+                            : "N/A"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {claim.nombre_denunciante && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">
+                          Denunciante
+                        </p>
+                        <p className="text-sm">{claim.nombre_denunciante}</p>
+                        {claim.email_denunciante && (
+                          <p className="text-xs text-muted-foreground">
+                            {claim.email_denunciante}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {(String(claim.es_anonimo) === "1" ||
+                      String(claim.es_anonimo).toLowerCase() === "true" ||
+                      claim.es_anonimo === true) && (
+                      <Chip color="default" size="sm" variant="flat">
+                        Denuncia Anónima
+                      </Chip>
+                    )}
+                  </div>
+                </AccordionItem>
+              ))}
             </Accordion>
           </CardBody>
         </Card>
@@ -261,30 +303,54 @@ export default function AdminDashboard() {
               <div>
                 <div className="flex justify-between text-sm mb-1">
                   <span>Nuevos</span>
-                  <span className="font-medium">15%</span>
+                  <span className="font-medium">
+                    {distribucion_estados.nuevos}
+                  </span>
                 </div>
-                <Progress color="primary" size="sm" value={15} />
+                <Progress
+                  color="primary"
+                  size="sm"
+                  value={distribucion_estados.nuevos}
+                />
               </div>
               <div>
                 <div className="flex justify-between text-sm mb-1">
                   <span>En Proceso</span>
-                  <span className="font-medium">35%</span>
+                  <span className="font-medium">
+                    {distribucion_estados.en_proceso}
+                  </span>
                 </div>
-                <Progress color="warning" size="sm" value={35} />
+                <Progress
+                  color="warning"
+                  size="sm"
+                  value={distribucion_estados.en_proceso}
+                />
               </div>
               <div>
                 <div className="flex justify-between text-sm mb-1">
                   <span>Resueltos</span>
-                  <span className="font-medium">45%</span>
+                  <span className="font-medium">
+                    {distribucion_estados.resueltos}
+                  </span>
                 </div>
-                <Progress color="success" size="sm" value={45} />
+                <Progress
+                  color="success"
+                  size="sm"
+                  value={distribucion_estados.resueltos}
+                />
               </div>
               <div>
                 <div className="flex justify-between text-sm mb-1">
                   <span>Cerrados</span>
-                  <span className="font-medium">5%</span>
+                  <span className="font-medium">
+                    {distribucion_estados.cerrados}
+                  </span>
                 </div>
-                <Progress color="default" size="sm" value={5} />
+                <Progress
+                  color="default"
+                  size="sm"
+                  value={distribucion_estados.cerrados}
+                />
               </div>
             </CardBody>
           </Card>
@@ -299,21 +365,27 @@ export default function AdminDashboard() {
                   <Users className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">Usuarios Activos</span>
                 </div>
-                <span className="font-semibold">24</span>
+                <span className="font-semibold">
+                  {metricas_rapidas.usuarios_activos}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">Empresas</span>
                 </div>
-                <span className="font-semibold">12</span>
+                <span className="font-semibold">
+                  {metricas_rapidas.total_empresas}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">Tiempo Prom. Resolución</span>
                 </div>
-                <span className="font-semibold">5.2 días</span>
+                <span className="font-semibold">
+                  {metricas_rapidas.tiempo_promedio_resolucion} días
+                </span>
               </div>
             </CardBody>
           </Card>

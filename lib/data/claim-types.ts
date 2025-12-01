@@ -1,76 +1,58 @@
-import type { TipoDenuncia } from "@/lib/types/database"
+import type { TipoDenuncia } from "@/lib/types/database";
 
 export const mockClaimTypes: TipoDenuncia[] = [
   {
-    id: 1,
+    id_tipo: 1,
     nombre: "Acoso Laboral",
-    descripcion: "Situaciones de acoso, hostigamiento o maltrato en el ambiente laboral",
+    descripcion:
+      "Situaciones de acoso, hostigamiento o maltrato en el ambiente laboral",
     activo: true,
-    orden: 1,
-    created_at: new Date("2024-01-01"),
-    updated_at: new Date("2024-01-01"),
   },
   {
-    id: 2,
+    id_tipo: 2,
     nombre: "Discriminación",
-    descripcion: "Actos discriminatorios por género, edad, orientación sexual, religión, etc.",
+    descripcion:
+      "Actos discriminatorios por género, edad, orientación sexual, religión, etc.",
     activo: true,
-    orden: 2,
-    created_at: new Date("2024-01-01"),
-    updated_at: new Date("2024-01-01"),
   },
   {
-    id: 3,
+    id_tipo: 3,
     nombre: "Fraude",
-    descripcion: "Actividades fraudulentas, malversación de fondos o corrupción",
+    descripcion:
+      "Actividades fraudulentas, malversación de fondos o corrupción",
     activo: true,
-    orden: 3,
-    created_at: new Date("2024-01-01"),
-    updated_at: new Date("2024-01-01"),
   },
   {
-    id: 4,
+    id_tipo: 4,
     nombre: "Seguridad Laboral",
-    descripcion: "Condiciones inseguras de trabajo o incumplimiento de normas de seguridad",
+    descripcion:
+      "Condiciones inseguras de trabajo o incumplimiento de normas de seguridad",
     activo: true,
-    orden: 4,
-    created_at: new Date("2024-01-01"),
-    updated_at: new Date("2024-01-01"),
   },
   {
-    id: 5,
+    id_tipo: 5,
     nombre: "Conflicto de Interés",
-    descripcion: "Situaciones donde existe conflicto entre intereses personales y corporativos",
+    descripcion:
+      "Situaciones donde existe conflicto entre intereses personales y corporativos",
     activo: true,
-    orden: 5,
-    created_at: new Date("2024-01-01"),
-    updated_at: new Date("2024-01-01"),
   },
   {
-    id: 6,
+    id_tipo: 6,
     nombre: "Incumplimiento Normativo",
     descripcion: "Violación de políticas internas, leyes o regulaciones",
     activo: true,
-    orden: 6,
-    created_at: new Date("2024-01-01"),
-    updated_at: new Date("2024-01-01"),
   },
   {
-    id: 7,
+    id_tipo: 7,
     nombre: "Medio Ambiente",
-    descripcion: "Daños ambientales o incumplimiento de normativas medioambientales",
+    descripcion:
+      "Daños ambientales o incumplimiento de normativas medioambientales",
     activo: true,
-    orden: 7,
-    created_at: new Date("2024-01-01"),
-    updated_at: new Date("2024-01-01"),
   },
   {
-    id: 8,
+    id_tipo: 8,
     nombre: "Otros",
     descripcion: "Otros tipos de reclamos no categorizados",
     activo: true,
-    orden: 8,
-    created_at: new Date("2024-01-01"),
-    updated_at: new Date("2024-01-01"),
   },
-]
+];

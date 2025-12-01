@@ -2,7 +2,7 @@
 
 import type { TimeframeMetadata } from "@/lib/form-metadata";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardBody, Chip } from "@heroui/react";
 import {
   Clock,
@@ -54,6 +54,11 @@ export function TimeStep({ formData, onUpdate, timeframes }: TimeStepProps) {
   const [selectedTime, setSelectedTime] = useState<string>(
     formData.timeframe || "",
   );
+
+  // 🔄 Sincronizar cuando formData cambie desde afuera
+  useEffect(() => {
+    setSelectedTime(formData.timeframe || "");
+  }, [formData.timeframe]);
 
   const handleTimeSelect = (timeframe: TimeframeMetadata) => {
     setSelectedTime(timeframe.id);

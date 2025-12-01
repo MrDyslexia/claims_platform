@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@heroui/react";
 import {
@@ -16,6 +16,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 
 export function SupervisorSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useAuth();
 
   const menuItems = [
@@ -90,7 +91,10 @@ export function SupervisorSidebar() {
           </div>
           <button
             className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-danger hover:bg-danger/10 rounded-lg transition-colors"
-            onClick={logout}
+            onClick={async () => {
+              await logout();
+              router.push("/");
+            }}
           >
             <LogOut className="w-4 h-4" />
             Cerrar Sesión

@@ -33,13 +33,9 @@ export function CategoryStep({
 
   // 🔄 sincronizar cuando formData cambie desde afuera
   useEffect(() => {
-    if (formData.category !== selectedCategory) {
-      setSelectedCategory(formData.category || "");
-    }
-    if (formData.subcategory !== selectedSubcategory) {
-      setSelectedSubcategory(formData.subcategory || "");
-    }
-  }, [formData]);
+    setSelectedCategory(formData.category || "");
+    setSelectedSubcategory(formData.subcategory || "");
+  }, [formData.category, formData.subcategory]);
 
   const handleCategorySelect = (category: CategoryMetadata) => {
     setSelectedCategory(category.id);
