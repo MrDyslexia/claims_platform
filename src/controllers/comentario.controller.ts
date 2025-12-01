@@ -3,14 +3,40 @@ import { models } from '../db/sequelize';
 import { Op } from 'sequelize';
 
 /**
+ * Helper: Obtener rol del usuario
+ */
+async function obtenerRolUsuario(usuario: any): Promise<string | null> {
+    try {
+        const usuarioCompleto = await models.Usuario.findByPk(
+            usuario.get('id'),
+            {
+                include: [
+                    {
+                        model: models.Rol,
+                        as: 'rol',
+                        attributes: ['nombre'],
+                    },
+                ],
+            }
+        );
+
+        const rol = (usuarioCompleto?.toJSON() as any)?.rol;
+        return rol?.nombre || null;
+    } catch {
+        return null;
+    }
+}
+
+/**
  * Crear nuevo comentario en una denuncia específica
  * POST /api/denuncias/:id/comentarios
  */
 export const crearComentarioDenuncia = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { contenido, es_interno } = req.body;
-        const usuario_id = (req as any).user?.get?.('id');
+        const { contenido, es_interno, visibility } = req.body;
+        const usuario = (req as any).user;
+        const usuario_id = usuario?.get?.('id');
 
         // Validaciones
         if (!contenido || contenido.trim().length === 0) {
@@ -33,12 +59,31 @@ export const crearComentarioDenuncia = async (req: Request, res: Response) => {
             });
         }
 
+        // Determinar visibilidad
+        let visibilityValue: 'publico' | 'interno' | 'privado_analista' =
+            'publico';
+
+        if (
+            visibility &&
+            ['publico', 'interno', 'privado_analista'].includes(visibility)
+        ) {
+            visibilityValue = visibility;
+        } else if (es_interno === true || es_interno === 'true') {
+            // Retrocompatibilidad: es_interno=true -> interno
+            visibilityValue = 'interno';
+        }
+
+        // Obtener rol del usuario
+        const autorRol = usuario ? await obtenerRolUsuario(usuario) : null;
+
         // Crear el comentario
         const comentario = await models.Comentario.create({
             denuncia_id: id,
             usuario_id: usuario_id,
             contenido: contenido.trim(),
-            es_interno: es_interno === true || es_interno === 'true',
+            es_interno: visibilityValue !== 'publico', // Mantener retrocompatibilidad
+            visibility: visibilityValue,
+            autor_rol: autorRol,
         });
 
         // Refrescar el comentario con las asociaciones
@@ -62,8 +107,11 @@ export const crearComentarioDenuncia = async (req: Request, res: Response) => {
                 autor: {
                     nombre: comentarioJSON.autor?.nombre_completo || 'Sistema',
                     email: comentarioJSON.autor?.email,
+                    rol: autorRol,
                 },
+                visibility: comentarioJSON.visibility,
                 es_interno: comentarioJSON.es_interno,
+                created_at: comentarioJSON.created_at,
             },
         });
     } catch (e: any) {
@@ -78,8 +126,15 @@ export const crearComentarioDenuncia = async (req: Request, res: Response) => {
  */
 export const crearComentario = async (req: Request, res: Response) => {
     try {
-        const { denuncia_id, contenido, autor_nombre, autor_email } = req.body;
-        const usuario_id = (req as any).user?.get?.('id');
+        const {
+            denuncia_id,
+            contenido,
+            autor_nombre,
+            autor_email,
+            visibility,
+        } = req.body;
+        const usuario = (req as any).user;
+        const usuario_id = usuario?.get?.('id');
 
         if (!denuncia_id || !contenido) {
             return res.status(400).json({
@@ -87,12 +142,25 @@ export const crearComentario = async (req: Request, res: Response) => {
             });
         }
 
+        // Determinar visibilidad (default: publico)
+        const visibilityValue: 'publico' | 'interno' | 'privado_analista' =
+            visibility &&
+            ['publico', 'interno', 'privado_analista'].includes(visibility)
+                ? visibility
+                : 'publico';
+
+        // Obtener rol del usuario si está autenticado
+        const autorRol = usuario ? await obtenerRolUsuario(usuario) : null;
+
         const comentario = await models.Comentario.create({
             denuncia_id,
             usuario_id: usuario_id ?? null,
             contenido,
             autor_nombre: autor_nombre ?? null,
             autor_email: autor_email ?? null,
+            visibility: visibilityValue,
+            es_interno: visibilityValue !== 'publico',
+            autor_rol: autorRol,
         });
 
         return res.status(201).json(comentario.toJSON());
@@ -125,15 +193,24 @@ export const obtenerComentario = async (req: Request, res: Response) => {
 /**
  * Listar comentarios de una denuncia
  * GET /api/comentarios?denuncia_id=1&page=1&limit=10
+ *
+ * Los usuarios autenticados ven todos los comentarios.
+ * Los usuarios no autenticados (públicos) solo ven comentarios públicos.
  */
 export const listarComentarios = async (req: Request, res: Response) => {
     try {
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
         const denuncia_id = req.query.denuncia_id as string;
+        const isAuthenticated = !!(req as any).user;
 
         const where: any = {};
         if (denuncia_id) where.denuncia_id = denuncia_id;
+
+        // Si no está autenticado, solo mostrar comentarios públicos
+        if (!isAuthenticated) {
+            where.visibility = 'publico';
+        }
 
         const offset = (page - 1) * limit;
 

@@ -1,6 +1,161 @@
 import type { Request, Response } from 'express';
 import { models } from '../db/sequelize';
 import { Op } from 'sequelize';
+import multer from 'multer';
+import { UPLOAD_CONFIG, getUploadErrorMessage } from '../config/upload';
+import {
+    uploadFile,
+    deleteFile,
+    getFilesByDenuncia,
+} from '../services/upload.service';
+import path from 'node:path';
+import fs from 'node:fs/promises';
+
+// Configurar multer para memoria (guardaremos manualmente)
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: UPLOAD_CONFIG.MAX_FILE_SIZE,
+        files: UPLOAD_CONFIG.MAX_FILES_PER_DENUNCIA,
+    },
+});
+
+export const uploadMiddleware = upload.array(
+    'archivos',
+    UPLOAD_CONFIG.MAX_FILES_PER_DENUNCIA
+);
+
+/**
+ * Subir archivos adjuntos a una denuncia
+ * POST /api/adjuntos/upload
+ * Content-Type: multipart/form-data
+ */
+export const subirAdjuntos = async (req: Request, res: Response) => {
+    try {
+        const files = req.files as Express.Multer.File[];
+        const { denuncia_id, tipo_vinculo } = req.body;
+        const userId = (req as any).user?.get?.('id') || null;
+
+        if (!denuncia_id) {
+            return res.status(400).json({
+                error: 'denuncia_id es requerido',
+            });
+        }
+
+        if (!files || files.length === 0) {
+            return res.status(400).json({
+                error: 'No se proporcionaron archivos',
+            });
+        }
+
+        // Verificar que la denuncia existe
+        const denuncia = await models.Denuncia.findByPk(denuncia_id);
+        if (!denuncia) {
+            return res.status(404).json({
+                error: 'Denuncia no encontrada',
+            });
+        }
+
+        // Subir cada archivo
+        const results = await Promise.all(
+            files.map((file) =>
+                uploadFile(
+                    file,
+                    Number(denuncia_id),
+                    userId,
+                    tipo_vinculo || 'DENUNCIA'
+                )
+            )
+        );
+
+        // Separar éxitos y errores
+        const successful = results.filter((r) => r.success);
+        const failed = results.filter((r) => !r.success);
+
+        return res.status(successful.length > 0 ? 201 : 400).json({
+            uploaded: successful.length,
+            failed: failed.length,
+            files: successful.map((r) => ({
+                id: r.fileId,
+                filename: r.filename,
+                size: r.size,
+                path: r.path,
+            })),
+            errors: failed.map((r) => ({
+                filename: r.filename,
+                error: getUploadErrorMessage(r.errorCode || 'UPLOAD_ERROR'),
+                code: r.errorCode,
+            })),
+        });
+    } catch (e: any) {
+        console.error('[Upload Error]:', e);
+        return res.status(500).json({ error: e.message });
+    }
+};
+
+/**
+ * Descargar archivo adjunto
+ * GET /api/adjuntos/:id/download
+ */
+export const descargarAdjunto = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        const adjunto = await models.Adjunto.findByPk(id);
+        if (!adjunto) {
+            return res.status(404).json({ error: 'Archivo no encontrado' });
+        }
+
+        const filePath = path.join(
+            UPLOAD_CONFIG.UPLOAD_DIR,
+            adjunto.get('ruta') as string
+        );
+
+        // Verificar que el archivo existe
+        try {
+            await fs.access(filePath);
+        } catch {
+            return res
+                .status(404)
+                .json({ error: 'Archivo no encontrado en el sistema' });
+        }
+
+        // Configurar headers
+        res.setHeader('Content-Type', adjunto.get('mime_type') as string);
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename="${adjunto.get('nombre_archivo')}"`
+        );
+        res.setHeader('Content-Length', adjunto.get('tamano_bytes') as number);
+
+        // Enviar archivo
+        const fileBuffer = await fs.readFile(filePath);
+        return res.send(fileBuffer);
+    } catch (e: any) {
+        console.error('[Download Error]:', e);
+        return res.status(500).json({ error: e.message });
+    }
+};
+
+/**
+ * Obtener archivos de una denuncia
+ * GET /api/adjuntos/denuncia/:denunciaId
+ */
+export const obtenerAdjuntosDenuncia = async (req: Request, res: Response) => {
+    try {
+        const { denunciaId } = req.params;
+
+        const archivos = await getFilesByDenuncia(Number(denunciaId));
+
+        return res.json({
+            total: archivos.length,
+            archivos,
+        });
+    } catch (e: any) {
+        console.error('[Get Files Error]:', e);
+        return res.status(500).json({ error: e.message });
+    }
+};
 
 /**
  * Crear nuevo adjunto
@@ -124,15 +279,21 @@ export const eliminarAdjunto = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
-        const adjunto = await models.Adjunto.findByPk(id);
-        if (!adjunto) {
-            return res.status(404).json({ error: 'adjunto not found' });
+        // Usar el servicio deleteFile que elimina archivo físico + metadata
+        const result = await deleteFile(Number(id));
+
+        if (!result.success) {
+            return res.status(404).json({
+                error: result.error || 'No se pudo eliminar el adjunto',
+            });
         }
 
-        await adjunto.destroy();
-
-        return res.json({ ok: true, message: 'adjunto deleted' });
+        return res.json({
+            ok: true,
+            message: 'Archivo eliminado correctamente',
+        });
     } catch (e: any) {
-        return res.status(400).json({ error: e.message });
+        console.error('[Delete Adjunto Error]:', e);
+        return res.status(500).json({ error: e.message });
     }
 };

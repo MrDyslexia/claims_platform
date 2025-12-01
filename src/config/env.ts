@@ -23,4 +23,8 @@ export const env = {
         password: process.env.SMTP_PASSWORD || '',
         from: process.env.SMTP_FROM || 'noreply@denuncias.com',
     },
+    upload: {
+        dir: process.env.UPLOAD_DIR || './uploads',
+        enableVirusScan: process.env.ENABLE_VIRUS_SCAN === 'true',
+    },
 };

@@ -472,15 +472,12 @@ export const crearDenunciaPublica = async (req: Request, res: Response) => {
         const denuncianteNombre = payload.isAnonymous
             ? null
             : sanitizeString(payload.fullName);
-        const denuncianteEmail = payload.isAnonymous
-            ? null
-            : sanitizeString(payload.email);
         const denuncianteFono = payload.isAnonymous
             ? null
             : sanitizeString(payload.phone);
 
-        // Email solo para notificación (siempre se encripta si se proporciona)
-        const emailParaNotificacion = sanitizeString(payload.email) || null;
+        // Email SIEMPRE se encripta (tanto para anónimos como identificados)
+        const emailParaEncriptar = sanitizeString(payload.email) || null;
 
         const { denuncia, clave, recoveryCode } = await createDenunciaRecord({
             empresaId: Number(empresa.get('id')),
@@ -491,18 +488,18 @@ export const crearDenunciaPublica = async (req: Request, res: Response) => {
             canalOrigen: 'WEB',
             canalId,
             denuncianteNombre,
-            denuncianteEmail: emailParaNotificacion, // Siempre se encripta
+            denuncianteEmail: emailParaEncriptar, // Se encripta con AES-256-GCM
             denuncianteFono,
             esAnonima: payload.isAnonymous ?? false,
             createdBy: null,
         });
 
         // Enviar correos si hay email
-        if (emailParaNotificacion) {
+        if (emailParaEncriptar) {
             try {
                 // 1. Enviar confirmación de denuncia con clave de seguimiento
                 await emailService.sendDenunciaConfirmation(
-                    emailParaNotificacion,
+                    emailParaEncriptar,
                     {
                         numero: denuncia.get('numero') as string,
                         clave,
@@ -513,7 +510,7 @@ export const crearDenunciaPublica = async (req: Request, res: Response) => {
 
                 // 2. Enviar recovery code para revelar identidad
                 if (recoveryCode) {
-                    await emailService.sendRecoveryCode(emailParaNotificacion, {
+                    await emailService.sendRecoveryCode(emailParaEncriptar, {
                         numero: denuncia.get('numero') as string,
                         recoveryCode,
                         asunto,
@@ -595,9 +592,11 @@ export const lookupDenuncia = async (req: Request, res: Response) => {
     );
 
     // Obtener comentarios con información del autor
+    // Solo comentarios públicos para denunciantes que hacen lookup
     const comentarios = await models.Comentario.findAll({
         where: {
             denuncia_id: denuncia.get('id'),
+            visibility: 'publico', // Solo comentarios públicos
         },
         order: [['created_at', 'ASC']],
     });
@@ -658,6 +657,110 @@ export const lookupDenuncia = async (req: Request, res: Response) => {
         statusHistory: statusHistoryWithNames,
         comments: commentsWithAuthor,
     });
+};
+
+/**
+ * Autorizar revelado de correo usando clave de seguimiento + recovery code
+ * POST /api/public/denuncias/:numero/autorizar-contacto
+ *
+ * Permite al denunciante autorizar el revelado de su correo cuando la denuncia
+ * está en estado "Requiere Contacto"
+ */
+export const autorizarContacto = async (req: Request, res: Response) => {
+    try {
+        const { numero } = req.params;
+        const { clave, recovery_code } = req.body as {
+            clave?: string;
+            recovery_code?: string;
+        };
+
+        // Validar campos requeridos
+        if (!numero || !clave || !recovery_code) {
+            return res.status(400).json({
+                error: 'Se requieren número, clave de seguimiento y código de recuperación',
+            });
+        }
+
+        // Buscar la denuncia
+        const denuncia = await models.Denuncia.findOne({ where: { numero } });
+        if (!denuncia) {
+            return res.status(404).json({ error: 'Denuncia no encontrada' });
+        }
+
+        // Verificar clave de seguimiento
+        const claveValida = verifyClaveWithSalt(
+            String(clave),
+            denuncia.get('clave_salt') as Buffer,
+            denuncia.get('clave_hash') as Buffer
+        );
+
+        if (!claveValida) {
+            return res.status(401).json({
+                error: 'Clave de seguimiento inválida',
+            });
+        }
+
+        // Verificar que tenga correo encriptado
+        const correoEncrypted = denuncia.get('correo_encrypted') as
+            | string
+            | null;
+        const correoIv = denuncia.get('correo_iv') as string | null;
+        const correoTag = denuncia.get('correo_tag') as string | null;
+        const recoveryCodeHash = denuncia.get('recovery_code_hash') as
+            | string
+            | null;
+
+        if (!correoEncrypted || !correoIv || !correoTag || !recoveryCodeHash) {
+            return res.status(400).json({
+                error: 'Esta denuncia no tiene correo encriptado o ya fue revelado',
+            });
+        }
+
+        // Verificar recovery code
+        const providedHash = hashText(recovery_code.trim());
+        if (providedHash !== recoveryCodeHash) {
+            return res.status(403).json({
+                error: 'Código de recuperación inválido',
+            });
+        }
+
+        // Desencriptar el correo
+        const correoRevelado = decryptText(
+            correoEncrypted,
+            correoIv,
+            correoTag
+        );
+
+        // Registrar en auditoría
+        const clientIp =
+            req.headers['x-forwarded-for'] ||
+            req.socket.remoteAddress ||
+            'unknown';
+
+        await models.DenunciaRevealAudit.create({
+            denuncia_id: denuncia.get('id') as number,
+            requested_by: null, // Denunciante autorizó (no es un usuario del sistema)
+            method: 'recovery_code',
+            reason: 'Denunciante autorizó contacto desde tracking público',
+            remote_ip: String(clientIp).split(',')[0].trim(),
+        });
+
+        // Invalidar recovery code para que no se pueda reusar
+        await denuncia.update({
+            recovery_code_hash: hashText(`USED_${Date.now()}_${Math.random()}`),
+        });
+
+        return res.json({
+            ok: true,
+            message:
+                'Correo revelado exitosamente. El equipo podrá contactarte.',
+            correo: correoRevelado,
+            revealed_at: new Date().toISOString(),
+        });
+    } catch (e: any) {
+        console.error('Error en autorizarContacto:', e);
+        return res.status(500).json({ error: e.message });
+    }
 };
 
 export const asignarDenuncia = async (
@@ -765,6 +868,7 @@ export const obtenerTodosLosReclamos = async (
                 );
 
                 // Obtener comentarios con información del autor
+                // Los usuarios autenticados ven comentarios internos y privados
                 const comentarios = await models.Comentario.findAll({
                     where: { denuncia_id: denunciaId },
                     order: [['created_at', 'ASC']],
@@ -801,6 +905,9 @@ export const obtenerTodosLosReclamos = async (
                             contenido: c.get('contenido'),
                             autor_nombre: autorNombre,
                             autor_email: autorEmail,
+                            autor_rol: c.get('autor_rol') as string | null,
+                            visibility: c.get('visibility') as string,
+                            es_interno: c.get('es_interno') as boolean,
                             fecha_creacion: c.get('created_at'),
                         };
                     })
@@ -894,8 +1001,10 @@ export const obtenerTodosLosReclamos = async (
                         autor: {
                             nombre: c.autor_nombre,
                             email: c.autor_email,
+                            rol: c.autor_rol,
                         },
-                        es_interno: false,
+                        visibility: c.visibility,
+                        es_interno: c.es_interno,
                         fecha_creacion: c.fecha_creacion,
                     })),
                     adjuntos: adjuntosEnriquecidos.map((adj) => ({

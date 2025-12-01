@@ -6,6 +6,7 @@ import {
     lookupDenuncia,
     obtenerTodosLosReclamos,
     revealEmail,
+    autorizarContacto,
 } from '../controllers/denuncia.controller';
 import {
     crearComentario,
@@ -22,6 +23,9 @@ const router = Router();
 
 // Public lookup by numero + clave
 router.post('/lookup', lookupDenuncia);
+
+// Autorizar contacto público (denunciante revela su correo con recovery code)
+router.post('/:numero/autorizar-contacto', autorizarContacto);
 
 // Crear denuncia autenticado (se setea created_by)
 router.post(

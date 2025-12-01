@@ -5,6 +5,7 @@ import { env } from './config/env';
 import { sequelize, testConnection } from './db/sequelize';
 import routes from './routes';
 import { requestLogger } from './middlewares/requestLogger';
+import { startCleanupScheduler } from './services/upload.service';
 
 async function bootstrap() {
     // Test connection first
@@ -59,6 +60,10 @@ async function bootstrap() {
     });
 
     app.listen(env.port, () => console.log(`API listening on :${env.port}`));
+
+    // Iniciar scheduler de limpieza automática de archivos temporales
+    startCleanupScheduler();
+    console.log('📁 Upload cleanup scheduler iniciado');
 
     // Sync database in background (development only)
     // DISABLED: Causing "Too many keys" error. Use migrations instead.

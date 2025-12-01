@@ -5,6 +5,10 @@ import {
     listarAdjuntos,
     actualizarAdjunto,
     eliminarAdjunto,
+    uploadMiddleware,
+    subirAdjuntos,
+    descargarAdjunto,
+    obtenerAdjuntosDenuncia,
 } from '../controllers/adjunto.controller';
 import { authMiddleware, requirePermission } from '../middlewares/auth';
 
@@ -14,8 +18,34 @@ const router = Router();
 router.use(authMiddleware);
 
 /**
+ * @route POST /api/adjuntos/upload
+ * @desc Subir archivos adjuntos a una denuncia (multipart/form-data)
+ * @access Privado - Requiere permiso CREATE_ADJUNTO
+ */
+router.post(
+    '/upload',
+    requirePermission('CREATE_ADJUNTO'),
+    uploadMiddleware,
+    subirAdjuntos
+);
+
+/**
+ * @route GET /api/adjuntos/:id/download
+ * @desc Descargar archivo adjunto
+ * @access Privado
+ */
+router.get('/:id/download', descargarAdjunto);
+
+/**
+ * @route GET /api/adjuntos/denuncia/:denunciaId
+ * @desc Obtener todos los archivos de una denuncia
+ * @access Privado
+ */
+router.get('/denuncia/:denunciaId', obtenerAdjuntosDenuncia);
+
+/**
  * @route POST /api/adjuntos
- * @desc Crear nuevo adjunto
+ * @desc Crear nuevo adjunto (legacy)
  * @access Privado - Requiere permiso CREATE_ADJUNTO
  */
 router.post('/', requirePermission('CREATE_ADJUNTO'), crearAdjunto);
