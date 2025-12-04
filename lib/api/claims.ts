@@ -91,6 +91,7 @@ export interface Reclamo {
   id: number;
   numero: string;
   asunto: string;
+  pais?: string;
   descripcion: string;
   canal_origen: string;
   fecha_creacion: string;
@@ -100,6 +101,13 @@ export interface Reclamo {
   empresa: Empresa;
   tipo: TipoDenuncia;
   denunciante: Denunciante;
+  supervisor: {
+    nombre_completo: any;
+    id: number;
+    nombre: string;
+    apellido: string;
+    email: string;
+  } | null;
   comentarios: Comentario[];
   adjuntos: Adjunto[];
   historial_estado: HistorialEstado[];

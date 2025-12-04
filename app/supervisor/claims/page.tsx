@@ -1,201 +1,887 @@
 "use client";
 
-import type { Key } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  Avatar,
+  Button,
+  Card,
+  CardBody,
+  Chip,
+  Divider,
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownTrigger,
+  Input,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  Pagination,
+  Spinner,
+  Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableColumn,
+  TableHeader,
+  TableRow,
+  Tabs,
+  Textarea,
+  useDisclosure,
+} from "@heroui/react";
+import {
+  AlertCircle,
+  Building2,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Download,
+  FileText,
+  Filter,
+  MapPin,
+  MessageSquare,
+  Paperclip,
+  Search,
+  Send,
+  User,
+} from "lucide-react";
 
-import { useState } from "react";
-import { Card, CardBody, Button, Input, Chip } from "@heroui/react";
-import { Search } from "lucide-react";
-import Link from "next/link";
+import { type Reclamo } from "@/lib/api/claims";
 
-import { useAuth } from "@/lib/auth/auth-context";
-import { mockClaims, getClaimWithRelations } from "@/lib/data";
-import { DataTable } from "@/components/data-table";
+const priorityColors = {
+  baja: "default",
+  media: "warning",
+  alta: "danger",
+  critica: "danger",
+} as const;
+
+const statusColors: Record<string, any> = {
+  Pendiente: "primary",
+  "En Proceso": "warning",
+  "En Revisión": "secondary",
+  Resuelto: "success",
+  Cerrado: "default",
+};
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003";
 
 export default function SupervisorClaims() {
-  const { user } = useAuth();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [priorityFilter, setPriorityFilter] = useState("all");
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [token, setToken] = useState<string | null>(null);
+  const [claims, setClaims] = useState<Reclamo[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Validar que el usuario esté cargado
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-default-500">Cargando...</p>
-      </div>
-    );
-  }
+  const [selectedClaim, setSelectedClaim] = useState<Reclamo | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterPriority, setFilterPriority] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const [newComment, setNewComment] = useState("");
+  const [isCommentInternal, setIsCommentInternal] = useState(true);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
+  const rowsPerPage = 10;
 
-  const companyClaims = mockClaims.filter(
-    (c) => c.id_empresa === user.empresa_id && c.asignado_a === user.id_usuario,
-  );
+  // Helper para formatear fechas de forma segura
+  const formatDate = (dateString: string | Date | null | undefined): string => {
+    try {
+      const date = dateString ? new Date(dateString) : new Date();
 
-  const filteredClaims = companyClaims.filter((claim) => {
-    const matchesSearch =
-      claim.codigo_acceso.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      claim.descripcion.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" || claim.id_estado === Number(statusFilter);
-    const matchesPriority =
-      priorityFilter === "all" || claim.prioridad === priorityFilter;
+      if (isNaN(date.getTime())) {
+        return new Date().toLocaleString("es-CL", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
 
-    return matchesSearch && matchesStatus && matchesPriority;
-  });
-
-  const columns = [
-    { key: "codigo", label: "CÓDIGO" },
-    { key: "tipo", label: "TIPO" },
-    { key: "descripcion", label: "DESCRIPCIÓN" },
-    { key: "estado", label: "ESTADO" },
-    { key: "prioridad", label: "PRIORIDAD" },
-    { key: "fecha", label: "FECHA" },
-    { key: "actions", label: "ACCIONES" },
-  ];
-
-  const renderCell = (claim: any, columnKey: Key) => {
-    const claimData = getClaimWithRelations(claim.id_denuncia);
-
-    switch (columnKey) {
-      case "codigo":
-        return <span className="font-mono text-sm">{claim.codigo_acceso}</span>;
-      case "tipo":
-        return (
-          <span className="text-sm">
-            {claimData?.tipo?.nombre || "Sin tipo"}
-          </span>
-        );
-      case "descripcion":
-        return (
-          <span className="text-sm line-clamp-2">{claim.descripcion}</span>
-        );
-      case "estado":
-        const statusColors: any = {
-          1: "warning", // pendiente
-          2: "primary", // en_revision
-          3: "primary", // en_investigacion
-          4: "success", // resuelto
-          5: "default", // cerrado
-        };
-
-        const statusNames: any = {
-          1: "Pendiente",
-          2: "En Revisión",
-          3: "En Investigación",
-          4: "Resuelto",
-          5: "Cerrado",
-        };
-
-        return (
-          <Chip
-            color={statusColors[claim.id_estado] || "default"}
-            size="sm"
-            variant="flat"
-          >
-            {statusNames[claim.id_estado] ||
-              claimData?.estadoObj?.nombre ||
-              "Desconocido"}
-          </Chip>
-        );
-      case "prioridad":
-        const priorityColors: any = {
-          alta: "danger",
-          critica: "danger",
-          media: "warning",
-          baja: "success",
-        };
-
-        return (
-          <Chip
-            color={priorityColors[claim.prioridad] || "default"}
-            size="sm"
-            variant="flat"
-          >
-            {claim.prioridad}
-          </Chip>
-        );
-      case "fecha":
-        return (
-          <span className="text-sm">
-            {new Date(claim.fecha_creacion).toLocaleDateString()}
-          </span>
-        );
-      case "actions":
-        return (
-          <Button
-            as={Link}
-            color="primary"
-            href={`/supervisor/claims/${claim.id_denuncia}`}
-            size="sm"
-            variant="flat"
-          >
-            Ver Detalle
-          </Button>
-        );
-      default:
-        return null;
+      return date.toLocaleString("es-CL", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return new Date().toLocaleString("es-CL", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
     }
   };
 
+  // Helper para formatear solo fecha (sin hora)
+  const formatDateOnly = (
+    dateString: string | Date | null | undefined,
+  ): string => {
+    try {
+      const date = dateString ? new Date(dateString) : new Date();
+
+      if (isNaN(date.getTime())) {
+        return new Date().toLocaleDateString("es-CL", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        });
+      }
+
+      return date.toLocaleDateString("es-CL", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+    } catch {
+      return new Date().toLocaleDateString("es-CL", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+    }
+  };
+
+  // Cargar token de localStorage al montar
+  useEffect(() => {
+    const storedToken = localStorage.getItem("auth_token");
+
+    setToken(storedToken);
+  }, []);
+
+  const fetchClaims = useCallback(async () => {
+    if (!token) return;
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/denuncias/assigned`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+
+        setClaims(data.reclamos || []);
+      } else {
+        setError("Error al cargar reclamos");
+      }
+    } catch {
+      setError("Error al cargar reclamos");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (token) {
+      fetchClaims();
+    }
+  }, [token, fetchClaims]);
+
+  const handleSendComment = async () => {
+    if (!selectedClaim || !newComment.trim()) {
+      setCommentError("El comentario no puede estar vacío");
+
+      return;
+    }
+
+    setIsSubmittingComment(true);
+    setCommentError(null);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/denuncias/${selectedClaim.id}/comentarios`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            contenido: newComment,
+            es_interno: isCommentInternal,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Error al enviar comentario");
+      }
+
+      setNewComment("");
+      // Recargar reclamos para ver el nuevo comentario
+      await fetchClaims();
+      // Actualizar el reclamo seleccionado también
+      const claimsResponse = await fetch(`${API_BASE_URL}/denuncias/assigned`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (claimsResponse.ok) {
+        const data = await claimsResponse.json();
+        const allClaims = data.reclamos || [];
+        const refreshedClaim = allClaims.find(
+          (c: any) => c.id === selectedClaim.id,
+        );
+
+        if (refreshedClaim) {
+          setSelectedClaim(refreshedClaim);
+        }
+        setClaims(allClaims);
+      }
+    } catch (err) {
+      setCommentError(
+        err instanceof Error ? err.message : "Error al enviar comentario",
+      );
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  const filteredClaims = useMemo(() => {
+    return (claims || []).filter((claim) => {
+      const matchesSearch =
+        claim.numero.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        claim.tipo.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        claim.empresa.nombre.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesStatus =
+        filterStatus === "all" || claim.estado.nombre === filterStatus;
+      const matchesPriority =
+        filterPriority === "all" || claim.prioridad === filterPriority;
+
+      return matchesSearch && matchesStatus && matchesPriority;
+    });
+  }, [claims, searchQuery, filterStatus, filterPriority]);
+
+  const pages = Math.ceil(filteredClaims.length / rowsPerPage);
+  const items = filteredClaims.slice(
+    (page - 1) * rowsPerPage,
+    page * rowsPerPage,
+  );
+
+  const handleViewClaim = (claim: Reclamo) => {
+    setSelectedClaim(claim);
+    onOpen();
+  };
+
   return (
-    <div className="p-8 space-y-6">
+    <div className="space-y-6 p-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">
-          Mis Reclamos
-        </h1>
-        <p className="text-default-500">
-          Gestiona todos los reclamos asignados a ti
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Mis Reclamos</h1>
+          <p className="text-muted-foreground mt-1">
+            Gestiona los reclamos asignados a ti
+          </p>
+        </div>
       </div>
 
+      {/* Error Display */}
+      {error && (
+        <Card className="bg-red-50 border border-red-200">
+          <CardBody className="flex flex-row items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-red-800 font-medium">{error}</p>
+              {error.includes("token") && (
+                <p className="text-red-600 text-sm mt-1">
+                  Por favor, inicie sesión para acceder a esta página.
+                </p>
+              )}
+            </div>
+            {!error.includes("token") && (
+              <Button
+                className="bg-red-100 text-red-700 hover:bg-red-200"
+                size="sm"
+                variant="flat"
+                onClick={() => fetchClaims()}
+              >
+                Reintentar
+              </Button>
+            )}
+          </CardBody>
+        </Card>
+      )}
+
       {/* Filters */}
-      <Card className="border-none shadow-sm">
-        <CardBody className="p-6">
+      <Card>
+        <CardBody>
           <div className="flex flex-col md:flex-row gap-4">
             <Input
               className="flex-1"
-              placeholder="Buscar por código o descripción..."
-              startContent={<Search className="w-4 h-4 text-default-400" />}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar por código, tipo o empresa..."
+              startContent={<Search className="h-4 w-4 text-default-400" />}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <select
-              className="px-4 py-2 rounded-lg border border-divider bg-content1 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+            <Dropdown>
+              <DropdownTrigger>
+                <Button
+                  startContent={<Filter className="h-4 w-4" />}
+                  variant="bordered"
+                >
+                  Estado: {filterStatus === "all" ? "Todos" : filterStatus}
+                </Button>
+              </DropdownTrigger>
+              <DropdownMenu
+                aria-label="Filter by status"
+                selectedKeys={[filterStatus]}
+                onAction={(key) => setFilterStatus(key as string)}
+              >
+                <DropdownItem key="all">Todos</DropdownItem>
+                <DropdownItem key="Pendiente">Pendiente</DropdownItem>
+                <DropdownItem key="En Proceso">En Proceso</DropdownItem>
+                <DropdownItem key="En Revisión">En Revisión</DropdownItem>
+                <DropdownItem key="Resuelto">Resuelto</DropdownItem>
+                <DropdownItem key="Cerrado">Cerrado</DropdownItem>
+              </DropdownMenu>
+            </Dropdown>
+            <Dropdown>
+              <DropdownTrigger>
+                <Button
+                  startContent={<Filter className="h-4 w-4" />}
+                  variant="bordered"
+                >
+                  Prioridad:{" "}
+                  {filterPriority === "all" ? "Todas" : filterPriority}
+                </Button>
+              </DropdownTrigger>
+              <DropdownMenu
+                aria-label="Filter by priority"
+                selectedKeys={[filterPriority]}
+                onAction={(key) => setFilterPriority(key as string)}
+              >
+                <DropdownItem key="all">Todas</DropdownItem>
+                <DropdownItem key="baja">Baja</DropdownItem>
+                <DropdownItem key="media">Media</DropdownItem>
+                <DropdownItem key="alta">Alta</DropdownItem>
+                <DropdownItem key="critica">Crítica</DropdownItem>
+              </DropdownMenu>
+            </Dropdown>
+            <Button
+              startContent={<Download className="h-4 w-4" />}
+              variant="bordered"
+              onClick={() => fetchClaims()}
             >
-              <option value="all">Todos los estados</option>
-              <option value="1">Pendiente</option>
-              <option value="2">En Revisión</option>
-              <option value="3">En Investigación</option>
-              <option value="4">Resuelto</option>
-              <option value="5">Cerrado</option>
-            </select>
-            <select
-              className="px-4 py-2 rounded-lg border border-divider bg-content1 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
-            >
-              <option value="all">Todas las prioridades</option>
-              <option value="alta">Alta</option>
-              <option value="critica">Crítica</option>
-              <option value="media">Media</option>
-              <option value="baja">Baja</option>
-            </select>
+              Actualizar
+            </Button>
           </div>
         </CardBody>
       </Card>
 
+      {/* Loading State */}
+      {isLoading && (
+        <Card>
+          <CardBody className="flex flex-row items-center justify-center gap-3 py-8">
+            <Spinner size="lg" />
+            <span className="text-lg text-muted-foreground">
+              Cargando reclamos...
+            </span>
+          </CardBody>
+        </Card>
+      )}
+
       {/* Claims Table */}
-      <Card className="border-none shadow-sm">
-        <CardBody className="p-0">
-          <DataTable
-            columns={columns}
-            data={filteredClaims}
-            renderCell={renderCell}
-          />
-        </CardBody>
-      </Card>
+      {!isLoading && (
+        <Card>
+          <CardBody className="p-0">
+            <Table
+              aria-label="Claims table"
+              bottomContent={
+                <div className="flex w-full justify-center py-2">
+                  <Pagination
+                    isCompact
+                    showControls
+                    showShadow
+                    color="primary"
+                    page={page}
+                    total={pages}
+                    onChange={setPage}
+                  />
+                </div>
+              }
+            >
+              <TableHeader>
+                <TableColumn>CÓDIGO</TableColumn>
+                <TableColumn>TIPO</TableColumn>
+                <TableColumn>EMPRESA</TableColumn>
+                <TableColumn>ESTADO</TableColumn>
+                <TableColumn>PRIORIDAD</TableColumn>
+                <TableColumn>FECHA</TableColumn>
+              </TableHeader>
+              <TableBody>
+                {items.map((claim) => (
+                  <TableRow
+                    key={claim.id}
+                    className="cursor-pointer hover:bg-default-100"
+                    onClick={() => handleViewClaim(claim)}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-purple-600" />
+                        <span className="font-medium">{claim.numero}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{claim.tipo.nombre}</TableCell>
+                    <TableCell>{claim.empresa.nombre}</TableCell>
+                    <TableCell>
+                      <Chip
+                        color={statusColors[claim.estado.nombre] || "default"}
+                        size="sm"
+                        variant="flat"
+                      >
+                        {claim.estado.nombre}
+                      </Chip>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        color={
+                          priorityColors[
+                            claim.prioridad as keyof typeof priorityColors
+                          ]
+                        }
+                        size="sm"
+                        variant="flat"
+                      >
+                        {claim.prioridad}
+                      </Chip>
+                    </TableCell>
+                    <TableCell>
+                      {formatDateOnly(claim.fecha_creacion)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardBody>
+        </Card>
+      )}
+
+      <Modal
+        isOpen={isOpen}
+        scrollBehavior="inside"
+        size="5xl"
+        onClose={onClose}
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-2xl font-bold">
+                    {selectedClaim?.numero}
+                  </h2>
+                  <Chip
+                    color={
+                      statusColors[selectedClaim?.estado.nombre || ""] ||
+                      "default"
+                    }
+                    size="lg"
+                    variant="flat"
+                  >
+                    {selectedClaim?.estado.nombre}
+                  </Chip>
+                  <Chip
+                    color={
+                      priorityColors[
+                        selectedClaim?.prioridad as keyof typeof priorityColors
+                      ]
+                    }
+                    size="lg"
+                    variant="flat"
+                  >
+                    {selectedClaim?.prioridad}
+                  </Chip>
+                </div>
+                <p className="text-sm text-muted-foreground font-normal">
+                  {selectedClaim?.tipo.nombre}
+                </p>
+              </ModalHeader>
+              <ModalBody>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Main Content */}
+                  <div className="lg:col-span-2 space-y-6">
+                    {/* Description */}
+                    <Card>
+                      <CardBody>
+                        <div className="flex items-center gap-2 mb-3">
+                          <FileText className="h-5 w-5 text-purple-600" />
+                          <h3 className="text-lg font-semibold">
+                            Descripción del Reclamo
+                          </h3>
+                        </div>
+                        <p className="text-foreground leading-relaxed">
+                          {selectedClaim?.asunto}
+                        </p>
+                        <p className="text-foreground leading-relaxed mt-2">
+                          {selectedClaim?.descripcion}
+                        </p>
+                      </CardBody>
+                    </Card>
+
+                    {/* Tabs */}
+                    <Card>
+                      <CardBody className="p-0">
+                        <Tabs
+                          aria-label="Claim details tabs"
+                          className="w-full"
+                        >
+                          <Tab
+                            key="comments"
+                            title={
+                              <div className="flex items-center gap-2">
+                                <MessageSquare className="h-4 w-4" />
+                                <span>
+                                  Comentarios (
+                                  {selectedClaim?.comentarios.length || 0})
+                                </span>
+                              </div>
+                            }
+                          >
+                            <div className="p-4 space-y-4">
+                              <div className="space-y-3">
+                                {selectedClaim?.comentarios.map((comment) => (
+                                  <div
+                                    key={comment.id}
+                                    className="flex gap-3 p-3 bg-default-50 dark:bg-default-100/50 rounded-lg"
+                                  >
+                                    <Avatar
+                                      className="flex-shrink-0"
+                                      name={comment.autor.nombre}
+                                      size="sm"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className="font-medium text-sm">
+                                          {comment.autor.nombre}
+                                        </span>
+                                        {comment.es_interno && (
+                                          <Chip
+                                            color="warning"
+                                            size="sm"
+                                            variant="flat"
+                                          >
+                                            Interno
+                                          </Chip>
+                                        )}
+                                        <span className="text-xs text-muted-foreground">
+                                          {formatDate(comment.fecha_creacion)}
+                                        </span>
+                                      </div>
+                                      <p className="text-sm text-foreground">
+                                        {comment.contenido}
+                                      </p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              <Divider />
+                              <div className="space-y-2">
+                                {commentError && (
+                                  <div className="bg-red-50 border border-red-200 rounded-lg p-2">
+                                    <p className="text-sm text-red-700">
+                                      {commentError}
+                                    </p>
+                                  </div>
+                                )}
+                                <Textarea
+                                  disabled={isSubmittingComment}
+                                  minRows={3}
+                                  placeholder="Agregar un comentario..."
+                                  value={newComment}
+                                  onChange={(e) =>
+                                    setNewComment(e.target.value)
+                                  }
+                                />
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button
+                                    disabled={isSubmittingComment}
+                                    size="sm"
+                                    variant="bordered"
+                                    onClick={() =>
+                                      setIsCommentInternal(!isCommentInternal)
+                                    }
+                                  >
+                                    {isCommentInternal ? "Interno" : "Público"}
+                                  </Button>
+                                  <Button
+                                    color="primary"
+                                    disabled={
+                                      isSubmittingComment || !newComment.trim()
+                                    }
+                                    isLoading={isSubmittingComment}
+                                    size="sm"
+                                    startContent={<Send className="h-4 w-4" />}
+                                    onClick={handleSendComment}
+                                  >
+                                    {isSubmittingComment
+                                      ? "Enviando..."
+                                      : "Enviar"}
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </Tab>
+                          <Tab
+                            key="attachments"
+                            title={
+                              <div className="flex items-center gap-2">
+                                <Paperclip className="h-4 w-4" />
+                                <span>
+                                  Adjuntos (
+                                  {selectedClaim?.adjuntos.length || 0})
+                                </span>
+                              </div>
+                            }
+                          >
+                            <div className="p-4 space-y-3">
+                              {(selectedClaim?.adjuntos.length || 0) > 0 ? (
+                                selectedClaim?.adjuntos.map((adjunto) => (
+                                  <Card
+                                    key={adjunto.id}
+                                    className="bg-default-50"
+                                  >
+                                    <CardBody className="flex flex-row items-center justify-between">
+                                      <div className="flex items-center gap-3">
+                                        <Paperclip className="h-4 w-4 text-muted-foreground" />
+                                        <div className="flex-1">
+                                          <p className="font-medium text-sm">
+                                            {adjunto.nombre}
+                                          </p>
+                                          <p className="text-xs text-muted-foreground">
+                                            {(adjunto.tamano / 1024).toFixed(2)}{" "}
+                                            KB • {adjunto.mime_type}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <Button
+                                        isIconOnly
+                                        size="sm"
+                                        variant="light"
+                                      >
+                                        <Download className="h-4 w-4" />
+                                      </Button>
+                                    </CardBody>
+                                  </Card>
+                                ))
+                              ) : (
+                                <p className="text-sm text-muted-foreground">
+                                  No hay adjuntos disponibles
+                                </p>
+                              )}
+                            </div>
+                          </Tab>
+                          <Tab
+                            key="history"
+                            title={
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4" />
+                                <span>
+                                  Historial (
+                                  {selectedClaim?.historial_estado.length || 0})
+                                </span>
+                              </div>
+                            }
+                          >
+                            <div className="p-4">
+                              <div className="space-y-4">
+                                {selectedClaim?.historial_estado.map((item) => (
+                                  <div key={item.id} className="flex gap-3">
+                                    <div className="flex flex-col items-center">
+                                      <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-full">
+                                        <CheckCircle2 className="h-4 w-4 text-purple-600" />
+                                      </div>
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="font-medium text-sm">
+                                        {item.estado_anterior?.nombre} →{" "}
+                                        {item.estado_nuevo.nombre}
+                                      </p>
+                                      {item.motivo && (
+                                        <p className="text-xs text-muted-foreground">
+                                          Motivo: {item.motivo}
+                                        </p>
+                                      )}
+                                      <p className="text-xs text-muted-foreground">
+                                        {formatDate(item.fecha_cambio)}{" "}
+                                        {item.usuario &&
+                                          `- ${item.usuario.nombre}`}
+                                      </p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </Tab>
+                        </Tabs>
+                      </CardBody>
+                    </Card>
+                  </div>
+
+                  {/* Sidebar */}
+                  <div className="space-y-4">
+                    {/* Claim Info */}
+                    <Card>
+                      <CardBody className="space-y-3">
+                        <h3 className="font-semibold mb-2">
+                          Información del Reclamo
+                        </h3>
+                        <div className="flex items-start gap-2">
+                          <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-xs text-muted-foreground">
+                              Empresa
+                            </p>
+                            <p className="text-sm font-medium">
+                              {selectedClaim?.empresa.nombre}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-xs text-muted-foreground">
+                              Fecha de Creación
+                            </p>
+                            <p className="text-sm font-medium">
+                              {formatDateOnly(selectedClaim?.fecha_creacion)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-xs text-muted-foreground">
+                              País
+                            </p>
+                            <p className="text-sm font-medium">
+                              {selectedClaim?.pais || "N/A"}
+                            </p>
+                          </div>
+                        </div>
+                      </CardBody>
+                    </Card>
+
+                    {/* Complainant Info */}
+                    {!selectedClaim?.denunciante.anonimo && (
+                      <Card>
+                        <CardBody className="space-y-3">
+                          <h3 className="font-semibold mb-2">
+                            Información del Denunciante
+                          </h3>
+                          <div className="flex items-start gap-2">
+                            <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-xs text-muted-foreground">
+                                Nombre
+                              </p>
+                              <p className="text-sm font-medium">
+                                {selectedClaim?.denunciante.nombre || "N/A"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-xs text-muted-foreground">
+                                Email
+                              </p>
+                              <p className="text-sm font-medium">
+                                {selectedClaim?.denunciante.email || "N/A"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-xs text-muted-foreground">
+                                Teléfono
+                              </p>
+                              <p className="text-sm font-medium">
+                                {selectedClaim?.denunciante.telefono || "N/A"}
+                              </p>
+                            </div>
+                          </div>
+                        </CardBody>
+                      </Card>
+                    )}
+                    {selectedClaim?.denunciante.anonimo && (
+                      <Card className="bg-blue-50 border border-blue-200">
+                        <CardBody>
+                          <p className="text-sm text-blue-800">
+                            ℹ️ Este reclamo fue presentado de manera anónima
+                          </p>
+                        </CardBody>
+                      </Card>
+                    )}
+
+                    {/* Actions Card (Read Only) */}
+                    <Card>
+                      <CardBody className="space-y-4">
+                        <h3 className="font-semibold">Gestión</h3>
+                        {/* Priority (Read Only) */}
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1.5">
+                            Prioridad
+                          </p>
+                          <Chip
+                            color={
+                              priorityColors[
+                                selectedClaim?.prioridad as keyof typeof priorityColors
+                              ]
+                            }
+                            size="sm"
+                            variant="flat"
+                          >
+                            {selectedClaim?.prioridad}
+                          </Chip>
+                        </div>
+
+                        {/* Supervisor (Read Only) */}
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1.5">
+                            Supervisor Asignado
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <Avatar
+                              name={selectedClaim?.supervisor?.nombre}
+                              size="sm"
+                            />
+                            <div>
+                              <p className="text-sm font-medium">
+                                {selectedClaim?.supervisor
+                                  ? `${selectedClaim.supervisor.nombre} ${selectedClaim.supervisor.apellido}`
+                                  : "Sin asignar"}
+                              </p>
+                              {selectedClaim?.supervisor && (
+                                <p className="text-xs text-muted-foreground">
+                                  {selectedClaim.supervisor.email}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </CardBody>
+                    </Card>
+                  </div>
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="light" onPress={onClose}>
+                  Cerrar
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import type { TimeframeMetadata } from "@/lib/form-metadata";
+import { type TimeframeMetadata, FALLBACK_TIMEFRAMES } from "@/lib/form-metadata";
 
 import { useEffect, useState } from "react";
 import { Card, CardBody, Chip } from "@heroui/react";
@@ -47,13 +47,14 @@ const DEFAULT_STYLE = {
 interface TimeStepProps {
   readonly formData: Record<string, any>;
   readonly onUpdate: (data: Record<string, any>) => void;
-  readonly timeframes: TimeframeMetadata[];
 }
 
-export function TimeStep({ formData, onUpdate, timeframes }: TimeStepProps) {
+export function TimeStep({ formData, onUpdate }: TimeStepProps) {
   const [selectedTime, setSelectedTime] = useState<string>(
     formData.timeframe || "",
   );
+
+  // 🔄 Sincronizar cuando formData cambie desde afuera
 
   // 🔄 Sincronizar cuando formData cambie desde afuera
   useEffect(() => {
@@ -69,7 +70,7 @@ export function TimeStep({ formData, onUpdate, timeframes }: TimeStepProps) {
     });
   };
 
-  const selectedTimeData = timeframes.find(
+  const selectedTimeData = FALLBACK_TIMEFRAMES.find(
     (timeframe) => timeframe.id === selectedTime,
   );
   const selectedStyle =
@@ -90,7 +91,7 @@ export function TimeStep({ formData, onUpdate, timeframes }: TimeStepProps) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {timeframes.map((timeframe) => {
+        {FALLBACK_TIMEFRAMES.map((timeframe) => {
           const style = TIMEFRAME_STYLES[timeframe.id] ?? DEFAULT_STYLE;
           const Icon = style.icon;
           const isSelected = selectedTime === timeframe.id;

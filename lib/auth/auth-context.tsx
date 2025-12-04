@@ -21,6 +21,7 @@ interface AuthUser extends Usuario {
 
 interface AuthContextType {
   user: AuthUser | null;
+  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -34,6 +35,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -42,10 +44,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkSession = async () => {
     try {
-      const token = localStorage.getItem("auth_token");
+      const storedToken = localStorage.getItem("auth_token");
 
-      if (!token) {
+      if (!storedToken) {
         setIsLoading(false);
+        setToken(null);
 
         return;
       }
@@ -58,9 +61,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem("token_exp");
         localStorage.removeItem("user_data");
         setIsLoading(false);
+        setToken(null);
 
         return;
       }
+
+      setToken(storedToken);
 
       // Cargar datos del usuario desde localStorage
       const userData = localStorage.getItem("user_data");
@@ -86,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Guardar el token
       localStorage.setItem("auth_token", response.token);
       localStorage.setItem("token_exp", response.exp.toString());
+      setToken(response.token);
 
       // Si el login retorna información del usuario, usarla directamente
       if (response.user) {
@@ -296,6 +303,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem("token_exp");
       localStorage.removeItem("user_data");
       setUser(null);
+      setToken(null);
     }
   };
 
@@ -313,11 +321,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const getPrimaryRole = (): string | null => {
     if (!user || user.roles.length === 0) return null;
-    const roleName = user.roles[0].nombre.toLowerCase();
 
-    if (roleName.includes("admin")) return "admin";
-    if (roleName.includes("analista")) return "analista";
-    if (roleName.includes("supervisor")) return "supervisor";
+    return user.roles[0].nombre.toLowerCase();
+
+    // if (roleName.includes("admin")) return "admin";
+    // if (roleName.includes("analista")) return "analista";
+    // if (roleName.includes("supervisor")) return "supervisor";
 
     return null;
   };
@@ -326,6 +335,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
+        token,
         isAuthenticated: !!user,
         isLoading,
         login,

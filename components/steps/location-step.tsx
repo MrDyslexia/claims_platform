@@ -1,37 +1,72 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Card, CardBody, CardHeader, Button, Input } from "@heroui/react";
 import { Search, MapPin, Globe, CircleCheckBig } from "lucide-react";
 
+const COUNTRIES = [
+  "Argentina",
+  "Bolivia",
+  "Brasil",
+  "Chile",
+  "Colombia",
+  "Costa Rica",
+  "Cuba",
+  "Ecuador",
+  "El Salvador",
+  "España",
+  "Guatemala",
+  "Honduras",
+  "México",
+  "Nicaragua",
+  "Panamá",
+  "Paraguay",
+  "Perú",
+  "Puerto Rico",
+  "República Dominicana",
+  "Uruguay",
+  "Venezuela",
+  "Estados Unidos",
+  "Canadá",
+  "Francia",
+  "Alemania",
+  "Italia",
+  "Reino Unido",
+  "Portugal",
+  "Países Bajos",
+  "Bélgica",
+  "Suiza",
+  "Austria",
+  "Suecia",
+  "Noruega",
+  "Dinamarca",
+  "Australia",
+  "Nueva Zelanda",
+  "Japón",
+  "Corea del Sur",
+  "China",
+  "India",
+  "Singapur",
+];
+
 interface LocationStepProps {
-  readonly formData: Record<string, any>;
-  readonly onUpdate: (data: Record<string, any>) => void;
-  readonly countries: string[];
+  readonly formData: any;
+  readonly onUpdate: (data: any) => void;
 }
 
-export function LocationStep({
-  formData,
-  onUpdate,
-  countries,
-}: LocationStepProps) {
+export function LocationStep({ formData, onUpdate }: LocationStepProps) {
   const [selectedCountry, setSelectedCountry] = useState(
     formData.country || "",
   );
   const [searchTerm, setSearchTerm] = useState("");
 
-  // 🔄 Sincronizar cuando formData cambie desde afuera
-  useEffect(() => {
-    setSelectedCountry(formData.country || "");
-  }, [formData.country]);
-
-  const filteredCountries = countries.filter((country) =>
+  const filteredCountries = COUNTRIES.filter((country) =>
     country.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const handleCountrySelect = (country: string) => {
     setSelectedCountry(country);
-    onUpdate({ country });
+    onUpdate({ ...formData, country });
   };
 
   return (
@@ -85,7 +120,7 @@ export function LocationStep({
           <h2>
             {searchTerm
               ? `${filteredCountries.length} países encontrados`
-              : `${countries.length} países disponibles`}
+              : `${COUNTRIES.length} países disponibles`}
           </h2>
         </CardHeader>
         <CardBody>

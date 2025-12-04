@@ -1,6 +1,8 @@
 "use client";
 
-import { Card, CardBody, CardHeader } from "@heroui/react";
+import { useState, useEffect } from "react";
+import { Download } from "lucide-react";
+import { Card, CardBody, CardHeader, Input, Button } from "@heroui/react";
 import {
   BarChart,
   Bar,
@@ -17,47 +19,160 @@ import {
 } from "recharts";
 
 import { useAuth } from "@/lib/auth/auth-context";
+import {
+  fetchAnalystAnalytics,
+  generateReport,
+  type AnalystAnalyticsResponse,
+} from "@/lib/api/dashboard";
 
 export default function AnalystAnalytics() {
   const { user } = useAuth();
+  
+  const [dateRange, setDateRange] = useState(() => {
+    const now = new Date();
+    const chileTime = new Date(
+      now.toLocaleString("en-US", { timeZone: "America/Santiago" }),
+    );
+    const year = chileTime.getFullYear();
+    const month = String(chileTime.getMonth() + 1).padStart(2, "0");
+    const day = String(chileTime.getDate()).padStart(2, "0");
 
-  const weeklyData = [
-    { dia: "Lun", reclamos: 8, resueltos: 6 },
-    { dia: "Mar", reclamos: 12, resueltos: 10 },
-    { dia: "Mié", reclamos: 10, resueltos: 9 },
-    { dia: "Jue", reclamos: 15, resueltos: 11 },
-    { dia: "Vie", reclamos: 9, resueltos: 8 },
-    { dia: "Sáb", reclamos: 5, resueltos: 5 },
-    { dia: "Dom", reclamos: 3, resueltos: 3 },
-  ];
+    return {
+      start: `${year}-01-01`,
+      end: `${year}-${month}-${day}`,
+    };
+  });
+  const [stats, setStats] = useState<AnalystAnalyticsResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [generatingReport, setGeneratingReport] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const categoryPerformance = [
-    { categoria: "Producto", promedio: 3.2, objetivo: 4.0 },
-    { categoria: "Servicio", promedio: 4.5, objetivo: 4.0 },
-    { categoria: "Facturación", promedio: 2.8, objetivo: 4.0 },
-    { categoria: "Entrega", promedio: 5.1, objetivo: 4.0 },
-  ];
+  const handleSearch = async () => {
+    if (!dateRange.start || !dateRange.end) return;
+    
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await fetchAnalystAnalytics(
+        dateRange.start,
+        dateRange.end,
+      );
+      setStats(result);
+    } catch (err: any) {
+      // console.error("Error fetching analytics:", err);
+      setError(err.message || "Error al cargar datos");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const satisfactionTrend = [
-    { mes: "Ene", satisfaccion: 4.2 },
-    { mes: "Feb", satisfaccion: 4.3 },
-    { mes: "Mar", satisfaccion: 4.1 },
-    { mes: "Abr", satisfaccion: 4.4 },
-    { mes: "May", satisfaccion: 4.5 },
-    { mes: "Jun", satisfaccion: 4.6 },
-  ];
+  const handleGenerateReport = async () => {
+    try {
+      setGeneratingReport(true);
+      setSuccessMessage(null);
+      setError(null);
+
+      const result = await generateReport(dateRange.start, dateRange.end);
+      
+      setSuccessMessage(`Reporte generado: ${result.filename}`);
+      
+      // Limpiar mensaje de éxito después de 3 segundos
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
+  useEffect(() => {
+    handleSearch();
+  }, []);
+
+  // Datos para gráficos (usar datos reales o vacíos si no hay)
+  const weeklyData =
+    stats?.dailyPerformance.map((d) => ({
+      dia: d.fecha,
+      reclamos: d.recibidos,
+      resueltos: d.resueltos,
+    })) || [];
+
+  const categoryPerformance =
+    stats?.claimsByCategory.map((c) => ({
+      categoria: c.categoria,
+      cantidad: c.cantidad,
+    })) || [];
+
+  const claimsByType =
+    stats?.claimsByType.map((t) => ({
+      tipo: t.tipo,
+      cantidad: t.cantidad,
+    })) || [];
+
+  const satisfactionTrend =
+    stats?.satisfactionTrend.map((s) => ({
+      mes: s.fecha,
+      satisfaccion: s.satisfaccion,
+    })) || [];
 
   return (
     <div className="p-8 space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">
-          Análisis Detallado
-        </h1>
-        <p className="text-default-500">
-          Análisis profundo de métricas de {user?.empresa?.nombre}
-        </p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground mb-2">
+            Análisis Detallado
+          </h1>
+          <p className="text-default-500">
+            Análisis profundo de métricas de {user?.empresa?.nombre}
+          </p>
+        </div>
+        
+        <div className="flex items-end gap-4">
+          <Input
+            className="w-48"
+            label="Fecha Inicio"
+            type="date"
+            value={dateRange.start}
+            onChange={(e) =>
+              setDateRange((prev) => ({ ...prev, start: e.target.value }))
+            }
+          />
+          <Input
+            className="w-48"
+            label="Fecha Fin"
+            type="date"
+            value={dateRange.end}
+            onChange={(e) =>
+              setDateRange((prev) => ({ ...prev, end: e.target.value }))
+            }
+          />
+          <Button color="primary" isLoading={loading} onPress={handleSearch}>
+            Actualizar
+          </Button>
+          <Button
+            color="secondary"
+            isLoading={generatingReport}
+            onPress={handleGenerateReport}
+            startContent={!generatingReport && <Download className="w-4 h-4" />}
+          >
+            Generar Reporte
+          </Button>
+        </div>
       </div>
+
+      {error && (
+        <div className="p-4 bg-danger-50 text-danger-600 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="p-4 bg-success-50 text-success-600 rounded-lg">
+          {successMessage}
+        </div>
+      )}
 
       {/* Weekly Performance */}
       <Card className="border-none shadow-sm">
@@ -113,33 +228,61 @@ export default function AnalystAnalytics() {
       </Card>
 
       {/* Category Performance */}
-      <Card className="border-none shadow-sm">
-        <CardHeader className="pb-0">
-          <h3 className="text-lg font-semibold">Rendimiento por Categoría</h3>
-          <p className="text-sm text-default-500">
-            Tiempo promedio de resolución vs objetivo (días)
-          </p>
-        </CardHeader>
-        <CardBody>
-          <ResponsiveContainer height={350} width="100%">
-            <BarChart data={categoryPerformance}>
-              <CartesianGrid stroke="#333" strokeDasharray="3 3" />
-              <XAxis dataKey="categoria" stroke="#888" />
-              <YAxis stroke="#888" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#18181b",
-                  border: "1px solid #333",
-                  borderRadius: "8px",
-                }}
-              />
-              <Legend />
-              <Bar dataKey="promedio" fill="#3b82f6" name="Promedio Actual" />
-              <Bar dataKey="objetivo" fill="#10b981" name="Objetivo" />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardBody>
-      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="border-none shadow-sm">
+          <CardHeader className="pb-0">
+            <h3 className="text-lg font-semibold">Reclamos por Categoría</h3>
+            <p className="text-sm text-default-500">
+              Distribución de reclamos según categoría
+            </p>
+          </CardHeader>
+          <CardBody>
+            <ResponsiveContainer height={350} width="100%">
+              <BarChart data={categoryPerformance}>
+                <CartesianGrid stroke="#333" strokeDasharray="3 3" />
+                <XAxis dataKey="categoria" stroke="#888" />
+                <YAxis stroke="#888" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#18181b",
+                    border: "1px solid #333",
+                    borderRadius: "8px",
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="cantidad" fill="#3b82f6" name="Cantidad" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardBody>
+        </Card>
+
+        <Card className="border-none shadow-sm">
+          <CardHeader className="pb-0">
+            <h3 className="text-lg font-semibold">Reclamos por Tipo</h3>
+            <p className="text-sm text-default-500">
+              Distribución de reclamos según tipo
+            </p>
+          </CardHeader>
+          <CardBody>
+            <ResponsiveContainer height={350} width="100%">
+              <BarChart data={claimsByType}>
+                <CartesianGrid stroke="#333" strokeDasharray="3 3" />
+                <XAxis dataKey="tipo" stroke="#888" />
+                <YAxis stroke="#888" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#18181b",
+                    border: "1px solid #333",
+                    borderRadius: "8px",
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="cantidad" fill="#10b981" name="Cantidad" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardBody>
+        </Card>
+      </div>
 
       {/* Satisfaction Trend */}
       <Card className="border-none shadow-sm">

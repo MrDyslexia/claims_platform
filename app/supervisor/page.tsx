@@ -1,6 +1,7 @@
 "use client";
 
-import { Card, CardBody, Button, Chip } from "@heroui/react";
+import { useEffect, useState } from "react";
+import { Card, CardBody, Button, Chip, Spinner } from "@heroui/react";
 import {
   Clock,
   CheckCircle2,
@@ -12,37 +13,71 @@ import {
 import Link from "next/link";
 
 import { useAuth } from "@/lib/auth/auth-context";
-import { mockClaims, getClaimWithRelations } from "@/lib/data";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003";
 
 export default function SupervisorDashboard() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!token) return;
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/dashboard/supervisor`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Error al cargar datos del dashboard");
+        }
+
+        const result = await response.json();
+
+        setData(result);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Error desconocido");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (token) {
+      fetchDashboardData();
+    }
+  }, [token]);
 
   // Validar que el usuario esté cargado
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-default-500">Cargando...</p>
+        <Spinner label="Cargando..." />
       </div>
     );
   }
 
-  // Filter claims for supervisor's company
-  const companyClaims = mockClaims.filter(
-    (c) => c.id_empresa === user.empresa_id,
-  );
-  const assignedClaims = companyClaims.filter(
-    (c) => c.asignado_a === user.id_usuario,
-  );
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Spinner label="Cargando dashboard..." />
+      </div>
+    );
+  }
 
-  const pendingClaims = assignedClaims.filter((c) => c.id_estado === 1); // pendiente
-  const inProgressClaims = assignedClaims.filter((c) => c.id_estado === 2); // en_revision
-  const resolvedClaims = assignedClaims.filter((c) => c.id_estado === 4); // resuelto
-  const criticalClaims = assignedClaims.filter((c) => c.prioridad === "alta");
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-danger">Error: {error}</p>
+      </div>
+    );
+  }
 
-  const recentClaims = assignedClaims
-    .slice(0, 5)
-    .map((claim) => getClaimWithRelations(claim.id_denuncia))
-    .filter((claim) => claim !== null); // Filtrar nulls
+  const { metrics, data: recentClaims } = data || { metrics: {}, data: [] };
 
   const getStatusColor = (estadoId: number) => {
     switch (estadoId) {
@@ -60,7 +95,7 @@ export default function SupervisorDashboard() {
   };
 
   const getPriorityColor = (prioridad: string) => {
-    switch (prioridad) {
+    switch (prioridad?.toLowerCase()) {
       case "alta":
       case "critica":
         return "danger";
@@ -98,7 +133,7 @@ export default function SupervisorDashboard() {
             <div>
               <p className="text-default-500 text-sm mb-1">Pendientes</p>
               <p className="text-3xl font-bold text-foreground">
-                {pendingClaims.length}
+                {metrics.pending_claims || 0}
               </p>
             </div>
           </CardBody>
@@ -114,7 +149,7 @@ export default function SupervisorDashboard() {
             <div>
               <p className="text-default-500 text-sm mb-1">En Revisión</p>
               <p className="text-3xl font-bold text-foreground">
-                {inProgressClaims.length}
+                {metrics.in_progress_claims || 0}
               </p>
             </div>
           </CardBody>
@@ -130,7 +165,7 @@ export default function SupervisorDashboard() {
             <div>
               <p className="text-default-500 text-sm mb-1">Resueltos</p>
               <p className="text-3xl font-bold text-foreground">
-                {resolvedClaims.length}
+                {metrics.resolved_claims || 0}
               </p>
             </div>
           </CardBody>
@@ -146,7 +181,7 @@ export default function SupervisorDashboard() {
             <div>
               <p className="text-default-500 text-sm mb-1">Críticos</p>
               <p className="text-3xl font-bold text-foreground">
-                {criticalClaims.length}
+                {metrics.critical_claims || 0}
               </p>
             </div>
           </CardBody>
@@ -181,11 +216,11 @@ export default function SupervisorDashboard() {
                 No hay reclamos asignados
               </p>
             ) : (
-              recentClaims.map((claim) => (
+              recentClaims.map((claim: any) => (
                 <Link
                   key={claim.id_denuncia}
                   className="block p-4 rounded-lg border border-divider hover:border-primary transition-colors"
-                  href={`/supervisor/claims/${claim.id_denuncia}`}
+                  href={`/supervisor/claims`} // Redirige a la lista general ya que el detalle es un modal
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
@@ -253,7 +288,7 @@ export default function SupervisorDashboard() {
               fullWidth
               as={Link}
               color="warning"
-              href="/supervisor/pending"
+              href="/supervisor/pending" // Redirige a claims, el filtro se haría allí si se implementa
               variant="flat"
             >
               Ver Pendientes
@@ -295,7 +330,7 @@ export default function SupervisorDashboard() {
               fullWidth
               as={Link}
               color="success"
-              href="/supervisor/resolved"
+              href="/supervisor/resolved" // Redirige a claims
               variant="flat"
             >
               Ver Resueltos

@@ -1,10 +1,5 @@
 "use client";
 
-import type {
-  CategoryMetadata,
-  SubcategoryMetadata,
-} from "@/lib/form-metadata";
-
 import { useEffect, useState } from "react";
 import {
   Accordion,
@@ -13,17 +8,51 @@ import {
   CheckboxGroup,
 } from "@heroui/react";
 
+const CATEGORIES = {
+  "Servicio al Cliente": [
+    "Atención deficiente",
+    "Demoras en respuesta",
+    "Información incorrecta",
+    "Falta de seguimiento",
+    "Personal no capacitado",
+    "Horarios de atención",
+    "Canales de comunicación",
+    "Resolución de problemas",
+    "Tiempo de espera",
+    "Calidad del servicio",
+  ],
+  "Productos y Servicios": [
+    "Calidad del producto",
+    "Defectos de fabricación",
+    "Garantías y devoluciones",
+    "Precios y facturación",
+    "Disponibilidad",
+    "Entrega y logística",
+    "Instalación y configuración",
+    "Mantenimiento",
+    "Actualizaciones",
+    "Compatibilidad",
+  ],
+  "Procesos Internos": [
+    "Políticas y procedimientos",
+    "Sistemas informáticos",
+    "Gestión de datos",
+    "Seguridad y privacidad",
+    "Cumplimiento normativo",
+    "Recursos humanos",
+    "Capacitación",
+    "Comunicación interna",
+    "Gestión de calidad",
+    "Mejora continua",
+  ],
+};
+
 interface CategoryStepProps {
-  readonly formData: Record<string, any>;
-  readonly onUpdate: (data: Record<string, any>) => void;
-  readonly categories: CategoryMetadata[];
+  readonly formData: any;
+  readonly onUpdate: (data: any) => void;
 }
 
-export function CategoryStep({
-  formData,
-  onUpdate,
-  categories,
-}: CategoryStepProps) {
+export function CategoryStep({ formData, onUpdate }: CategoryStepProps) {
   const [selectedCategory, setSelectedCategory] = useState(
     formData.category || "",
   );
@@ -33,33 +62,24 @@ export function CategoryStep({
 
   // 🔄 sincronizar cuando formData cambie desde afuera
   useEffect(() => {
-    setSelectedCategory(formData.category || "");
-    setSelectedSubcategory(formData.subcategory || "");
-  }, [formData.category, formData.subcategory]);
+    if (formData.category !== selectedCategory) {
+      setSelectedCategory(formData.category || "");
+    }
+    if (formData.subcategory !== selectedSubcategory) {
+      setSelectedSubcategory(formData.subcategory || "");
+    }
+  }, [formData]);
 
-  const handleCategorySelect = (category: CategoryMetadata) => {
-    setSelectedCategory(category.id);
+  const handleCategorySelect = (category: string) => {
+    setSelectedCategory(category);
     setSelectedSubcategory("");
-    onUpdate({
-      category: category.id,
-      categoryName: category.name,
-      subcategory: "",
-      subcategoryName: "",
-    });
+    onUpdate({ ...formData, category, subcategory: "" });
   };
 
-  const handleSubcategorySelect = (
-    category: CategoryMetadata,
-    subcategory: SubcategoryMetadata,
-  ) => {
-    setSelectedCategory(category.id);
-    setSelectedSubcategory(subcategory.code);
-    onUpdate({
-      category: category.id,
-      categoryName: category.name,
-      subcategory: subcategory.code,
-      subcategoryName: subcategory.name,
-    });
+  const handleSubcategorySelect = (subcategory: string) => {
+    setSelectedSubcategory(subcategory);
+    onUpdate({ ...formData, category: selectedCategory, subcategory });
+    console.log("[v0] Selected subcategory:", subcategory);
   };
 
   return (
@@ -70,35 +90,33 @@ export function CategoryStep({
           Selecciona la categoría principal
         </h3>
         <Accordion variant="bordered">
-          {categories.map((category: CategoryMetadata) => (
-            <AccordionItem
-              key={category.id}
-              title={category.name}
-              value={category.id}
-              onPress={() => handleCategorySelect(category)}
-            >
-              <CheckboxGroup
-                value={
-                  selectedCategory === category.id ? [selectedSubcategory] : []
-                }
+          {(Object.keys(CATEGORIES) as Array<keyof typeof CATEGORIES>).map(
+            (category) => (
+              <AccordionItem
+                key={category}
+                title={category}
+                value={category}
+                onPress={() => handleCategorySelect(category)}
               >
-                {category.subcategories.map(
-                  (subcategory: SubcategoryMetadata) => (
+                <CheckboxGroup
+                  value={
+                    selectedCategory === category ? [selectedSubcategory] : []
+                  }
+                >
+                  {CATEGORIES[category].map((subcategory) => (
                     <Checkbox
-                      key={subcategory.code}
-                      disabled={selectedCategory !== category.id}
-                      value={subcategory.code}
-                      onChange={() =>
-                        handleSubcategorySelect(category, subcategory)
-                      }
+                      key={subcategory}
+                      disabled={selectedCategory !== category}
+                      value={subcategory}
+                      onChange={() => handleSubcategorySelect(subcategory)}
                     >
-                      {subcategory.name}
+                      {subcategory}
                     </Checkbox>
-                  ),
-                )}
-              </CheckboxGroup>
-            </AccordionItem>
-          ))}
+                  ))}
+                </CheckboxGroup>
+              </AccordionItem>
+            ),
+          )}
         </Accordion>
       </div>
     </div>

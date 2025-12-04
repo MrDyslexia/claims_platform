@@ -484,3 +484,41 @@ export function useGetListaCompletaUsuarios(token: string | null) {
     },
   };
 }
+
+/**
+ * Alternar estado activo de un usuario
+ * Requiere autenticación y permisos de administrador
+ */
+export async function toggleUsuarioActivo(
+  token: string,
+  id: number,
+): Promise<{ ok: boolean; message: string; activo: number }> {
+  if (!token) {
+    throw new Error("Token de autenticación requerido");
+  }
+
+  const response = await fetch(`${API_BASE_URL}/usuarios/${id}/toggle-activo`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+
+    if (response.status === 401) {
+      throw new Error("No autenticado. Por favor inicie sesión.");
+    }
+    if (response.status === 403) {
+      throw new Error("No tiene permisos para realizar esta acción.");
+    }
+    if (response.status === 404) {
+      throw new Error("Usuario no encontrado.");
+    }
+    throw new Error(errorData.error || "Error al cambiar estado del usuario");
+  }
+
+  return response.json();
+}

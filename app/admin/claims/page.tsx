@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Avatar,
   Button,
@@ -19,6 +19,8 @@ import {
   ModalFooter,
   ModalHeader,
   Pagination,
+  Select,
+  SelectItem,
   Spinner,
   Tab,
   Table,
@@ -49,7 +51,7 @@ import {
   User,
 } from "lucide-react";
 
-import { useGetAllClaims, createComment, type Reclamo } from "@/lib/api/claims";
+import { type Reclamo } from "@/lib/api/claims";
 
 const priorityColors = {
   baja: "default",
@@ -57,6 +59,8 @@ const priorityColors = {
   alta: "danger",
   critica: "danger",
 } as const;
+
+
 
 const statusColors: Record<string, any> = {
   Pendiente: "primary",
@@ -66,20 +70,28 @@ const statusColors: Record<string, any> = {
   Cerrado: "default",
 };
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003";
+
 export default function ClaimsPage() {
   const { isOpen, onOpen, onClose } = useDisclosure();
   // Obtener token de localStorage
   const [token, setToken] = useState<string | null>(null);
-  const { data, loading, error, refetch } = useGetAllClaims(token);
+  const [claims, setClaims] = useState<Reclamo[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [selectedClaim, setSelectedClaim] = useState<Reclamo | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [newComment, setNewComment] = useState("");
-  const [isCommentInternal, setIsCommentInternal] = useState(false);
+  const [isCommentInternal, setIsCommentInternal] = useState(true); // Changed default to true
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
+  const [supervisors, setSupervisors] = useState<any[]>([]);
+  const [isUpdatingPriority, setIsUpdatingPriority] = useState(false);
+  const [isAssigningSupervisor, setIsAssigningSupervisor] = useState(false);
   const rowsPerPage = 10;
 
   // Helper para formatear fechas de forma segura
@@ -153,21 +165,74 @@ export default function ClaimsPage() {
   };
 
   // Cargar token de localStorage al montar
-  React.useEffect(() => {
+  useEffect(() => {
     const storedToken = localStorage.getItem("auth_token");
 
     setToken(storedToken);
   }, []);
 
-  const handleSendComment = async () => {
-    if (!newComment.trim()) {
-      setCommentError("El comentario no puede estar vacío");
+  const fetchClaims = useCallback(async () => {
+    if (!token) return;
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/denuncias/all`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-      return;
+      if (response.ok) {
+        const data = await response.json();
+
+        setClaims(data.reclamos || []);
+      } else {
+        // Handle error, e.g., set an error state
+      }
+    } catch {
+      // console.error("Error fetching claims:", error);
+      setError("Error al cargar reclamos");
+    } finally {
+      setIsLoading(false);
     }
+  }, [token]);
 
-    if (!selectedClaim) {
-      setCommentError("No hay reclamo seleccionado");
+  const fetchSupervisors = useCallback(async () => {
+    if (!token) return;
+    try {
+      // Usamos el endpoint de lista completa y filtramos en el frontend por ahora
+      // Idealmente deberíamos tener un endpoint específico o filtrar en el backend
+      const response = await fetch(
+        `${API_BASE_URL}/usuarios/admin/lista-completa?limit=100`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const supervisorUsers = data.usuarios.filter((u: any) =>
+          u.roles.some((r: any) => r.nombre.toUpperCase() === "SUPERVISOR"),
+        );
+
+        setSupervisors(supervisorUsers);
+      }
+    } catch {
+      // console.error("Error fetching supervisors:", error);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (token) {
+      fetchClaims();
+      fetchSupervisors();
+    }
+  }, [token, fetchClaims, fetchSupervisors]);
+
+  const handleSendComment = async () => {
+    if (!selectedClaim || !newComment.trim()) {
+      setCommentError("El comentario no puede estar vacío");
 
       return;
     }
@@ -176,21 +241,45 @@ export default function ClaimsPage() {
     setCommentError(null);
 
     try {
-      const result = await createComment(
-        selectedClaim.id,
-        token || "",
-        newComment.trim(),
-        isCommentInternal,
+      const response = await fetch(
+        `${API_BASE_URL}/denuncias/${selectedClaim.id}/comentarios`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            contenido: newComment,
+            es_interno: isCommentInternal,
+          }),
+        },
       );
 
-      // Agregar el nuevo comentario a la lista
-      if (selectedClaim.comentarios) {
-        selectedClaim.comentarios.push(result.comentario);
+      if (!response.ok) {
+        throw new Error("Error al enviar comentario");
       }
 
-      // Limpiar el formulario
       setNewComment("");
-      setIsCommentInternal(false);
+      // Recargar reclamos para ver el nuevo comentario
+      await fetchClaims();
+      // Actualizar el reclamo seleccionado también
+      const claimsResponse = await fetch(`${API_BASE_URL}/denuncias/all`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (claimsResponse.ok) {
+        const data = await claimsResponse.json();
+        const allClaims = data.reclamos || [];
+        const refreshedClaim = allClaims.find(
+          (c: any) => c.id === selectedClaim.id,
+        );
+
+        if (refreshedClaim) {
+          setSelectedClaim(refreshedClaim);
+        }
+        setClaims(allClaims); // Update the main claims list
+      }
     } catch (err) {
       setCommentError(
         err instanceof Error ? err.message : "Error al enviar comentario",
@@ -200,7 +289,87 @@ export default function ClaimsPage() {
     }
   };
 
-  const filteredClaims = (data?.reclamos || []).filter((claim) => {
+  const handlePriorityChange = async (newPriority: string) => {
+    if (!selectedClaim) return;
+    setIsUpdatingPriority(true);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/denuncias/${selectedClaim.id}/prioridad`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ prioridad: newPriority }),
+        },
+      );
+
+      if (response.ok) {
+        // Refresh claims
+        await fetchClaims();
+        // Update local state
+        setSelectedClaim({ ...selectedClaim, prioridad: newPriority as any });
+      } else {
+        const errorData = await response.json();
+
+        throw new Error(errorData.error || "Failed to update priority");
+      }
+    } catch {
+      // console.error("Error updating priority:", error);
+    } finally {
+      setIsUpdatingPriority(false);
+    }
+  };
+
+  const handleAssignSupervisor = async (supervisorId: string) => {
+    if (!selectedClaim) return;
+    setIsAssigningSupervisor(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/denuncias/asignar`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          denuncia_id: selectedClaim.id,
+          usuario_id: Number(supervisorId),
+        }),
+      });
+
+      if (response.ok) {
+        await fetchClaims();
+        // Update local state logic if needed (e.g. show assigned supervisor)
+        // For now, refetching claims will update the selectedClaim if it's still open
+        const claimsResponse = await fetch(`${API_BASE_URL}/denuncias/all`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (claimsResponse.ok) {
+          const data = await claimsResponse.json();
+          const allClaims = data.reclamos || [];
+          const refreshedClaim = allClaims.find(
+            (c: any) => c.id === selectedClaim.id,
+          );
+
+          if (refreshedClaim) {
+            setSelectedClaim(refreshedClaim);
+          }
+          setClaims(allClaims);
+        }
+      } else {
+        throw new Error("Failed to assign supervisor");
+      }
+    } catch {
+      // console.error("Error assigning supervisor:", error);
+    } finally {
+      setIsAssigningSupervisor(false);
+    }
+  };
+
+  const filteredClaims = (claims || []).filter((claim) => {
+    // Use local claims state
     const matchesSearch =
       claim.numero.toLowerCase().includes(searchQuery.toLowerCase()) ||
       claim.tipo.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -258,7 +427,7 @@ export default function ClaimsPage() {
                 className="bg-red-100 text-red-700 hover:bg-red-200"
                 size="sm"
                 variant="flat"
-                onClick={() => refetch()}
+                onClick={() => fetchClaims()}
               >
                 Reintentar
               </Button>
@@ -325,7 +494,7 @@ export default function ClaimsPage() {
             <Button
               startContent={<Download className="h-4 w-4" />}
               variant="bordered"
-              onClick={() => refetch()}
+              onClick={() => fetchClaims()}
             >
               Actualizar
             </Button>
@@ -334,7 +503,7 @@ export default function ClaimsPage() {
       </Card>
 
       {/* Loading State */}
-      {loading && (
+      {isLoading && (
         <Card>
           <CardBody className="flex flex-row items-center justify-center gap-3 py-8">
             <Spinner size="lg" />
@@ -346,7 +515,7 @@ export default function ClaimsPage() {
       )}
 
       {/* Claims Table */}
-      {!loading && (
+      {!isLoading && (
         <Card>
           <CardBody className="p-0">
             <Table
@@ -371,6 +540,7 @@ export default function ClaimsPage() {
                 <TableColumn>EMPRESA</TableColumn>
                 <TableColumn>ESTADO</TableColumn>
                 <TableColumn>PRIORIDAD</TableColumn>
+                <TableColumn>RESPONSABLE</TableColumn>
                 <TableColumn>FECHA</TableColumn>
               </TableHeader>
               <TableBody>
@@ -409,6 +579,20 @@ export default function ClaimsPage() {
                       >
                         {claim.prioridad}
                       </Chip>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <p className="text-bold text-small capitalize">
+                          {claim.supervisor
+                            ? `${claim.supervisor.nombre}`
+                            : "Sin asignar"}
+                        </p>
+                        {claim.supervisor && (
+                          <p className="text-bold text-tiny capitalize text-default-400">
+                            {claim.supervisor.email}
+                          </p>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       {formatDateOnly(claim.fecha_creacion)}
@@ -719,7 +903,7 @@ export default function ClaimsPage() {
                               País
                             </p>
                             <p className="text-sm font-medium">
-                              {selectedClaim?.denunciante.pais || "N/A"}
+                              {selectedClaim?.pais || "N/A"}
                             </p>
                           </div>
                         </div>
@@ -778,6 +962,62 @@ export default function ClaimsPage() {
                         </CardBody>
                       </Card>
                     )}
+
+                    {/* Actions Card */}
+                    <Card>
+                      <CardBody className="space-y-4">
+                        <h3 className="font-semibold">Gestión</h3>
+                        {/* Priority Selector */}
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1.5">
+                            Prioridad
+                          </p>
+                          <Select
+                            aria-label="Seleccionar prioridad"
+                            className="max-w-xs"
+                            defaultSelectedKeys={[
+                              selectedClaim?.prioridad || "MEDIA",
+                            ]}
+                            isDisabled={isUpdatingPriority}
+                            onChange={(e) =>
+                              handlePriorityChange(e.target.value)
+                            }
+                          >
+                            <SelectItem key="baja">Baja</SelectItem>
+                            <SelectItem key="media">Media</SelectItem>
+                            <SelectItem key="alta">Alta</SelectItem>
+                            <SelectItem key="critica">Crítica</SelectItem>
+                          </Select>
+                        </div>
+
+                        {/* Supervisor Assignment */}
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1.5">
+                            Asignar Supervisor
+                          </p>
+                          <Select
+                            aria-label="Asignar supervisor"
+                            className="max-w-xs"
+                            isDisabled={isAssigningSupervisor}
+                            onChange={(e) =>
+                              handleAssignSupervisor(e.target.value)
+                            }
+                            placeholder="Seleccionar supervisor"
+                            selectedKeys={
+                              selectedClaim?.supervisor?.id
+                                ? [String(selectedClaim.supervisor.id)]
+                                : []
+                            }
+                          >
+                            {supervisors.map((supervisor) => (
+                              <SelectItem key={supervisor.id_usuario}>
+                                {`${supervisor.nombre} ${supervisor.apellido}`}
+                              </SelectItem>
+                            ))}
+                          </Select>
+                        </div>
+                      </CardBody>
+                    </Card>
                   </div>
                 </div>
               </ModalBody>

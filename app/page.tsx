@@ -3,6 +3,7 @@
 import { Button } from "@heroui/button";
 import { Card, CardBody } from "@heroui/card";
 import Link from "next/link";
+import Image from "next/image";
 import { Search } from "lucide-react";
 import { useState } from "react";
 
@@ -13,17 +14,34 @@ export default function HomePage() {
   const [isLoginDrawerOpen, setIsLoginDrawerOpen] = useState(false);
 
   return (
-    <main className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
+    <main className="bg-background">
+      <div className="container mx-auto px-4 py-8 relative z-10">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-foreground mb-4">
-              Sistema de Reclamos Corporativos
+            <Image
+              alt="Belator group logo"
+              height={300}
+              src="/icon.svg"
+              style={{
+                backgroundColor: "white",
+                borderRadius: "50%",
+                alignSelf: "center",
+                justifySelf: "center",
+                marginBottom: "calc(var(--spacing) * 8)",
+                boxShadow: "0 12px 12px rgba(0, 0, 0, 0.1)",
+              }}
+              width={300}
+            />
+            <h1 className="text-4xl font-bold mb-8 text-[#202e5e]">
+              Sistema de Reclamos Grupo Belator
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6">
-              Presenta tu reclamo de manera segura y profesional. Nuestro
-              sistema te guiará paso a paso para documentar tu caso de forma
-              completa.
+              La “Línea de Denuncias” de Grupo Belator es una herramienta para
+              que cualquier persona pueda denunciar hechos o conductas que
+              constituyan o puedan constituir una violación de los principios y
+              valores de la Compañía, sus normas corporativas o las leyes
+              vigentes. La información entregada a través de la línea de
+              denuncias es estrictamente confidencial.
             </p>
 
             <div className="grid md:grid-cols-2 gap-4 mb-6">

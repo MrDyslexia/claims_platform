@@ -1,6 +1,6 @@
 "use client";
 
-import type { RelationshipMetadata } from "@/lib/form-metadata";
+import { type RelationshipMetadata, FALLBACK_RELATIONSHIPS } from "@/lib/form-metadata";
 
 import { useEffect, useState } from "react";
 import { Card, CardBody, Chip } from "@heroui/react";
@@ -51,13 +51,11 @@ const DEFAULT_STYLE = {
 interface RelationshipStepProps {
   readonly formData: Record<string, any>;
   readonly onUpdate: (data: Record<string, any>) => void;
-  readonly relationships: RelationshipMetadata[];
 }
 
 export function RelationshipStep({
   formData,
   onUpdate,
-  relationships,
 }: RelationshipStepProps) {
   const [selectedRelationship, setSelectedRelationship] = useState<string>(
     formData.relationship || "",
@@ -76,7 +74,7 @@ export function RelationshipStep({
     });
   };
 
-  const selectedRelationshipData = relationships.find(
+  const selectedRelationshipData = FALLBACK_RELATIONSHIPS.find(
     (relationship) => relationship.id === selectedRelationship,
   );
   const selectedStyle =
@@ -98,7 +96,7 @@ export function RelationshipStep({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {relationships.map((relationship) => {
+        {FALLBACK_RELATIONSHIPS.map((relationship) => {
           const style = RELATIONSHIP_STYLES[relationship.id] ?? DEFAULT_STYLE;
           const Icon = style.icon;
           const isSelected = selectedRelationship === relationship.id;

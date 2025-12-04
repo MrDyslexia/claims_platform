@@ -123,7 +123,7 @@ const FALLBACK_CATEGORIES: CategoryMetadata[] = [
   },
 ];
 
-const FALLBACK_RELATIONSHIPS: RelationshipMetadata[] = [
+export const FALLBACK_RELATIONSHIPS: RelationshipMetadata[] = [
   { id: "cliente", title: "Cliente", description: "Soy cliente de la empresa" },
   { id: "empleado", title: "Empleado", description: "Trabajo en la empresa" },
   {
@@ -142,50 +142,13 @@ const FALLBACK_RELATIONSHIPS: RelationshipMetadata[] = [
 
 const FALLBACK_COUNTRIES: string[] = [
   "Argentina",
-  "Bolivia",
-  "Brasil",
   "Chile",
-  "Colombia",
-  "Costa Rica",
-  "Cuba",
-  "Ecuador",
-  "El Salvador",
-  "España",
-  "Guatemala",
-  "Honduras",
-  "México",
-  "Nicaragua",
-  "Panamá",
-  "Paraguay",
   "Perú",
-  "Puerto Rico",
-  "República Dominicana",
-  "Uruguay",
-  "Venezuela",
-  "Estados Unidos",
-  "Canadá",
   "Francia",
-  "Alemania",
-  "Italia",
-  "Reino Unido",
-  "Portugal",
-  "Países Bajos",
-  "Bélgica",
-  "Suiza",
-  "Austria",
-  "Suecia",
-  "Noruega",
-  "Dinamarca",
-  "Australia",
-  "Nueva Zelanda",
-  "Japón",
-  "Corea del Sur",
-  "China",
-  "India",
-  "Singapur",
+  "Mexico",
 ];
 
-const FALLBACK_TIMEFRAMES: TimeframeMetadata[] = [
+export const FALLBACK_TIMEFRAMES: TimeframeMetadata[] = [
   {
     id: "reciente",
     title: "Menos de 1 semana",

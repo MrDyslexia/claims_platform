@@ -71,6 +71,9 @@ export default function LoginDrawer({
         case "supervisor":
           route = "/supervisor";
           break;
+        case "auditor":
+          route = "/admin";
+          break;
         default:
           route = "/";
       }
@@ -90,6 +93,10 @@ export default function LoginDrawer({
         );
       } else if (errorMessage.includes("invalid credentials")) {
         setError("Credenciales inválidas. Verifique su email y contraseña.");
+      } else if (errorMessage.includes("User is inactive")) {
+        setError(
+          "Su cuenta está inactiva. Contacte al administrador para restaurar el acceso.",
+        );
       } else {
         setError(errorMessage);
       }

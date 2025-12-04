@@ -13,6 +13,12 @@ const config = {
         sans: ["var(--font-sans)"],
         mono: ["var(--font-mono)"],
       },
+      colors: {
+        corporate: {
+          900: "#051342",
+          800: "#202e5e",
+        },
+      },
     },
   },
   darkMode: "class",

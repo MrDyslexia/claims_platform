@@ -62,11 +62,22 @@ export interface Empresa {
   updated_at?: Date;
 }
 
-export interface TipoDenuncia {
-  id_tipo: number;
+export interface CategoriaDenuncia {
+  id: number;
   nombre: string;
   descripcion?: string;
   activo: boolean;
+}
+
+export interface TipoDenuncia {
+  id: number;
+  id_tipo?: number; // Deprecated, kept for compatibility
+  codigo: string;
+  nombre: string;
+  descripcion?: string;
+  activo: boolean;
+  categoria_id?: number;
+  categoria?: CategoriaDenuncia;
 }
 
 export interface EstadoDenuncia {

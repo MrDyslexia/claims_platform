@@ -2,9 +2,13 @@
 "use client";
 
 import type React from "react";
-import type { TipoDenuncia, EstadoDenuncia } from "@/lib/types/database";
+import type {
+  TipoDenuncia,
+  EstadoDenuncia,
+  CategoriaDenuncia,
+} from "@/lib/types/database";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardBody,
@@ -21,45 +25,33 @@ import {
   Tab,
   Textarea,
   Checkbox,
+  Accordion,
+  AccordionItem,
+  Spinner,
 } from "@heroui/react";
-import { Plus, Edit, Trash2, FileText, Activity, Palette } from "lucide-react";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  FileText,
+  Activity,
+  Palette,
+  Folder,
+} from "lucide-react";
 
 import { DataTable } from "@/components/data-table";
+import {
+  getCategorias,
+  crearCategoria,
+  actualizarCategoria,
+  eliminarCategoria,
+  getTipos,
+  crearTipo,
+  actualizarTipo,
+  eliminarTipo,
+} from "@/lib/api/settings";
 
-// Mock data
-const mockClaimTypes: TipoDenuncia[] = [
-  {
-    id_tipo: 1,
-    nombre: "Acoso Laboral",
-    descripcion: "Situaciones de acoso en el ambiente laboral",
-    activo: true,
-  },
-  {
-    id_tipo: 2,
-    nombre: "Discriminación",
-    descripcion: "Casos de discriminación por cualquier motivo",
-    activo: true,
-  },
-  {
-    id_tipo: 3,
-    nombre: "Fraude",
-    descripcion: "Actividades fraudulentas o irregulares",
-    activo: true,
-  },
-  {
-    id_tipo: 4,
-    nombre: "Conflicto de Interés",
-    descripcion: "Situaciones de conflicto de interés",
-    activo: true,
-  },
-  {
-    id_tipo: 5,
-    nombre: "Incumplimiento Normativo",
-    descripcion: "Violación de normas o políticas internas",
-    activo: false,
-  },
-];
-
+// Mock data for statuses (keeping as is for now)
 const mockClaimStatuses: EstadoDenuncia[] = [
   {
     id_estado: 1,
@@ -101,6 +93,7 @@ const mockClaimStatuses: EstadoDenuncia[] = [
 const typeColumns = [
   { key: "nombre", label: "NOMBRE" },
   { key: "descripcion", label: "DESCRIPCIÓN" },
+  { key: "codigo", label: "CÓDIGO" },
   { key: "estado", label: "ESTADO" },
   { key: "acciones", label: "ACCIONES" },
 ];
@@ -114,22 +107,47 @@ const statusColumns = [
 ];
 
 export default function SettingsPage() {
+  // Category Modal
+  const {
+    isOpen: isCategoryOpen,
+    onOpen: onCategoryOpen,
+    onClose: onCategoryClose,
+  } = useDisclosure();
+
+  // Type Modal
   const {
     isOpen: isTypeOpen,
     onOpen: onTypeOpen,
     onClose: onTypeClose,
   } = useDisclosure();
+
+  // Status Modal
   const {
     isOpen: isStatusOpen,
     onOpen: onStatusOpen,
     onClose: onStatusClose,
   } = useDisclosure();
 
-  const [editingType, setEditingType] = useState<TipoDenuncia | null>(null);
-  const [typeFormData, setTypeFormData] = useState({
+  const [categories, setCategories] = useState<CategoriaDenuncia[]>([]);
+  const [types, setTypes] = useState<TipoDenuncia[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [editingCategory, setEditingCategory] =
+    useState<CategoriaDenuncia | null>(null);
+  const [categoryFormData, setCategoryFormData] = useState({
     nombre: "",
     descripcion: "",
     activo: true,
+  });
+
+  const [editingType, setEditingType] = useState<TipoDenuncia | null>(null);
+  // const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [typeFormData, setTypeFormData] = useState({
+    nombre: "",
+    codigo: "",
+    descripcion: "",
+    activo: true,
+    categoria_id: 0,
   });
 
   const [editingStatus, setEditingStatus] = useState<EstadoDenuncia | null>(
@@ -142,24 +160,121 @@ export default function SettingsPage() {
     orden: 1,
   });
 
-  const handleOpenTypeModal = (type?: TipoDenuncia | null) => {
-    if (type) {
-      setEditingType(type);
-      setTypeFormData({
-        nombre: type.nombre,
-        descripcion: type.descripcion || "",
-        activo: type.activo,
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [cats, typs] = await Promise.all([getCategorias(), getTipos()]);
+      setCategories(cats);
+      setTypes(typs);
+    } catch (error) {
+      console.error("Error loading settings data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // --- Category Handlers ---
+
+  const handleOpenCategoryModal = (category?: CategoriaDenuncia) => {
+    if (category) {
+      setEditingCategory(category);
+      setCategoryFormData({
+        nombre: category.nombre,
+        descripcion: category.descripcion || "",
+        activo: category.activo,
       });
     } else {
-      setEditingType(null);
-      setTypeFormData({
+      setEditingCategory(null);
+      setCategoryFormData({
         nombre: "",
         descripcion: "",
         activo: true,
       });
     }
+    onCategoryOpen();
+  };
+
+  const handleSaveCategory = async () => {
+    try {
+      if (editingCategory) {
+        await actualizarCategoria(editingCategory.id, categoryFormData);
+      } else {
+        await crearCategoria(categoryFormData);
+      }
+      await loadData();
+      onCategoryClose();
+    } catch (error) {
+      console.error("Error saving category:", error);
+    }
+  };
+
+  const handleDeleteCategory = async (id: number) => {
+    if (confirm("¿Estás seguro de eliminar esta categoría?")) {
+      try {
+        await eliminarCategoria(id);
+        await loadData();
+      } catch (error) {
+        console.error("Error deleting category:", error);
+      }
+    }
+  };
+
+  // --- Type Handlers ---
+
+  const handleOpenTypeModal = (categoryId: number, type?: TipoDenuncia) => {
+    // setSelectedCategoryId(categoryId);
+    if (type) {
+      setEditingType(type);
+      setTypeFormData({
+        nombre: type.nombre,
+        codigo: type.codigo,
+        descripcion: type.descripcion || "",
+        activo: type.activo,
+        categoria_id: categoryId,
+      });
+    } else {
+      setEditingType(null);
+      setTypeFormData({
+        nombre: "",
+        codigo: "",
+        descripcion: "",
+        activo: true,
+        categoria_id: categoryId,
+      });
+    }
     onTypeOpen();
   };
+
+  const handleSaveType = async () => {
+    try {
+      if (editingType) {
+        await actualizarTipo(editingType.id, typeFormData);
+      } else {
+        await crearTipo(typeFormData);
+      }
+      await loadData();
+      onTypeClose();
+    } catch (error) {
+      console.error("Error saving type:", error);
+    }
+  };
+
+  const handleDeleteType = async (id: number) => {
+    if (confirm("¿Estás seguro de eliminar este tipo?")) {
+      try {
+        await eliminarTipo(id);
+        await loadData();
+      } catch (error) {
+        console.error("Error deleting type:", error);
+      }
+    }
+  };
+
+  // --- Status Handlers (Mock) ---
 
   const handleOpenStatusModal = (status?: EstadoDenuncia | null) => {
     if (status) {
@@ -182,15 +297,12 @@ export default function SettingsPage() {
     onStatusOpen();
   };
 
-  const handleSaveType = () => {
-    console.log("[v0] Saving claim type:", typeFormData);
-    onTypeClose();
-  };
-
   const handleSaveStatus = () => {
     console.log("[v0] Saving claim status:", statusFormData);
     onStatusClose();
   };
+
+  // --- Renderers ---
 
   const renderTypeCell = (type: TipoDenuncia, columnKey: React.Key) => {
     switch (columnKey) {
@@ -200,6 +312,12 @@ export default function SettingsPage() {
             <FileText className="h-4 w-4 text-purple-600" />
             <span className="font-medium">{type.nombre}</span>
           </div>
+        );
+      case "codigo":
+        return (
+          <Chip size="sm" variant="flat">
+            {type.codigo}
+          </Chip>
         );
       case "descripcion":
         return type.descripcion;
@@ -220,11 +338,17 @@ export default function SettingsPage() {
               isIconOnly
               size="sm"
               variant="light"
-              onPress={() => handleOpenTypeModal(type)}
+              onPress={() => handleOpenTypeModal(type.categoria_id!, type)}
             >
               <Edit className="h-4 w-4" />
             </Button>
-            <Button isIconOnly color="danger" size="sm" variant="light">
+            <Button 
+              isIconOnly 
+              color="danger"
+              size="sm"
+              variant="light"
+              onPress={() => handleDeleteType(type.id)}
+            >
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
@@ -282,6 +406,14 @@ export default function SettingsPage() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex justify-center p-8">
+        <Spinner />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -296,36 +428,106 @@ export default function SettingsPage() {
       <Card>
         <CardBody className="p-0">
           <Tabs aria-label="Settings tabs" className="w-full">
-            {/* Claim Types Tab */}
+            {/* Categories & Types Tab */}
             <Tab
               key="types"
               title={
                 <div className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />
-                  <span>Tipos de Reclamos</span>
+                  <span>Categorías y Tipos</span>
                 </div>
               }
             >
               <div className="p-6 space-y-4">
                 <div className="flex justify-between items-center">
                   <p className="text-sm text-muted-foreground">
-                    Configura los tipos de reclamos disponibles en el sistema
+                    Gestiona las categorías de reclamos y sus tipos asociados
                   </p>
                   <Button
                     color="primary"
                     size="sm"
                     startContent={<Plus className="h-4 w-4" />}
-                    onPress={() => handleOpenTypeModal()}
+                    onPress={() => handleOpenCategoryModal()}
                   >
-                    Nuevo Tipo
+                    Nueva Categoría
                   </Button>
                 </div>
 
-                <DataTable
-                  columns={typeColumns}
-                  data={mockClaimTypes}
-                  renderCell={renderTypeCell}
-                />
+                <Accordion selectionMode="multiple" variant="splitted">
+                  {categories.map((category) => (
+                    <AccordionItem
+                      key={category.id}
+                      aria-label={category.nombre}
+                      startContent={<Folder className="text-primary" />}
+                      subtitle={category.descripcion}
+                      title={
+                        <div className="flex items-center justify-between w-full pr-4">
+                          <div className="flex items-center gap-3">
+                            <span className="font-semibold">
+                              {category.nombre}
+                            </span>
+                            <Chip
+                              color={category.activo ? "success" : "default"}
+                              size="sm"
+                              variant="flat"
+                            >
+                              {category.activo ? "Activo" : "Inactivo"}
+                            </Chip>
+                          </div>
+                        </div>
+                      }
+                    >
+                      <div className="py-2">
+                        <div className="flex justify-between items-center mb-4 border-b pb-2">
+                          <div className="flex gap-2">
+                            <Button
+                              onPress={() => handleOpenCategoryModal(category)}
+                              size="sm"
+                              startContent={<Edit className="h-4 w-4" />}
+                              variant="flat"
+                            >
+                              Editar Categoría
+                            </Button>
+                            <Button
+                              color="danger"
+                              onPress={() => handleDeleteCategory(category.id)}
+                              size="sm"
+                              startContent={<Trash2 className="h-4 w-4" />}
+                              variant="flat"
+                            >
+                              Eliminar Categoría
+                            </Button>
+                          </div>
+                          <Button
+                            color="primary"
+                            onPress={() => handleOpenTypeModal(category.id)}
+                            size="sm"
+                            startContent={<Plus className="h-4 w-4" />}
+                          >
+                            Agregar Tipo
+                          </Button>
+                        </div>
+                        
+                        <h4 className="text-sm font-semibold mb-2">
+                          Tipos asociados
+                        </h4>
+                        <DataTable
+                          columns={typeColumns}
+                          data={types.filter(
+                            (t) => t.categoria_id === category.id,
+                          )}
+                          renderCell={renderTypeCell}
+                        />
+                      </div>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+                
+                {categories.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No hay categorías definidas. Crea una para comenzar.
+                  </div>
+                )}
               </div>
             </Tab>
 
@@ -365,8 +567,61 @@ export default function SettingsPage() {
         </CardBody>
       </Card>
 
-      {/* Claim Type Modal */}
-      <Modal isOpen={isTypeOpen} size="lg" onClose={onTypeClose}>
+      {/* Category Modal */}
+      <Modal isOpen={isCategoryOpen} onClose={onCategoryClose}>
+        <ModalContent>
+          <ModalHeader>
+            {editingCategory ? "Editar Categoría" : "Nueva Categoría"}
+          </ModalHeader>
+          <ModalBody>
+            <div className="space-y-4">
+              <Input
+                isRequired
+                label="Nombre"
+                placeholder="Ej: Recursos Humanos"
+                value={categoryFormData.nombre}
+                onChange={(e) =>
+                  setCategoryFormData({
+                    ...categoryFormData,
+                    nombre: e.target.value,
+                  })
+                }
+              />
+              <Textarea
+                label="Descripción"
+                minRows={3}
+                placeholder="Descripción de la categoría"
+                value={categoryFormData.descripcion}
+                onChange={(e) =>
+                  setCategoryFormData({
+                    ...categoryFormData,
+                    descripcion: e.target.value,
+                  })
+                }
+              />
+              <Checkbox
+                isSelected={categoryFormData.activo}
+                onValueChange={(checked) =>
+                  setCategoryFormData({ ...categoryFormData, activo: checked })
+                }
+              >
+                Categoría activa
+              </Checkbox>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="bordered" onPress={onCategoryClose}>
+              Cancelar
+            </Button>
+            <Button color="primary" onPress={handleSaveCategory}>
+              {editingCategory ? "Guardar Cambios" : "Crear Categoría"}
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Type Modal */}
+      <Modal isOpen={isTypeOpen} onClose={onTypeClose}>
         <ModalContent>
           <ModalHeader>
             {editingType ? "Editar Tipo de Reclamo" : "Nuevo Tipo de Reclamo"}
@@ -380,6 +635,15 @@ export default function SettingsPage() {
                 value={typeFormData.nombre}
                 onChange={(e) =>
                   setTypeFormData({ ...typeFormData, nombre: e.target.value })
+                }
+              />
+              <Input
+                isRequired
+                label="Código"
+                placeholder="Ej: AL-001"
+                value={typeFormData.codigo}
+                onChange={(e) =>
+                  setTypeFormData({ ...typeFormData, codigo: e.target.value })
                 }
               />
               <Textarea
@@ -415,7 +679,7 @@ export default function SettingsPage() {
         </ModalContent>
       </Modal>
 
-      {/* Claim Status Modal */}
+      {/* Status Modal */}
       <Modal isOpen={isStatusOpen} size="lg" onClose={onStatusClose}>
         <ModalContent>
           <ModalHeader>

@@ -21,7 +21,17 @@ import {
   SelectItem,
   Checkbox,
 } from "@heroui/react";
-import { Search, Plus, Edit, Trash2, Users, Mail, Phone } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Edit,
+  Trash2,
+  Users,
+  Mail,
+  Phone,
+  Lock as LockIcon,
+  Shield as ShieldIcon,
+} from "lucide-react";
 
 import { DataTable } from "@/components/data-table";
 import { FormInput } from "@/components/form-input";
@@ -31,6 +41,7 @@ import {
   actualizarUsuario,
   asignarRolesUsuario,
   eliminarUsuario,
+  toggleUsuarioActivo,
 } from "@/lib/api/usuarios";
 
 const columns = [
@@ -295,6 +306,18 @@ export default function UsersPage() {
     }
   };
 
+  const handleToggleActive = async (user: UsuarioAPI) => {
+    if (!token) return;
+
+    try {
+      await toggleUsuarioActivo(token, user.id_usuario);
+      refetch();
+    } catch (err: any) {
+      console.error("❌ Error al cambiar estado:", err);
+      // Podríamos mostrar un toast aquí
+    }
+  };
+
   const renderCell = (user: UsuarioAPI, columnKey: React.Key) => {
     switch (columnKey) {
       case "usuario":
@@ -363,6 +386,19 @@ export default function UsersPage() {
               onPress={() => handleOpenModal(user)}
             >
               <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              isIconOnly
+              className={user.activo ? "text-warning" : "text-success"}
+              size="sm"
+              variant="light"
+              onPress={() => handleToggleActive(user)}
+            >
+              {user.activo ? (
+                <LockIcon className="h-4 w-4" />
+              ) : (
+                <ShieldIcon className="h-4 w-4" />
+              )}
             </Button>
             <Button
               isIconOnly

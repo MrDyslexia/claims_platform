@@ -67,14 +67,7 @@ export function DescriptionStep({ formData, onUpdate }: DescriptionStepProps) {
           <div className="relative">
             <Textarea
               className="min-h-48 resize-none"
-              placeholder="Describe detalladamente lo ocurrido. Incluye:
-• Fecha y hora específica del incidente
-• Lugar donde ocurrió
-• Personas presentes o testigos
-• Secuencia de eventos
-• Consecuencias o daños
-• Cualquier comunicación previa relacionada
-• Números de referencia, códigos o documentos relevantes..."
+              placeholder="Describe detalladamente lo ocurrido. "
               value={description}
               onChange={(e) => handleDescriptionChange(e.target.value)}
             />
@@ -105,11 +98,13 @@ export function DescriptionStep({ formData, onUpdate }: DescriptionStepProps) {
             </p>
             <ul className="list-disc list-inside space-y-1">
               <li>Sé específico con fechas, horarios y ubicaciones</li>
+              <li>Lugar donde ocurrió</li>
               <li>Describe los hechos en orden cronológico</li>
               <li>Incluye nombres de personas involucradas (si los conoces)</li>
               <li>Menciona cualquier comunicación previa sobre el tema</li>
               <li>Describe las consecuencias o impacto del problema</li>
               <li>Evita opiniones personales, enfócate en los hechos</li>
+              <li>Números de referencia, códigos o documentos relevantes</li>
             </ul>
           </div>
         </CardBody>
