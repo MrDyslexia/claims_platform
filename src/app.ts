@@ -2,7 +2,7 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import { env } from './config/env';
-import { sequelize, testConnection } from './db/sequelize';
+import { testConnection } from './db/sequelize';
 import routes from './routes';
 import { requestLogger } from './middlewares/requestLogger';
 import { startCleanupScheduler } from './services/upload.service';

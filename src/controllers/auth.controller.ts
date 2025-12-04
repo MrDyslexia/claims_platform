@@ -47,6 +47,12 @@ export const login = async (req: Request, res: Response) => {
         ],
     });
     if (!user) return res.status(401).json({ error: 'invalid credentials' });
+    
+    // Verificar si el usuario está activo
+    if (user.get('activo') === 0) {
+        return res.status(401).json({ error: 'User is inactive' });
+    }
+
     const ok = await bcrypt.compare(password, String(user.get('pass_hash')));
     if (!ok) return res.status(401).json({ error: 'invalid credentials' });
 
@@ -117,7 +123,9 @@ export const logout = async (req: Request & { user?: any }, res: Response) => {
                 { where: { jti: payload.jti } }
             );
         }
-    } catch {}
+    } catch {
+        // Ignore error if session doesn't exist
+    }
     return res.json({ ok: true });
 };
 

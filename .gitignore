@@ -7,3 +7,5 @@
 *.md
 /scripts
 test-reports-endpoint.sh
+uploads
+public

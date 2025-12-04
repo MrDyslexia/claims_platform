@@ -3,7 +3,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { models } from '../db/sequelize';
 
 // Cola de logs para inserciones en batch y reducir carga a la DB
-let logQueue: Array<{
+const logQueue: Array<{
     metodo: string;
     ruta: string;
     modulo: string | null;

@@ -14,20 +14,19 @@ import { authMiddleware, requirePermission } from '../middlewares/auth';
 
 const router = Router();
 
-// Aplicar autenticación a todas las rutas
-router.use(authMiddleware);
-
 /**
  * @route POST /api/adjuntos/upload
  * @desc Subir archivos adjuntos a una denuncia (multipart/form-data)
- * @access Privado - Requiere permiso CREATE_ADJUNTO
+ * @access Público (para wizard)
  */
 router.post(
     '/upload',
-    requirePermission('CREATE_ADJUNTO'),
     uploadMiddleware,
     subirAdjuntos
 );
+
+// Aplicar autenticación al resto de las rutas
+router.use(authMiddleware);
 
 /**
  * @route GET /api/adjuntos/:id/download

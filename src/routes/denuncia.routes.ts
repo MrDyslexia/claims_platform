@@ -5,13 +5,16 @@ import {
     crearDenunciaPublica,
     lookupDenuncia,
     obtenerTodosLosReclamos,
+    obtenerReclamosAsignados,
     revealEmail,
     autorizarContacto,
+    actualizarPrioridad,
 } from '../controllers/denuncia.controller';
 import {
     crearComentario,
     crearComentarioDenuncia,
 } from '../controllers/comentario.controller';
+import { uploadMiddleware } from '../controllers/adjunto.controller';
 import { crearResolucion } from '../controllers/resolucion.controller';
 import {
     authMiddleware,
@@ -36,13 +39,20 @@ router.post(
 );
 
 // Crear denuncia pública (created_by = null)
-router.post('/public', crearDenunciaPublica);
+router.post('/public', uploadMiddleware, crearDenunciaPublica);
 
-// Obtener todos los reclamos - requiere rol Admin o Analista
+// Obtener reclamos asignados al usuario actual
+router.get(
+    '/assigned',
+    authMiddleware,
+    obtenerReclamosAsignados
+);
+
+// Obtener todos los reclamos - requiere rol Admin, Analista o Supervisor
 router.get(
     '/all',
     authMiddleware,
-    requireRoles('ADMIN', 'ANALISTA'),
+    requireRoles('ADMIN', 'ANALISTA', 'SUPERVISOR', 'AUDITOR'),
     obtenerTodosLosReclamos
 );
 
@@ -56,7 +66,7 @@ router.post('/comentario', crearComentario);
 router.post(
     '/resolucion',
     authMiddleware,
-    requirePermission('DENUNCIA_RESOLVER'),
+    requireRoles('ADMIN', 'SUPERVISOR', 'ANALISTA'),
     crearResolucion
 );
 
@@ -64,8 +74,16 @@ router.post(
 router.post(
     '/asignar',
     authMiddleware,
-    requirePermission('DENUNCIA_REASIGNAR'),
+    requireRoles('ADMIN', 'SUPERVISOR', 'ANALISTA'),
     asignarDenuncia
+);
+
+// Actualizar prioridad (requires auth + permission)
+router.post(
+    '/:id/prioridad',
+    authMiddleware,
+    requireRoles('ADMIN', 'SUPERVISOR', 'ANALISTA'),
+    actualizarPrioridad
 );
 
 // Revelar correo encriptado (requiere auth - permiso verificado dentro del controlador)

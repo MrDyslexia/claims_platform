@@ -72,6 +72,13 @@ export const defineDenuncia = (sequelize: Sequelize) => {
                     len: [10, 65535],
                 },
             },
+            pais: {
+                type: DataTypes.STRING(100),
+                allowNull: true,
+                validate: {
+                    len: [0, 100],
+                },
+            },
             canal_origen: {
                 type: DataTypes.STRING(50),
                 allowNull: false,
@@ -126,6 +133,13 @@ export const defineDenuncia = (sequelize: Sequelize) => {
                 type: DataTypes.DATE,
                 allowNull: false,
                 defaultValue: DataTypes.NOW,
+            },
+            prioridad_id: {
+                type: DataTypes.ENUM('BAJA', 'MEDIA', 'ALTA', 'CRITICA'),
+                allowNull: true,
+                validate: {
+                    isIn: [['BAJA', 'MEDIA', 'ALTA', 'CRITICA']],
+                },
             },
         },
         {

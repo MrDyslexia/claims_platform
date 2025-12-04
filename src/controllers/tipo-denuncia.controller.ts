@@ -6,9 +6,9 @@ import { Op } from 'sequelize';
  * Crear nuevo tipo de denuncia
  * POST /api/tipos-denuncia
  */
-export const crearTipoDenuncia = async (req: Request, res: Response) => {
+    export const crearTipoDenuncia = async (req: Request, res: Response) => {
     try {
-        const { nombre, descripcion } = req.body;
+        const { nombre, descripcion, categoria_id, activo } = req.body;
 
         if (!nombre) {
             return res.status(400).json({ error: 'missing field: nombre' });
@@ -17,6 +17,8 @@ export const crearTipoDenuncia = async (req: Request, res: Response) => {
         const tipo = await models.TipoDenuncia.create({
             nombre,
             descripcion: descripcion ?? null,
+            categoria_id: categoria_id ?? null,
+            activo: activo !== undefined ? activo : 1,
         });
 
         return res.status(201).json(tipo.toJSON());
@@ -64,6 +66,12 @@ export const listarTiposDenuncia = async (req: Request, res: Response) => {
             offset,
             limit,
             order: [['nombre', 'ASC']],
+            include: [
+                {
+                    model: models.CategoriaDenuncia,
+                    as: 'categoria',
+                },
+            ],
         });
 
         return res.json({
@@ -85,7 +93,7 @@ export const listarTiposDenuncia = async (req: Request, res: Response) => {
 export const actualizarTipoDenuncia = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { nombre, descripcion } = req.body;
+        const { nombre, descripcion, categoria_id, activo } = req.body;
 
         const tipo = await models.TipoDenuncia.findByPk(id);
         if (!tipo) {
@@ -98,6 +106,11 @@ export const actualizarTipoDenuncia = async (req: Request, res: Response) => {
                 descripcion !== undefined
                     ? descripcion
                     : tipo.get('descripcion'),
+            categoria_id:
+                categoria_id !== undefined
+                    ? categoria_id
+                    : tipo.get('categoria_id'),
+            activo: activo !== undefined ? activo : tipo.get('activo'),
         });
 
         return res.json(tipo.toJSON());

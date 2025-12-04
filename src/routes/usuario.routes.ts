@@ -10,6 +10,7 @@ import {
     obtenerRolesUsuario,
     obtenerSesionesUsuario,
     obtenerListaCompletaUsuarios,
+    toggleActivo,
 } from '../controllers/usuario.controller';
 import { authMiddleware, requirePermission } from '../middlewares/auth';
 
@@ -94,5 +95,16 @@ router.get('/:id/roles', obtenerRolesUsuario);
  * @access Privado
  */
 router.get('/:id/sesiones', obtenerSesionesUsuario);
+
+/**
+ * @route PATCH /api/usuarios/:id/toggle-activo
+ * @desc Alternar estado activo de usuario
+ * @access Privado - Requiere permiso UPDATE_USUARIO
+ */
+router.patch(
+    '/:id/toggle-activo',
+    requirePermission('UPDATE_USUARIO'),
+    toggleActivo
+);
 
 export default router;

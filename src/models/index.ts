@@ -3,6 +3,7 @@ import { Sequelize } from 'sequelize';
 // Importar definiciones de modelos
 import { defineEmpresa } from './empresa.model';
 import { defineTipoDenuncia } from './tipo-denuncia.model';
+import { defineCategoriaDenuncia } from './categoria-denuncia.model';
 import { defineEstadoDenuncia } from './estado-denuncia.model';
 import { defineCanalDenuncia } from './canal-denuncia.model';
 import { defineRol } from './rol.model';
@@ -35,6 +36,7 @@ export const initModels = (sequelize: Sequelize) => {
     // Definir todos los modelos
     const Empresa = defineEmpresa(sequelize);
     const TipoDenuncia = defineTipoDenuncia(sequelize);
+    const CategoriaDenuncia = defineCategoriaDenuncia(sequelize);
     const EstadoDenuncia = defineEstadoDenuncia(sequelize);
     const CanalDenuncia = defineCanalDenuncia(sequelize);
     const Rol = defineRol(sequelize);
@@ -81,6 +83,10 @@ export const initModels = (sequelize: Sequelize) => {
 
     Empresa.hasMany(Denuncia, { foreignKey: 'empresa_id' });
     TipoDenuncia.hasMany(Denuncia, { foreignKey: 'tipo_id' });
+    
+    // CategoriaDenuncia associations
+    CategoriaDenuncia.hasMany(TipoDenuncia, { foreignKey: 'categoria_id', as: 'tipos' });
+    TipoDenuncia.belongsTo(CategoriaDenuncia, { foreignKey: 'categoria_id', as: 'categoria' });
     EstadoDenuncia.hasMany(Denuncia, { foreignKey: 'estado_id' });
     CanalDenuncia.hasMany(Denuncia, {
         foreignKey: 'canal_id',
@@ -239,6 +245,7 @@ export const initModels = (sequelize: Sequelize) => {
     return {
         Empresa,
         TipoDenuncia,
+        CategoriaDenuncia,
         EstadoDenuncia,
         CanalDenuncia,
         Rol,

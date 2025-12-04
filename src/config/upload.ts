@@ -2,6 +2,8 @@
  * Configuración del sistema de upload de archivos adjuntos
  */
 
+import path from 'path';
+
 export const UPLOAD_CONFIG = {
     // Límites
     MAX_FILES_PER_DENUNCIA: 10,
@@ -50,8 +52,8 @@ export const UPLOAD_CONFIG = {
     ],
 
     // Directorio de almacenamiento
-    UPLOAD_DIR: process.env.UPLOAD_DIR || './uploads',
-    TEMP_DIR: process.env.TEMP_DIR || './uploads/temp',
+    UPLOAD_DIR: process.env.UPLOAD_DIR || path.resolve(process.cwd(), 'uploads'),
+    TEMP_DIR: process.env.TEMP_DIR || path.resolve(process.cwd(), 'uploads/temp'),
 
     // Configuración de limpieza
     TEMP_FILE_MAX_AGE_HOURS: 24, // Eliminar archivos temporales después de 24 horas

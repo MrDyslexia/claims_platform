@@ -440,3 +440,33 @@ export const obtenerListaCompletaUsuarios = async (
         });
     }
 };
+
+/**
+ * Alternar estado activo de usuario
+ * PATCH /api/usuarios/:id/toggle-activo
+ */
+export const toggleActivo = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        const usuario = await models.Usuario.findByPk(id);
+        if (!usuario) {
+            return res.status(404).json({ error: 'usuario not found' });
+        }
+
+        const nuevoEstado = usuario.get('activo') === 1 ? 0 : 1;
+
+        await usuario.update({
+            activo: nuevoEstado,
+            updated_at: new Date(),
+        });
+
+        return res.json({
+            ok: true,
+            message: `usuario ${nuevoEstado === 1 ? 'activado' : 'desactivado'}`,
+            activo: nuevoEstado,
+        });
+    } catch (e: any) {
+        return res.status(400).json({ error: e.message });
+    }
+};

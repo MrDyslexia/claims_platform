@@ -18,6 +18,11 @@ import {
     hashText,
     generateRecoveryCode,
 } from '../utils/crypto';
+
+import {
+    uploadFile,
+} from '../services/upload.service';
+import { getUploadErrorMessage } from '../config/upload';
 import { emailService } from '../utils/email.service';
 
 const CLAVE_CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -68,6 +73,8 @@ interface CreateDenunciaInput {
     denuncianteFono?: string | null;
     esAnonima?: boolean | number;
     createdBy?: number | null;
+    prioridad?: string;
+    pais?: string | null;
 }
 
 interface CreateDenunciaResult {
@@ -172,6 +179,7 @@ async function createDenunciaRecord(
                 correo_tag: correoTag,
                 correo_hash: correoHash,
                 recovery_code_hash: recoveryCodeHash,
+                pais: normalizeNullableString(input.pais),
             },
             { transaction }
         );
@@ -261,10 +269,10 @@ function buildDescripcionFromPayload(payload: PublicDenunciaPayload) {
         sections.push(`Duración del problema: ${timeframeLabel}`);
     }
 
-    const country = sanitizeString(payload.country);
-    if (country) {
-        sections.push(`País del incidente: ${country}`);
-    }
+    // const country = sanitizeString(payload.country);
+    // if (country) {
+    //     sections.push(`País del incidente: ${country}`);
+    // }
 
     const involvedSection = formatInvolvedParties(
         payload.involvedParties ?? []
@@ -342,6 +350,8 @@ export const crearDenuncia = async (
             denuncianteFono: payload.denunciante_fono,
             esAnonima: payload.es_anonima,
             createdBy,
+            prioridad: payload.prioridad,
+            pais: payload.pais,
         });
 
         // Enviar correo de confirmación si hay email
@@ -391,7 +401,7 @@ export const crearDenunciaPublica = async (req: Request, res: Response) => {
     }
 
     // Validar canal si se proporciona
-    const canalId = payload.canal_id ? Number(payload.canal_id) : null;
+    const canalId = payload.canal_id ? Number(payload.canal_id) : undefined;
     let canal: any = null;
 
     if (canalId) {
@@ -458,11 +468,16 @@ export const crearDenunciaPublica = async (req: Request, res: Response) => {
         const subcategoryName =
             sanitizeString(payload.subcategoryName) ||
             findSubcategoryName(subcategoryCode) ||
-            (tipo.get('nombre') as string);
+            (tipo?.get('nombre') as string);
 
-        const asunto =
+        let asunto =
             sanitizeString(payload.details).slice(0, 300) ||
             subcategoryName.slice(0, 300);
+
+        // Asegurar longitud mínima de 5 caracteres
+        if (asunto.length < 5) {
+            asunto = `${asunto} (Denuncia)`;
+        }
 
         const descripcionFinal = buildDescripcionFromPayload({
             ...payload,
@@ -480,9 +495,9 @@ export const crearDenunciaPublica = async (req: Request, res: Response) => {
         const emailParaEncriptar = sanitizeString(payload.email) || null;
 
         const { denuncia, clave, recoveryCode } = await createDenunciaRecord({
-            empresaId: Number(empresa.get('id')),
-            tipoId: Number(tipo.get('id')),
-            estadoId: Number(estado.get('id')),
+            empresaId: Number(empresa!.get('id')),
+            tipoId: Number(tipo!.get('id')),
+            estadoId: Number(estado!.get('id')),
             asunto,
             descripcion: descripcionFinal,
             canalOrigen: 'WEB',
@@ -492,6 +507,7 @@ export const crearDenunciaPublica = async (req: Request, res: Response) => {
             denuncianteFono,
             esAnonima: payload.isAnonymous ?? false,
             createdBy: null,
+            pais: payload.country,
         });
 
         // Enviar correos si hay email
@@ -523,11 +539,56 @@ export const crearDenunciaPublica = async (req: Request, res: Response) => {
             }
         }
 
+        // Subir archivos adjuntos si existen
+        const files = req.files as Express.Multer.File[];
+        let uploadResults: any = null;
+
+        if (files && files.length > 0) {
+            try {
+                const results = await Promise.all(
+                    files.map((file) =>
+                        uploadFile(
+                            file,
+                            Number(denuncia.get('id')),
+                            null, // userId es null para denuncias públicas
+                            'DENUNCIA'
+                        )
+                    )
+                );
+
+                const successful = results.filter((r: any) => r.success);
+                const failed = results.filter((r: any) => !r.success);
+
+                uploadResults = {
+                    uploaded: successful.length,
+                    failed: failed.length,
+                    files: successful.map((r: any) => ({
+                        id: r.fileId,
+                        filename: r.filename,
+                        size: r.size,
+                        path: r.path,
+                    })),
+                    errors: failed.map((r: any) => ({
+                        filename: r.filename,
+                        error: getUploadErrorMessage(
+                            r.errorCode || 'UPLOAD_ERROR'
+                        ),
+                        code: r.errorCode,
+                    })),
+                };
+            } catch (uploadError) {
+                console.error('Error uploading files:', uploadError);
+                // No fallar la creación de la denuncia si fallan los archivos, pero reportarlo
+                uploadResults = { error: 'Error processing uploads' };
+            }
+        }
+
         return res.status(201).json({
             id: denuncia.get('id'),
             numero: denuncia.get('numero'),
             clave,
             estado: DEFAULT_ESTADO.code,
+            uploads: uploadResults,
         });
     } catch (e: any) {
         return res.status(400).json({ error: e.message });
@@ -635,7 +696,7 @@ export const lookupDenuncia = async (req: Request, res: Response) => {
         codigo: denuncia.get('numero'),
         asunto: denuncia.get('asunto'),
         descripcion: denuncia.get('descripcion'),
-        ubicacion: denuncia.get('ubicacion') || null,
+        pais: denuncia.get('pais') || null,
         estado_id: denuncia.get('estado_id'),
         estado: estado?.get('nombre') || 'Desconocido',
         empresa_id: denuncia.get('empresa_id'),
@@ -653,7 +714,6 @@ export const lookupDenuncia = async (req: Request, res: Response) => {
         denunciante_email: denuncia.get('denunciante_email') || null,
         denunciante_fono: denuncia.get('denunciante_fono') || null,
         es_anonima: denuncia.get('es_anonima'),
-        prioridad: denuncia.get('prioridad') || 'media',
         statusHistory: statusHistoryWithNames,
         comments: commentsWithAuthor,
     });
@@ -792,13 +852,71 @@ export const asignarDenuncia = async (
     }
 };
 
+export const actualizarPrioridad = async (
+    req: Request & { user?: any },
+    res: Response
+) => {
+    const { id } = req.params;
+    const { prioridad } = req.body;
+
+    if (!id || !prioridad) {
+        return res.status(400).json({ error: 'missing fields' });
+    }
+
+    const validPriorities = ['baja', 'media', 'alta', 'critica'];
+    if (!validPriorities.includes(prioridad.toLowerCase())) {
+        return res.status(400).json({ error: 'invalid priority' });
+    }
+
+    try {
+        const denuncia = await models.Denuncia.findByPk(id);
+        if (!denuncia) {
+            return res.status(404).json({ error: 'denuncia not found' });
+        }
+
+        await denuncia.update({ prioridad_id: prioridad.toUpperCase() });
+
+        return res.json({ ok: true, message: 'priority updated' });
+    } catch (e: any) {
+        return res.status(400).json({ error: e.message });
+    }
+};
+
 export const obtenerTodosLosReclamos = async (
     req: Request & { user?: any },
     res: Response
 ) => {
     try {
+        const userId = req.user?.get('id');
+        const userRoles = req.user?.get('roles') || [];
+        const rolesCodigos = userRoles.map((r: any) => r.get('codigo'));
+
+        const isAdminOrAnalyst = rolesCodigos.some((role: string) =>
+            ['ADMIN', 'ANALISTA'].includes(role)
+        );
+
+        let whereClause = {};
+
+        // Si es supervisor y no es admin/analista, filtrar solo sus asignaciones
+        if (!isAdminOrAnalyst && rolesCodigos.includes('SUPERVISOR')) {
+            // Buscar IDs de denuncias asignadas
+            const asignaciones = await models.DenunciaAsignacion.findAll({
+                where: {
+                    usuario_id: userId,
+                    activo: 1,
+                },
+                attributes: ['denuncia_id'],
+            });
+
+            const denunciaIds = asignaciones.map((a) => a.get('denuncia_id'));
+            whereClause = {
+                id: denunciaIds,
+            };
+        }
+
         // Obtener todos los reclamos
         const denuncias = await models.Denuncia.findAll({
+            where: whereClause,
             order: [['created_at', 'DESC']],
         });
 
@@ -962,10 +1080,25 @@ export const obtenerTodosLosReclamos = async (
                     };
                 }
 
+                // Obtener asignación activa de supervisor
+                const asignacion = await models.DenunciaAsignacion.findOne({
+                    where: {
+                        denuncia_id: denunciaId,
+                        activo: 1,
+                    },
+                    include: [
+                        {
+                            model: models.Usuario,
+                            as: 'asignado',
+                        },
+                    ],
+                });
+
                 return {
                     id: denuncia.get('id'),
                     numero: denuncia.get('numero'),
                     asunto: denuncia.get('asunto'),
+                    pais: denuncia.get('pais'),
                     descripcion: denuncia.get('descripcion'),
                     canal_origen: denuncia.get('canal_origen'),
                     fecha_creacion: denuncia.get('created_at'),
@@ -975,7 +1108,7 @@ export const obtenerTodosLosReclamos = async (
                         nombre: estado?.get('nombre') || 'Desconocido',
                         codigo: estado?.get('codigo'),
                     },
-                    prioridad: denuncia.get('prioridad') || 'media',
+                    prioridad: (denuncia.get('prioridad_id') as string)?.toLowerCase(),
                     empresa: {
                         id: empresa?.get('id'),
                         nombre: empresa?.get('nombre') || 'Empresa Desconocida',
@@ -995,6 +1128,13 @@ export const obtenerTodosLosReclamos = async (
                         telefono: denuncia.get('denunciante_fono'),
                         anonimo: denuncia.get('es_anonima') === 1,
                     },
+                    supervisor: asignacion?.get('asignado')
+                        ? {
+                              id: (asignacion.get('asignado') as any).id,
+                              nombre: (asignacion.get('asignado') as any).nombre_completo,
+                              email: (asignacion.get('asignado') as any).email,
+                          }
+                        : null,
                     comentarios: comentariosEnriquecidos.map((c) => ({
                         id: c.id,
                         contenido: c.contenido,
@@ -1057,6 +1197,305 @@ export const obtenerTodosLosReclamos = async (
         });
     } catch (e: any) {
         console.error('Error fetching denuncias:', e);
+        return res.status(500).json({ error: e.message });
+    }
+};
+
+export const obtenerReclamosAsignados = async (
+    req: Request & { user?: any },
+    res: Response
+) => {
+    try {
+        const userId = req.user?.get('id');
+
+        // Buscar IDs de denuncias asignadas activas
+        const asignaciones = await models.DenunciaAsignacion.findAll({
+            where: {
+                usuario_id: userId,
+                activo: 1,
+            },
+            attributes: ['denuncia_id'],
+        });
+
+        const denunciaIds = asignaciones.map((a) => a.get('denuncia_id'));
+
+        // Obtener denuncias
+        const denuncias = await models.Denuncia.findAll({
+            where: { id: denunciaIds },
+            order: [['created_at', 'DESC']],
+            include: [
+                {
+                    model: models.EstadoDenuncia,
+                    as: 'estado_denuncia',
+                },
+            ],
+        });
+
+        // Enriquecer cada reclamo con información relacionada
+        const reclamosEnriquecidos = await Promise.all(
+            denuncias.map(async (denuncia) => {
+                const denunciaId = denuncia.get('id') as number;
+
+                // Obtener estado desde la inclusión
+                const estado = denuncia.get('estado_denuncia') as any;
+
+                // Obtener empresa
+                const empresa = await models.Empresa.findByPk(
+                    Number(denuncia.get('empresa_id'))
+                );
+
+                // Obtener tipo de denuncia
+                const tipo = await models.TipoDenuncia.findByPk(
+                    Number(denuncia.get('tipo_id'))
+                );
+
+                // Obtener historial de estados
+                const statusHistory =
+                    await models.DenunciaHistorialEstado.findAll({
+                        where: { denuncia_id: denunciaId },
+                        order: [['created_at', 'ASC']],
+                    });
+
+                const historialEstado = await Promise.all(
+                    statusHistory.map(async (sh) => {
+                        const deEstado = sh.get('de_estado_id')
+                            ? await models.EstadoDenuncia.findByPk(
+                                  Number(sh.get('de_estado_id'))
+                              )
+                            : null;
+                        const aEstado = await models.EstadoDenuncia.findByPk(
+                            Number(sh.get('a_estado_id'))
+                        );
+
+                        let cambiadoPorNombre = null;
+                        if (sh.get('cambiado_por')) {
+                            const usuarioCambio = await models.Usuario.findByPk(
+                                Number(sh.get('cambiado_por'))
+                            );
+                            if (usuarioCambio) {
+                                cambiadoPorNombre = `${usuarioCambio.get(
+                                    'nombre_completo'
+                                )}`.trim();
+                            }
+                        }
+
+                        return {
+                            id: sh.get('id'),
+                            de_estado_id: sh.get('de_estado_id'),
+                            de_estado_nombre: deEstado?.get('nombre') || null,
+                            a_estado_id: sh.get('a_estado_id'),
+                            a_estado_nombre:
+                                aEstado?.get('nombre') || 'Desconocido',
+                            motivo: sh.get('motivo') || null,
+                            cambiado_por: sh.get('cambiado_por'),
+                            cambiado_por_nombre: cambiadoPorNombre,
+                            fecha_cambio: sh.get('created_at'),
+                        };
+                    })
+                );
+
+                // Obtener comentarios
+                const comentarios = await models.Comentario.findAll({
+                    where: { denuncia_id: denunciaId },
+                    order: [['created_at', 'ASC']],
+                });
+
+                const comentariosEnriquecidos = await Promise.all(
+                    comentarios.map(async (c) => {
+                        let autorNombre = 'Equipo de Soporte';
+                        let autorEmail = null;
+
+                        if (c.get('usuario_id')) {
+                            const usuario = await models.Usuario.findByPk(
+                                Number(c.get('usuario_id'))
+                            );
+                            if (usuario) {
+                                autorNombre = `${usuario.get(
+                                    'nombre_completo'
+                                )}`.trim();
+                                autorEmail = usuario.get('email') as string;
+                            }
+                        }
+
+                        if (!c.get('usuario_id') && c.get('autor_nombre')) {
+                            autorNombre = c.get('autor_nombre') as string;
+                        }
+
+                        if (!autorEmail && c.get('autor_email')) {
+                            autorEmail = c.get('autor_email') as string;
+                        }
+
+                        return {
+                            id: c.get('id'),
+                            contenido: c.get('contenido'),
+                            autor_nombre: autorNombre,
+                            autor_email: autorEmail,
+                            autor_rol: c.get('autor_rol') as string | null,
+                            visibility: c.get('visibility') as string,
+                            es_interno: c.get('es_interno') as boolean,
+                            fecha_creacion: c.get('created_at'),
+                        };
+                    })
+                );
+
+                // Obtener archivos adjuntos
+                const adjuntos = await models.Adjunto.findAll({
+                    where: { denuncia_id: denunciaId },
+                    order: [['created_at', 'ASC']],
+                });
+
+                const adjuntosEnriquecidos = adjuntos.map((adj) => ({
+                    id: adj.get('id'),
+                    nombre_archivo: adj.get('nombre_archivo'),
+                    ruta: adj.get('ruta'),
+                    mime_type: adj.get('mime_type'),
+                    tamano_bytes: adj.get('tamano_bytes'),
+                    tipo_vinculo: adj.get('tipo_vinculo'),
+                    subido_por: adj.get('subido_por'),
+                    fecha_carga: adj.get('created_at'),
+                }));
+
+                // Obtener resolución
+                const resolucion = await models.Resolucion.findOne({
+                    where: { denuncia_id: denunciaId },
+                });
+
+                let resolucionInfo = null;
+                if (resolucion) {
+                    const resuelto_por_usuario = await models.Usuario.findByPk(
+                        Number(resolucion.get('resuelto_por'))
+                    );
+                    resolucionInfo = {
+                        id: resolucion.get('id'),
+                        contenido: resolucion.get('contenido'),
+                        resuelto_por: resolucion.get('resuelto_por'),
+                        resuelto_por_nombre: resuelto_por_usuario
+                            ? `${resuelto_por_usuario.get(
+                                  'nombre_completo'
+                              )}`.trim()
+                            : 'Desconocido',
+                        resuelto_at: resolucion.get('resuelto_at'),
+                        pdf_path: resolucion.get('pdf_path'),
+                    };
+                }
+
+                // Obtener asignación activa de supervisor
+                const asignacion = await models.DenunciaAsignacion.findOne({
+                    where: {
+                        denuncia_id: denunciaId,
+                        activo: 1,
+                    },
+                    include: [
+                        {
+                            model: models.Usuario,
+                            as: 'asignado',
+                        },
+                    ],
+                });
+
+                return {
+                    id: denuncia.get('id'),
+                    numero: denuncia.get('numero'),
+                    asunto: denuncia.get('asunto'),
+                    pais: denuncia.get('pais'),
+                    descripcion: denuncia.get('descripcion'),
+                    canal_origen: denuncia.get('canal_origen'),
+                    fecha_creacion: denuncia.get('created_at'),
+                    fecha_actualizacion: denuncia.get('updated_at'),
+                    estado: {
+                        id: estado?.get('id'),
+                        nombre: estado?.get('nombre') || 'Desconocido',
+                        codigo: estado?.get('codigo'),
+                    },
+                    prioridad: (denuncia.get('prioridad_id') as string)?.toLowerCase(),
+                    empresa: {
+                        id: empresa?.get('id'),
+                        nombre: empresa?.get('nombre') || 'Empresa Desconocida',
+                        rut: empresa?.get('rut'),
+                        email: empresa?.get('email'),
+                        telefono: empresa?.get('telefono'),
+                        direccion: empresa?.get('direccion'),
+                    },
+                    tipo: {
+                        id: tipo?.get('id'),
+                        nombre: tipo?.get('nombre') || 'Tipo desconocido',
+                        codigo: tipo?.get('codigo'),
+                    },
+                    denunciante: {
+                        nombre: denuncia.get('denunciante_nombre'),
+                        email: denuncia.get('denunciante_email'),
+                        telefono: denuncia.get('denunciante_fono'),
+                        anonimo: denuncia.get('es_anonima') === 1,
+                    },
+                    supervisor: asignacion?.get('asignado')
+                        ? {
+                              id: (asignacion.get('asignado') as any).id,
+                              nombre: (asignacion.get('asignado') as any).nombre_completo,
+                              email: (asignacion.get('asignado') as any).email,
+                          }
+                        : null,
+                    comentarios: comentariosEnriquecidos.map((c) => ({
+                        id: c.id,
+                        contenido: c.contenido,
+                        autor: {
+                            nombre: c.autor_nombre,
+                            email: c.autor_email,
+                            rol: c.autor_rol,
+                        },
+                        visibility: c.visibility,
+                        es_interno: c.es_interno,
+                        fecha_creacion: c.fecha_creacion,
+                    })),
+                    adjuntos: adjuntosEnriquecidos.map((adj) => ({
+                        id: adj.id,
+                        nombre: adj.nombre_archivo,
+                        ruta: adj.ruta,
+                        mime_type: adj.mime_type,
+                        tamano: adj.tamano_bytes,
+                        tipo_vinculo: adj.tipo_vinculo,
+                        fecha_subida: adj.fecha_carga,
+                    })),
+                    historial_estado: historialEstado.map((h) => ({
+                        id: h.id,
+                        estado_anterior: h.de_estado_id
+                            ? {
+                                  id: h.de_estado_id,
+                                  nombre: h.de_estado_nombre,
+                              }
+                            : null,
+                        estado_nuevo: {
+                            id: h.a_estado_id,
+                            nombre: h.a_estado_nombre,
+                        },
+                        motivo: h.motivo,
+                        usuario: h.cambiado_por_nombre
+                            ? {
+                                  nombre: h.cambiado_por_nombre,
+                              }
+                            : null,
+                        fecha_cambio: h.fecha_cambio,
+                    })),
+                    resolucion: resolucionInfo
+                        ? {
+                              id: resolucionInfo.id,
+                              contenido: resolucionInfo.contenido,
+                              usuario_resolvio: {
+                                  nombre: resolucionInfo.resuelto_por_nombre,
+                              },
+                              fecha_resolucion: resolucionInfo.resuelto_at,
+                              ruta_pdf: resolucionInfo.pdf_path,
+                          }
+                        : null,
+                };
+            })
+        );
+
+        return res.json({
+            total: reclamosEnriquecidos.length,
+            reclamos: reclamosEnriquecidos,
+        });
+    } catch (e: any) {
+        console.error('Error fetching assigned claims:', e);
         return res.status(500).json({ error: e.message });
     }
 };

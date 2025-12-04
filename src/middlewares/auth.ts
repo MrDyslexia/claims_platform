@@ -41,7 +41,7 @@ export async function authMiddleware(
         if (!user) return res.status(401).json({ error: 'user not found' });
         req.user = user;
         return next();
-    } catch (e) {
+    } catch (_e) {
         return res.status(401).json({ error: 'invalid token' });
     }
 }
@@ -75,7 +75,7 @@ export function requirePermission(codigo: string) {
             if (!permiso) return res.status(403).json({ error: 'forbidden' });
 
             next();
-        } catch (e) {
+        } catch (_e) {
             return res.status(403).json({ error: 'forbidden' });
         }
     };

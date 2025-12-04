@@ -7,6 +7,7 @@ import rolRoutes from './rol.routes';
 import permisoRoutes from './permiso.routes';
 import usuarioRoutes from './usuario.routes';
 import tipoDenunciaRoutes from './tipo-denuncia.routes';
+import categoriaDenunciaRoutes from './categoria-denuncia.routes';
 import estadoDenunciaRoutes from './estado-denuncia.routes';
 import canalRoutes from './canal.routes';
 import adjuntoRoutes from './adjunto.routes';
@@ -38,6 +39,7 @@ router.use('/usuarios', usuarioRoutes);
 
 // Denuncia configuration routes
 router.use('/tipos-denuncia', tipoDenunciaRoutes);
+router.use('/categorias-denuncia', categoriaDenunciaRoutes);
 router.use('/estados-denuncia', estadoDenunciaRoutes);
 router.use('/canales', canalRoutes);
 

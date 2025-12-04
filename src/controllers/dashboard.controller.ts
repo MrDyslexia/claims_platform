@@ -124,8 +124,8 @@ function getPeriodDates(period: ReportPeriod): {
 } {
     const now = new Date();
     const endDate = new Date(now);
-    let startDate = new Date(now);
-    let previousStartDate = new Date(now);
+    const startDate = new Date(now);
+    const previousStartDate = new Date(now);
     let previousEndDate = new Date(now);
 
     switch (period) {
@@ -233,8 +233,13 @@ export const getDashboardStats = async (req: Request, res: Response) => {
             },
         }); // Ajustar cuando tengas más estados
 
-        // Denuncias críticas - como no hay campo prioridad, usamos 0
-        const criticas = 0;
+        // Denuncias críticas
+        const criticas = await models.Denuncia.count({
+            where: {
+                prioridad_id: 'CRITICA',
+                estado_id: { [Op.ne]: estadosMap.get('RESUELTO') || 2 },
+            },
+        });
 
         // 2. DISTRIBUCIÓN POR ESTADO
         // Obtener conteos por cada estado
@@ -307,6 +312,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
                 'created_at',
                 'asunto',
                 'descripcion',
+                'prioridad_id',
             ],
             include: [
                 {
@@ -340,7 +346,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
                 id_denuncia: claimData.id,
                 codigo_acceso: claimData.numero,
                 descripcion: claimData.descripcion,
-                prioridad: 'media', // Default ya que no existe en BD
+                prioridad: (claimData.prioridad_id as string)?.toLowerCase() || 'media',
                 id_estado: claimData.estado_id,
                 id_tipo: claimData.tipo_id,
                 id_empresa: claimData.empresa_id,
@@ -497,6 +503,15 @@ export const generateReports = async (req: Request, res: Response) => {
             raw: true,
         });
         const nuevasEmpresas = empresasConPrimerReclamo.length;
+        
+        const reclamosCriticos = await models.Denuncia.count({
+            where: {
+                created_at: {
+                    [Op.between]: [startDate, endDate],
+                },
+                prioridad_id: 'CRITICA',
+            },
+        });
 
         // Satisfacción promedio (simulado, ajustar según tu modelo)
         const satisfaccionPromedio = 4.2 + (Math.random() * 0.6 - 0.3);
@@ -728,7 +743,7 @@ export const generateReports = async (req: Request, res: Response) => {
                 variacionTiempoPromedioDias:
                     Math.round(variacionTiempoPromedioDias * 1000) / 1000,
                 nuevasEmpresas,
-                reclamosCriticos: 0, // Campo prioridad no existe en el modelo
+                reclamosCriticos: reclamosCriticos,
                 satisfaccionPromedio:
                     Math.round(satisfaccionPromedio * 10) / 10,
             },
@@ -1023,16 +1038,11 @@ export const getDashboardAnalista = async (
         const satisfactionCurrent = calculateSatisfaction(avgTimeCurrent);
         const satisfactionPrev = calculateSatisfaction(avgTimePrev);
 
-        // Critical Claims (Real calculation based on keywords or specific types if priority doesn't exist)
-        // Assuming 'critical' keywords in subject or description, or specific types
-        const criticalKeywords = ['urgente', 'grave', 'peligro', 'robo', 'estafa'];
+        // Critical Claims
         const criticalClaimsCount = await models.Denuncia.count({
             where: {
                 created_at: { [Op.between]: [startCurrentMonth, endCurrentMonth] },
-                [Op.or]: [
-                    { asunto: { [Op.regexp]: criticalKeywords.join('|') } },
-                    // Add specific types if known, e.g. type_id: X
-                ]
+                prioridad_id: 'CRITICA'
             }
         });
         
@@ -1049,7 +1059,7 @@ export const getDashboardAnalista = async (
             },
             critical_claims: {
                 value: criticalClaimsCount,
-                description: 'Detectados por palabras clave urgentes'
+                description: 'Denuncias con prioridad CRÍTICA'
             },
             recurrence_rate: {
                 value: Math.round(recurrenceRateCurrent * 10) / 10,
@@ -1118,11 +1128,58 @@ export const getDashboardSupervisor = async (
 ) => {
     try {
         const userId = req.user?.get('id');
-        const empresaId = req.user?.get('empresa_id') || 1; // Fallback to 1 if not set, similar to other endpoints
+        const empresaId = req.user?.get('empresa_id') || 1;
         
-        const whereClause: any = { empresa_id: empresaId , asignado_a: userId};
+        // 1. Obtener IDs de denuncias asignadas al supervisor
+        const asignaciones = await models.DenunciaAsignacion.findAll({
+            where: {
+                usuario_id: userId,
+                activo: 1,
+            },
+            attributes: ['denuncia_id'],
+        });
 
+        const denunciaIds = asignaciones.map((a: any) => a.get('denuncia_id'));
 
+        // Si no tiene asignaciones, devolver todo en 0
+        if (denunciaIds.length === 0) {
+             return res.json({
+                data: [],
+                metrics: {
+                    total_claims: 0,
+                    pending_claims: 0,
+                    in_progress_claims: 0,
+                    resolved_claims: 0,
+                    critical_claims: 0,
+                }
+            });
+        }
+
+        const whereClause: any = { 
+            id: denunciaIds,
+            empresa_id: empresaId 
+        };
+
+        // 2. Calculate Metrics (Count all assigned claims)
+        const total = await models.Denuncia.count({ where: whereClause });
+        
+        const pending = await models.Denuncia.count({ 
+            where: { ...whereClause, estado_id: 1 } 
+        });
+        
+        const inProgress = await models.Denuncia.count({ 
+            where: { ...whereClause, estado_id: 2 } 
+        });
+        
+        const resolved = await models.Denuncia.count({ 
+            where: { ...whereClause, estado_id: 4 } 
+        });
+        
+        const critical = await models.Denuncia.count({ 
+            where: { ...whereClause, prioridad_id: 'CRITICA' } 
+        });
+
+        // 3. Fetch Recent Claims (Limit 5)
         const denuncias = await models.Denuncia.findAll({
             where: whereClause,
             include: [
@@ -1146,36 +1203,10 @@ export const getDashboardSupervisor = async (
             limit: 5,
         });
 
-        // 2. Calculate Metrics
-        let pending = 0;
-        let inProgress = 0;
-        let resolved = 0;
-        let critical = 0;
-
-
         const formattedClaims = denuncias.map((d: any) => {
             const plain = d.get({ plain: true });
             
-            // Derive priority (mock logic since column missing)
-            let prioridad = 'media';
-            const asunto = plain.asunto?.toLowerCase() || '';
-            const desc = plain.descripcion?.toLowerCase() || '';
-            
-            if (asunto.includes('urgente') || asunto.includes('grave') || desc.includes('robo')) {
-                prioridad = 'alta';
-            } else if (asunto.includes('consulta') || asunto.includes('duda')) {
-                prioridad = 'baja';
-            }
-
-            // Update metrics
-            const estadoId = plain.estado_id;
-            if (estadoId === 1) pending++; // Pendiente
-            else if (estadoId === 2) inProgress++; // En Revision
-            else if (estadoId === 4) resolved++; // Resuelto
-            
-            if (prioridad === 'alta' || prioridad === 'critica') critical++;
-
-
+            const prioridad = (plain.prioridad_id as string)?.toLowerCase() || 'media';
 
             return {
                 id_denuncia: plain.id,
@@ -1190,7 +1221,7 @@ export const getDashboardSupervisor = async (
                 asunto: plain.asunto,
                 descripcion: plain.descripcion,
                 prioridad: prioridad,
-                asignado_a: plain.asignado_a || userId, // Fallback to current user if null
+                asignado_a: userId, // Sabemos que está asignado a este usuario
                 nombre_denunciante: plain.denunciante_nombre,
                 denunciante_nombre: plain.denunciante_nombre,
                 email_denunciante: plain.denunciante_email,
@@ -1213,7 +1244,7 @@ export const getDashboardSupervisor = async (
         const response = {
             data: formattedClaims,
             metrics: {
-                total_claims: formattedClaims.length,
+                total_claims: total,
                 pending_claims: pending,
                 in_progress_claims: inProgress,
                 resolved_claims: resolved,
@@ -1273,16 +1304,7 @@ export const getAllSupervisorClaims = async (
         const formattedClaims = denuncias.map((d: any) => {
             const plain = d.get({ plain: true });
             
-            // Derive priority
-            let prioridad = 'media';
-            const asunto = plain.asunto?.toLowerCase() || '';
-            const desc = plain.descripcion?.toLowerCase() || '';
-            
-            if (asunto.includes('urgente') || asunto.includes('grave') || desc.includes('robo')) {
-                prioridad = 'alta';
-            } else if (asunto.includes('consulta') || asunto.includes('duda')) {
-                prioridad = 'baja';
-            }
+            const prioridad = (plain.prioridad_id as string)?.toLowerCase() || 'media';
 
 
 
@@ -1365,16 +1387,7 @@ export const getPendingSupervisorClaims = async (
         const formattedClaims = denuncias.map((d: any) => {
             const plain = d.get({ plain: true });
             
-            // Derive priority
-            let prioridad = 'media';
-            const asunto = plain.asunto?.toLowerCase() || '';
-            const desc = plain.descripcion?.toLowerCase() || '';
-            
-            if (asunto.includes('urgente') || asunto.includes('grave') || desc.includes('robo')) {
-                prioridad = 'alta';
-            } else if (asunto.includes('consulta') || asunto.includes('duda')) {
-                prioridad = 'baja';
-            }
+            const prioridad = (plain.prioridad_id as string)?.toLowerCase() || 'media';
 
             return {
                 id_denuncia: plain.id,
@@ -1455,16 +1468,7 @@ export const getResolvedSupervisorClaims = async (
         const formattedClaims = denuncias.map((d: any) => {
             const plain = d.get({ plain: true });
             
-            // Derive priority
-            let prioridad = 'media';
-            const asunto = plain.asunto?.toLowerCase() || '';
-            const desc = plain.descripcion?.toLowerCase() || '';
-            
-            if (asunto.includes('urgente') || asunto.includes('grave') || desc.includes('robo')) {
-                prioridad = 'alta';
-            } else if (asunto.includes('consulta') || asunto.includes('duda')) {
-                prioridad = 'baja';
-            }
+            const prioridad = (plain.prioridad_id as string)?.toLowerCase() || 'media';
 
             return {
                 id_denuncia: plain.id,
@@ -1502,3 +1506,178 @@ export const getResolvedSupervisorClaims = async (
 
 
 
+
+/**
+ * Obtener métricas detalladas para analista con filtro de fechas
+ * GET /api/dashboard/analyst/analytics?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+ */
+export const getAnalystAnalytics = async (req: Request, res: Response) => {
+    try {
+        const { startDate: startDateStr, endDate: endDateStr } = req.body;
+
+        if (!startDateStr || !endDateStr) {
+            return res.status(400).json({ error: 'startDate and endDate are required' });
+        }
+
+        const startDate = new Date(startDateStr);
+        const endDate = new Date(endDateStr);
+        // Ajustar endDate para incluir todo el día
+        endDate.setHours(23, 59, 59, 999);
+
+        // Obtener estados
+        const estados = await models.EstadoDenuncia.findAll({
+            attributes: ['id', 'codigo', 'nombre'],
+        });
+        const estadosMap = new Map();
+        estados.forEach((estado: any) => {
+            estadosMap.set(estado.codigo, estado.id);
+        });
+        const estadoResueltoId = estadosMap.get('RESUELTO') || estadosMap.get('CERRADO') || 2;
+
+        // 1. Rendimiento Diario (Recibidos vs Resueltos)
+        const receivedByDay = await models.Denuncia.findAll({
+            attributes: [
+                [fn('DATE', col('created_at')), 'fecha'],
+                [fn('COUNT', col('id')), 'cantidad'],
+            ],
+            where: {
+                created_at: {
+                    [Op.between]: [startDate, endDate],
+                },
+            },
+            group: [fn('DATE', col('created_at'))],
+            raw: true,
+            order: [[fn('DATE', col('created_at')), 'ASC']],
+        });
+
+        const resolvedByDay = await models.Denuncia.findAll({
+            attributes: [
+                [fn('DATE', col('updated_at')), 'fecha'],
+                [fn('COUNT', col('id')), 'cantidad'],
+            ],
+            where: {
+                updated_at: {
+                    [Op.between]: [startDate, endDate],
+                },
+                estado_id: estadoResueltoId,
+            },
+            group: [fn('DATE', col('updated_at'))],
+            raw: true,
+            order: [[fn('DATE', col('updated_at')), 'ASC']],
+        });
+
+        // Combinar datos diarios
+        const dailyPerformanceMap = new Map();
+
+        receivedByDay.forEach((item: any) => {
+            const fecha = item.fecha;
+            dailyPerformanceMap.set(fecha, {
+                fecha,
+                recibidos: parseInt(item.cantidad),
+                resueltos: 0,
+            });
+        });
+
+        resolvedByDay.forEach((item: any) => {
+            const fecha = item.fecha;
+            if (dailyPerformanceMap.has(fecha)) {
+                dailyPerformanceMap.get(fecha).resueltos = parseInt(item.cantidad);
+            } else {
+                dailyPerformanceMap.set(fecha, {
+                    fecha,
+                    recibidos: 0,
+                    resueltos: parseInt(item.cantidad),
+                });
+            }
+        });
+
+        const dailyPerformance = Array.from(dailyPerformanceMap.values()).sort((a: any, b: any) => 
+            new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
+        );
+
+        // 2. Reclamos por Categoría
+        const claimsByCategory = await models.Denuncia.findAll({
+            attributes: [
+                [col('tipo_denuncia.categoria_id'), 'categoria_id'], // Ajustar según modelo real si es necesario
+                [fn('COUNT', col('denuncia.id')), 'cantidad'],
+            ],
+            include: [{
+                model: models.TipoDenuncia,
+                as: 'tipo_denuncia',
+                attributes: ['categoria_id'],
+                include: [{
+                    model: models.CategoriaDenuncia, // Asumiendo que existe este modelo y relación
+                    as: 'categoria', // Verificar nombre de la asociación
+                    attributes: ['nombre'],
+                }]
+            }],
+            where: {
+                created_at: {
+                    [Op.between]: [startDate, endDate],
+                },
+            },
+            group: ['tipo_denuncia.categoria_id', 'tipo_denuncia.categoria.id', 'tipo_denuncia.categoria.nombre'],
+            raw: true,
+        });
+
+        // Procesar resultado de categorías (puede requerir ajustes según la estructura exacta de la respuesta raw)
+        const processedCategories = claimsByCategory.map((item: any) => ({
+            categoria: item['tipo_denuncia.categoria.nombre'] || 'Sin Categoría',
+            cantidad: parseInt(item.cantidad),
+        }));
+
+
+        // 3. Reclamos por Tipo
+        const claimsByType = await models.Denuncia.findAll({
+            attributes: [
+                [col('tipo_denuncia.nombre'), 'tipo'],
+                [fn('COUNT', col('denuncia.id')), 'cantidad'],
+            ],
+            include: [{
+                model: models.TipoDenuncia,
+                as: 'tipo_denuncia',
+                attributes: [],
+            }],
+            where: {
+                created_at: {
+                    [Op.between]: [startDate, endDate],
+                },
+            },
+            group: ['tipo_denuncia.nombre'],
+            raw: true,
+        });
+
+        const processedTypes = claimsByType.map((item: any) => ({
+            tipo: item.tipo || 'Sin Tipo',
+            cantidad: parseInt(item.cantidad),
+        }));
+
+        // 4. Tendencia de Satisfacción (Simulada)
+        // Generar datos simulados distribuidos en el rango de fechas
+        const satisfactionTrend = [];
+        const currentDate = new Date(startDate);
+        while (currentDate <= endDate) {
+            satisfactionTrend.push({
+                fecha: currentDate.toISOString().split('T')[0],
+                satisfaccion: parseFloat((3.5 + Math.random() * 1.5).toFixed(1)), // Random entre 3.5 y 5.0
+            });
+            currentDate.setDate(currentDate.getDate() + 1); // Avanzar un día
+            
+            // Si el rango es muy grande, podríamos agrupar por semana o mes, pero por ahora diario está bien para la simulación
+            if (satisfactionTrend.length > 30) break; // Limitar a 30 puntos para no saturar
+        }
+
+        res.json({
+            dailyPerformance,
+            claimsByCategory: processedCategories,
+            claimsByType: processedTypes,
+            satisfactionTrend,
+        });
+
+    } catch (error) {
+        console.error('❌ Error en getAnalystAnalytics:', error);
+        res.status(500).json({
+            error: error instanceof Error ? error.message : 'Error al obtener analíticas',
+        });
+    }
+};

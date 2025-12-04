@@ -26,4 +26,14 @@ router.get('/supervisor/pending', authMiddleware, dashboardController.getPending
 // Endpoint para obtener denuncias resueltas del supervisor
 router.get('/supervisor/resolved', authMiddleware, dashboardController.getResolvedSupervisorClaims);
 
+import * as reportsController from '../controllers/reports.controller';
+
+// Endpoint para analíticas detalladas de analista
+router.post('/analyst/analytics', authMiddleware, dashboardController.getAnalystAnalytics);
+
+// Endpoints para reportes
+router.post('/analyst/reports/generate', authMiddleware, reportsController.generateReport);
+router.get('/analyst/reports', authMiddleware, reportsController.listReports);
+router.get('/analyst/reports/:filename', authMiddleware, reportsController.downloadReport);
+
 export default router;

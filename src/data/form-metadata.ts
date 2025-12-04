@@ -43,58 +43,60 @@ export interface FormMetadata {
     countries: string[];
     timeframes: TimeframeMetadata[];
     defaults: {
-        estado: DefaultEstadoMetadata;
         empresa: DefaultEmpresaMetadata;
+        estado: DefaultEstadoMetadata;
     };
 }
 
 export const FORM_CATEGORIES: CategoryMetadata[] = [
     {
-        id: 'SERVICIO_CLIENTE',
-        name: 'Servicio al Cliente',
+        id: 'RESPETO_SEGURIDAD',
+        name: 'Respeto y seguridad en el trabajo',
         subcategories: [
-            { code: 'SERVICIO_ATENCION_DEFICIENTE', name: 'Atención deficiente' },
-            { code: 'SERVICIO_DEMORAS_RESPUESTA', name: 'Demoras en respuesta' },
-            { code: 'SERVICIO_INFORMACION_INCORRECTA', name: 'Información incorrecta' },
-            { code: 'SERVICIO_FALTA_SEGUIMIENTO', name: 'Falta de seguimiento' },
-            { code: 'SERVICIO_PERSONAL_NO_CAPACITADO', name: 'Personal no capacitado' },
-            { code: 'SERVICIO_HORARIOS_ATENCION', name: 'Horarios de atención' },
-            { code: 'SERVICIO_CANALES_COMUNICACION', name: 'Canales de comunicación' },
-            { code: 'SERVICIO_RESOLUCION_PROBLEMAS', name: 'Resolución de problemas' },
-            { code: 'SERVICIO_TIEMPO_ESPERA', name: 'Tiempo de espera' },
-            { code: 'SERVICIO_CALIDAD', name: 'Calidad del servicio' },
+            { code: 'ACOSO_LABORAL', name: 'Acoso laboral' },
+            { code: 'ACOSO_SEXUAL', name: 'Acoso sexual' },
+            { code: 'COMPORTAMIENTO_INADECUADO', name: 'Comportamiento inadecuado' },
+            { code: 'DISCRIMINACION', name: 'Discriminación' },
+            { code: 'REPRESALIAS', name: 'Represalias' },
+            { code: 'SALUD_SEGURIDAD', name: 'Salud y seguridad' },
+            { code: 'VIOLENCIA_TRABAJO', name: 'Violencia en el lugar de trabajo' },
         ],
     },
     {
-        id: 'PRODUCTOS_SERVICIOS',
-        name: 'Productos y Servicios',
+        id: 'INTEGRIDAD_NEGOCIOS',
+        name: 'Integridad en los negocios',
         subcategories: [
-            { code: 'PRODUCTO_CALIDAD', name: 'Calidad del producto' },
-            { code: 'PRODUCTO_DEFECTOS_FABRICACION', name: 'Defectos de fabricación' },
-            { code: 'PRODUCTO_GARANTIAS_DEVOLUCIONES', name: 'Garantías y devoluciones' },
-            { code: 'PRODUCTO_PRECIOS_FACTURACION', name: 'Precios y facturación' },
-            { code: 'PRODUCTO_DISPONIBILIDAD', name: 'Disponibilidad' },
-            { code: 'PRODUCTO_ENTREGA_LOGISTICA', name: 'Entrega y logística' },
-            { code: 'PRODUCTO_INSTALACION_CONFIGURACION', name: 'Instalación y configuración' },
-            { code: 'PRODUCTO_MANTENCION', name: 'Mantenimiento' },
-            { code: 'PRODUCTO_ACTUALIZACIONES', name: 'Actualizaciones' },
-            { code: 'PRODUCTO_COMPATIBILIDAD', name: 'Compatibilidad' },
+            {
+                code: 'USO_INDEBIDO_RECURSOS',
+                name: 'Apropiación o uso indebido de recursos de la compañía',
+            },
+            { code: 'CONFLICTO_INTERESES', name: 'Conflicto de intereses' },
+            { code: 'FRAUDE_CONTABLE', name: 'Fraude contable o tributario' },
+            {
+                code: 'LAVADO_ACTIVOS',
+                name: 'Lavado de activos / Financiamiento del terrorismo',
+            },
+            { code: 'LIBRE_COMPETENCIA', name: 'Libre competencia' },
+            {
+                code: 'PRIVACIDAD_DATOS',
+                name: 'Privacidad y protección de datos personales',
+            },
+            { code: 'RECEPTACION', name: 'Receptación' },
+            { code: 'SOBORNO_CORRUPCION', name: 'Soborno y corrupción' },
+            {
+                code: 'PROPIEDAD_INTELECTUAL',
+                name: 'Uso indebido de propiedad intelectual o industrial',
+            },
+            { code: 'INFORMACION_PRIVILEGIADA', name: 'Uso información privilegiada' },
         ],
     },
     {
-        id: 'PROCESOS_INTERNOS',
-        name: 'Procesos Internos',
+        id: 'SOSTENIBILIDAD',
+        name: 'Sostenibilidad, medio ambiente y vecinos',
         subcategories: [
-            { code: 'PROCESO_POLITICAS_PROCEDIMIENTOS', name: 'Políticas y procedimientos' },
-            { code: 'PROCESO_SISTEMAS_INFORMATICOS', name: 'Sistemas informáticos' },
-            { code: 'PROCESO_GESTION_DATOS', name: 'Gestión de datos' },
-            { code: 'PROCESO_SEGURIDAD_PRIVACIDAD', name: 'Seguridad y privacidad' },
-            { code: 'PROCESO_CUMPLIMIENTO_NORMATIVO', name: 'Cumplimiento normativo' },
-            { code: 'PROCESO_RECURSOS_HUMANOS', name: 'Recursos humanos' },
-            { code: 'PROCESO_CAPACITACION', name: 'Capacitación' },
-            { code: 'PROCESO_COMUNICACION_INTERNA', name: 'Comunicación interna' },
-            { code: 'PROCESO_GESTION_CALIDAD', name: 'Gestión de calidad' },
-            { code: 'PROCESO_MEJORA_CONTINUA', name: 'Mejora continua' },
+            { code: 'MEDIO_AMBIENTE', name: 'Medio ambiente' },
+            { code: 'TRABAJO_INFANTIL', name: 'Trabajo infantil o forzoso' },
+            { code: 'VECINOS_COMUNIDADES', name: 'Vecinos y comunidades' },
         ],
     },
 ];
@@ -133,48 +135,11 @@ export const FORM_RELATIONSHIPS: RelationshipMetadata[] = [
 ];
 
 export const FORM_COUNTRIES: string[] = [
-    'Argentina',
-    'Bolivia',
-    'Brasil',
-    'Chile',
-    'Colombia',
-    'Costa Rica',
-    'Cuba',
-    'Ecuador',
-    'El Salvador',
-    'España',
-    'Guatemala',
-    'Honduras',
-    'México',
-    'Nicaragua',
-    'Panamá',
-    'Paraguay',
-    'Perú',
-    'Puerto Rico',
-    'República Dominicana',
-    'Uruguay',
-    'Venezuela',
-    'Estados Unidos',
-    'Canadá',
-    'Francia',
-    'Alemania',
-    'Italia',
-    'Reino Unido',
-    'Portugal',
-    'Países Bajos',
-    'Bélgica',
-    'Suiza',
-    'Austria',
-    'Suecia',
-    'Noruega',
-    'Dinamarca',
-    'Australia',
-    'Nueva Zelanda',
-    'Japón',
-    'Corea del Sur',
-    'China',
-    'India',
-    'Singapur',
+  "Argentina",
+  "Chile",
+  "Perú",
+  "Francia",
+  "Mexico",
 ];
 
 export const FORM_TIMEFRAMES: TimeframeMetadata[] = [
@@ -238,15 +203,33 @@ async function ensureTipoDenunciaSeeded(
     transaction: Transaction
 ) {
     for (const category of FORM_CATEGORIES) {
+        // Asegurar que la categoría existe
+        const [categoriaDb] = (await models.CategoriaDenuncia.findOrCreate({
+            where: { nombre: category.name },
+            defaults: {
+                nombre: category.name,
+                descripcion: category.description,
+                activo: 1,
+            },
+            transaction,
+        })) as any;
+
         for (const subcategory of category.subcategories) {
             const codigo = subcategory.code.toUpperCase();
-            await models.TipoDenuncia.findOrCreate({
+            const [tipo, created] = (await models.TipoDenuncia.findOrCreate({
                 where: { codigo },
                 defaults: {
                     nombre: subcategory.name,
+                    categoria_id: categoriaDb.id,
                 },
                 transaction,
-            });
+            })) as any;
+
+            // Si ya existía pero no tenía categoría asignada, actualizarla
+            if (!created && !tipo.categoria_id) {
+                tipo.categoria_id = categoriaDb.id;
+                await tipo.save({ transaction });
+            }
         }
     }
 }
