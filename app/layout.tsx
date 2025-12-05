@@ -5,7 +5,7 @@ import type { Metadata, Viewport } from "next";
 import { Providers } from "./providers";
 
 import { siteConfig } from "@/config/site";
-import { ConditionalNavbar } from "@/components/conditional-navbar";
+//import { ConditionalNavbar } from "@/components/conditional-navbar";
 
 export const metadata: Metadata = {
   title: {
@@ -37,7 +37,7 @@ export default function RootLayout({
       <body>
         <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
           <div className="relative flex flex-col h-screen">
-            <ConditionalNavbar />
+            {/*<ConditionalNavbar />*/}
             <main className="container mx-auto max-w-full">{children}</main>
           </div>
         </Providers>

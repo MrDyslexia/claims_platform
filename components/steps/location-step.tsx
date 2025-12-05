@@ -66,7 +66,7 @@ export function LocationStep({ formData, onUpdate }: LocationStepProps) {
 
   const handleCountrySelect = (country: string) => {
     setSelectedCountry(country);
-    onUpdate({ ...formData, country });
+    onUpdate({ country });
   };
 
   return (

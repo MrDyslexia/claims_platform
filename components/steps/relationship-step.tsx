@@ -1,7 +1,5 @@
 "use client";
 
-import { type RelationshipMetadata, FALLBACK_RELATIONSHIPS } from "@/lib/form-metadata";
-
 import { useEffect, useState } from "react";
 import { Card, CardBody, Chip } from "@heroui/react";
 import {
@@ -14,6 +12,11 @@ import {
   CircleCheckBig,
   type LucideIcon,
 } from "lucide-react";
+
+import {
+  type RelationshipMetadata,
+  FALLBACK_RELATIONSHIPS,
+} from "@/lib/form-metadata";
 
 const RELATIONSHIP_STYLES: Record<string, { icon: LucideIcon; color: string }> =
   {

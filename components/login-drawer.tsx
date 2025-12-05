@@ -55,14 +55,11 @@ export default function LoginDrawer({
 
     try {
       await login(email, password);
-
       const role = getPrimaryRole();
-
-      // Determinar la ruta correspondiente según el rol
       let route = "/";
 
       switch (role) {
-        case "admin":
+        case "administrador":
           route = "/admin";
           break;
         case "analista":
@@ -72,7 +69,7 @@ export default function LoginDrawer({
           route = "/supervisor";
           break;
         case "auditor":
-          route = "/admin";
+          route = "/auditor";
           break;
         default:
           route = "/";

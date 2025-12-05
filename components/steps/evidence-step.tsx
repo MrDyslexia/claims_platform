@@ -33,7 +33,7 @@ export function EvidenceStep({ formData, onUpdate }: EvidenceStepProps) {
     ) {
       setFiles(formData.evidence);
     }
-  }, [formData.evidence?.length]);
+  }, [formData.evidence]);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files || []);
@@ -189,7 +189,7 @@ export function EvidenceStep({ formData, onUpdate }: EvidenceStepProps) {
                       className="text-destructive hover:text-destructive"
                       size="sm"
                       variant="ghost"
-                      onClick={() => removeFile(file.id)}
+                      onPress={() => removeFile(file.id)}
                     >
                       <X className="h-4 w-4" />
                     </Button>

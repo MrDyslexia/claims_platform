@@ -1,7 +1,5 @@
 "use client";
 
-import { type TimeframeMetadata, FALLBACK_TIMEFRAMES } from "@/lib/form-metadata";
-
 import { useEffect, useState } from "react";
 import { Card, CardBody, Chip } from "@heroui/react";
 import {
@@ -11,6 +9,11 @@ import {
   CircleCheck,
   type LucideIcon,
 } from "lucide-react";
+
+import {
+  type TimeframeMetadata,
+  FALLBACK_TIMEFRAMES,
+} from "@/lib/form-metadata";
 
 const TIMEFRAME_STYLES: Record<string, { icon: LucideIcon; color: string }> = {
   reciente: {
@@ -64,7 +67,6 @@ export function TimeStep({ formData, onUpdate }: TimeStepProps) {
   const handleTimeSelect = (timeframe: TimeframeMetadata) => {
     setSelectedTime(timeframe.id);
     onUpdate({
-      ...formData,
       timeframe: timeframe.id,
       timeframeLabel: timeframe.title,
     });

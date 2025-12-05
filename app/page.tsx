@@ -20,17 +20,11 @@ export default function HomePage() {
           <div className="text-center mb-8">
             <Image
               alt="Belator group logo"
-              height={300}
+              className="w-auto h-auto bg-white rounded-full mx-auto mb-8 shadow-lg"
+              height="300"
+              priority={true}
               src="/icon.svg"
-              style={{
-                backgroundColor: "white",
-                borderRadius: "50%",
-                alignSelf: "center",
-                justifySelf: "center",
-                marginBottom: "calc(var(--spacing) * 8)",
-                boxShadow: "0 12px 12px rgba(0, 0, 0, 0.1)",
-              }}
-              width={300}
+              width="300"
             />
             <h1 className="text-4xl font-bold mb-8 text-[#202e5e]">
               Sistema de Reclamos Grupo Belator
