@@ -2,88 +2,27 @@
 
 import { useEffect, useState } from "react";
 import { CheckboxGroup, Checkbox } from "@heroui/checkbox";
-import { Package, Settings, ArrowLeft, Scale, Headset } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-
-const CATEGORY_ICONS = {
-  "Servicio al Cliente": Headset,
-  "Productos y Servicios": Package,
-  "Procesos Internos": Settings,
-  "Ley Karin": Scale,
-} as const;
-
-const CATEGORIES = {
-  "Ley Karin": {
-    description: "Problemas relacionados con la atención al cliente",
-    categories: [
-      "Atención deficiente",
-      "Demoras en respuesta",
-      "Información incorrecta",
-      "Falta de seguimiento",
-      "Personal no capacitado",
-      "Horarios de atención",
-      "Canales de comunicación",
-      "Resolución de problemas",
-      "Tiempo de espera",
-      "Calidad del servicio",
-    ],
-  },
-  "Servicio al Cliente": {
-    description: "Problemas relacionados con la atención al cliente",
-    categories: [
-      "Atención deficiente",
-      "Demoras en respuesta",
-      "Información incorrecta",
-      "Falta de seguimiento",
-      "Personal no capacitado",
-      "Horarios de atención",
-      "Canales de comunicación",
-      "Resolución de problemas",
-      "Tiempo de espera",
-      "Calidad del servicio",
-    ],
-  },
-  "Productos y Servicios": {
-    description: "Problemas relacionados con productos y servicios",
-    categories: [
-      "Calidad del producto",
-      "Defectos de fabricación",
-      "Garantías y devoluciones",
-      "Precios y facturación",
-      "Disponibilidad",
-      "Entrega y logística",
-      "Instalación y configuración",
-      "Mantenimiento",
-      "Actualizaciones",
-      "Compatibilidad",
-    ],
-  },
-  "Procesos Internos": {
-    description: "Problemas relacionados con procesos internos",
-    categories: [
-      "Políticas y procedimientos",
-      "Sistemas informáticos",
-      "Gestión de datos",
-      "Seguridad y privacidad",
-      "Cumplimiento normativo",
-      "Recursos humanos",
-      "Capacitación",
-      "Comunicación interna",
-      "Gestión de calidad",
-      "Mejora continua",
-    ],
-  },
-};
-
-type CategoryKey = keyof typeof CATEGORIES;
-
 interface CategoryStepProps {
   readonly formData: any;
   readonly onUpdate: (data: any) => void;
+  readonly CATEGORIES: {
+    [key: string]: { description: string; categories: string[] };
+  };
+  readonly CATEGORY_ICONS: {
+    [key: string]: React.ComponentType<any>;
+  };
 }
 
-export function CategoryStep({ formData, onUpdate }: CategoryStepProps) {
+export function CategoryStep({
+  formData,
+  onUpdate,
+  CATEGORIES,
+  CATEGORY_ICONS,
+}: CategoryStepProps) {
+  type CategoryKey = keyof typeof CATEGORIES;
   const [selectedCategory, setSelectedCategory] = useState<string>(
     formData.category || "",
   );
@@ -105,7 +44,7 @@ export function CategoryStep({ formData, onUpdate }: CategoryStepProps) {
 
   const handleCategoryClick = (category: CategoryKey) => {
     setExpandedCategory(category);
-    setSelectedCategory(category);
+    setSelectedCategory(String(category));
     setSelectedSubcategory("");
     onUpdate({ category, subcategory: "" });
   };

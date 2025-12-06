@@ -1,5 +1,7 @@
 "use client";
-import { useState, useCallback } from "react";
+import type FormData from "@/types/interface";
+
+import { useState, useCallback, useEffect } from "react";
 import {
   Card,
   CardBody,
@@ -12,14 +14,7 @@ import {
 import {
   ChevronLeft,
   ChevronRight,
-  FileText,
   Shield,
-  Users,
-  Globe,
-  Clock,
-  Building,
-  MessageSquare,
-  User,
   Send,
   AlertCircle,
   CheckCircle,
@@ -35,77 +30,8 @@ import { DescriptionStep } from "./steps/description-step";
 import { EvidenceStep } from "./steps/evidence-step";
 import { IdentificationStep } from "./steps/identification-step";
 
-interface FormData {
-  category?: string;
-  subcategory?: string;
-  relationship?: string;
-  relationshipLabel?: string;
-  country?: string;
-  details?: string;
-  timeframe?: string;
-  timeframeLabel?: string;
-  involvedParties?: Array<{ id: number; name: string; type: string }>;
-  description?: string;
-  evidence?: Array<{ id: number; name: string; size: number; type: string }>;
-  isAnonymous?: boolean;
-  fullName?: string;
-  rut?: string;
-  email?: string;
-  phone?: string;
-}
-
-const STEPS = [
-  {
-    id: 1,
-    title: "Categoría",
-    description: "Tipo de reclamo",
-    icon: FileText,
-  },
-  {
-    id: 2,
-    title: "Identificación",
-    description: "Datos personales o anónimo",
-    icon: User,
-  },
-  {
-    id: 3,
-    title: "Relación",
-    description: "Tu relación con la empresa",
-    icon: Users,
-  },
-  {
-    id: 4,
-    title: "Ubicación",
-    description: "País donde ocurrió el hecho",
-    icon: Globe,
-  },
-  {
-    id: 5,
-    title: "Detalles",
-    description: "Información adicional",
-    icon: MessageSquare,
-  },
-  { id: 6, title: "Tiempo", description: "Duración del problema", icon: Clock },
-  {
-    id: 7,
-    title: "Involucrados",
-    description: "Personas y entidades",
-    icon: Building,
-  },
-  {
-    id: 8,
-    title: "Descripción",
-    description: "Relato detallado del hecho",
-    icon: MessageSquare,
-  },
-  {
-    id: 9,
-    title: "Evidencias",
-    description: "Documentos y fotografías",
-    icon: FileText,
-  },
-];
-
+import STEPS from "@/config/steps";
+import ClaimsData from "@/API/claims_data";
 const validateStep = (
   step: number,
   formData: FormData,
@@ -219,17 +145,49 @@ const isStepCompleted = (step: number, formData: FormData): boolean => {
 };
 
 export function ClaimsWizard() {
+  const [categories, setCategories] = useState<
+    Record<
+      string,
+      {
+        description: string;
+        categories: string[];
+      }
+    >
+  >({});
+  const [categoryIcons, setCategoryIcons] = useState<Record<string, any>>({});
+  const [countries, setCountries] = useState<string[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({});
   const [validationError, setValidationError] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [enterprise, setEnterprise] = useState<
+    { rut: string; nombre: string }[] | undefined
+  >(undefined);
+  const [isLoading, setIsLoading] = useState(true);
 
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setIsLoading(true);
+        const data = await ClaimsData();
+
+        setCategories(data.categories);
+        setCategoryIcons(data.categoryIcons);
+        setCountries(data.countries);
+        setEnterprise(data.enterprise);
+      } catch (error) {
+        console.error("Failed to fetch claims data:", error);
+        // ClaimsData ya maneja el fallback con datos por defecto
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
   const handleFormUpdate = useCallback((newData: Partial<FormData>) => {
-    console.log("[v0] Updating formData with:", newData);
     setFormData((prev) => {
       const merged = { ...prev, ...newData };
-
-      console.log("[v0] Merged formData:", merged);
 
       return merged;
     });
@@ -331,17 +289,22 @@ export function ClaimsWizard() {
         });
         submitData.append("evidenceCount", String(formData.evidence.length));
       }
+      console.log("[v0] FormData entries:", Array.from(submitData.entries()));
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/denuncias/public`,
+        {
+          method: "POST",
+          body: submitData,
+        },
+      );
 
-      console.log("[v0] Submitting form data:", {
-        ...formData,
-        evidence: formData.evidence?.map((e) => ({
-          name: e.name,
-          size: e.size,
-          type: e.type,
-        })),
-      });
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status} ${response.statusText}`);
+      }
 
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const result = await response.json();
+
+      console.log("[v0] Claim submitted successfully:", result);
 
       alert(
         "Reclamo enviado exitosamente. Recibirás una confirmación por email.",
@@ -360,9 +323,26 @@ export function ClaimsWizard() {
   };
 
   const renderStepContent = () => {
+    if (isLoading && currentStep === 1) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
+            <p className="text-muted-foreground">Cargando categorías...</p>
+          </div>
+        </div>
+      );
+    }
     switch (currentStep) {
       case 1:
-        return <CategoryStep formData={formData} onUpdate={handleFormUpdate} />;
+        return (
+          <CategoryStep
+            CATEGORIES={categories}
+            CATEGORY_ICONS={categoryIcons}
+            formData={formData}
+            onUpdate={handleFormUpdate}
+          />
+        );
       case 2:
         return (
           <IdentificationStep formData={formData} onUpdate={handleFormUpdate} />
@@ -372,13 +352,25 @@ export function ClaimsWizard() {
           <RelationshipStep formData={formData} onUpdate={handleFormUpdate} />
         );
       case 4:
-        return <LocationStep formData={formData} onUpdate={handleFormUpdate} />;
+        return (
+          <LocationStep
+            countries={countries}
+            formData={formData}
+            onUpdate={handleFormUpdate}
+          />
+        );
       case 5:
         return <DetailsStep formData={formData} onUpdate={handleFormUpdate} />;
       case 6:
         return <TimeStep formData={formData} onUpdate={handleFormUpdate} />;
       case 7:
-        return <InvolvedStep formData={formData} onUpdate={handleFormUpdate} />;
+        return (
+          <InvolvedStep
+            enterprises={enterprise}
+            formData={formData}
+            onUpdate={handleFormUpdate}
+          />
+        );
       case 8:
         return (
           <DescriptionStep formData={formData} onUpdate={handleFormUpdate} />
@@ -545,14 +537,14 @@ export function ClaimsWizard() {
 
             {currentStep === STEPS.length ? (
               <Button
-                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white font-medium"
                 disabled={!currentValidation.isValid || isSubmitting}
                 isLoading={isSubmitting}
                 variant="solid"
                 onPress={handleSubmit}
               >
                 <Send className="h-4 w-4" />
-                <span>{isSubmitting ? "Enviando..." : "Enviar Reclamo"}</span>
+                {isSubmitting ? "Enviando..." : "Enviar Reclamo"}
               </Button>
             ) : (
               <Button

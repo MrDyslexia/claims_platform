@@ -4,64 +4,24 @@ import { useState } from "react";
 import { Card, CardBody, CardHeader, Button, Input } from "@heroui/react";
 import { Search, MapPin, Globe, CircleCheckBig } from "lucide-react";
 
-const COUNTRIES = [
-  "Argentina",
-  "Bolivia",
-  "Brasil",
-  "Chile",
-  "Colombia",
-  "Costa Rica",
-  "Cuba",
-  "Ecuador",
-  "El Salvador",
-  "España",
-  "Guatemala",
-  "Honduras",
-  "México",
-  "Nicaragua",
-  "Panamá",
-  "Paraguay",
-  "Perú",
-  "Puerto Rico",
-  "República Dominicana",
-  "Uruguay",
-  "Venezuela",
-  "Estados Unidos",
-  "Canadá",
-  "Francia",
-  "Alemania",
-  "Italia",
-  "Reino Unido",
-  "Portugal",
-  "Países Bajos",
-  "Bélgica",
-  "Suiza",
-  "Austria",
-  "Suecia",
-  "Noruega",
-  "Dinamarca",
-  "Australia",
-  "Nueva Zelanda",
-  "Japón",
-  "Corea del Sur",
-  "China",
-  "India",
-  "Singapur",
-];
-
 interface LocationStepProps {
   readonly formData: any;
   readonly onUpdate: (data: any) => void;
+  readonly countries: string[];
 }
 
-export function LocationStep({ formData, onUpdate }: LocationStepProps) {
+export function LocationStep({
+  formData,
+  onUpdate,
+  countries,
+}: LocationStepProps) {
   const [selectedCountry, setSelectedCountry] = useState(
-    formData.country || ""
+    formData.country || "",
   );
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredCountries = COUNTRIES.filter((country) =>
-    country.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredCountries = countries.filter((country) =>
+    country.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const handleCountrySelect = (country: string) => {
@@ -121,7 +81,7 @@ export function LocationStep({ formData, onUpdate }: LocationStepProps) {
             <h2>
               {searchTerm
                 ? `${filteredCountries.length} países encontrados`
-                : `${COUNTRIES.length} países disponibles`}
+                : `${countries.length} países disponibles`}
             </h2>
           </div>
         </CardHeader>
