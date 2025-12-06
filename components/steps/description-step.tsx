@@ -41,33 +41,34 @@ export function DescriptionStep({ formData, onUpdate }: DescriptionStepProps) {
   const StatusIcon = getStatusIcon();
 
   return (
-    <div className="space-y-6">
+    <div>
       <div className="p-4 overflow-hidden">
         <h3 className="text-lg font-semibold mb-2">
           Descripción detallada del hecho
         </h3>
-        <p className="text-muted-foreground mb-6">
+        <p className="text-muted-foreground">
           Relata de manera detallada y completa lo ocurrido. Incluye fechas,
           lugares, circunstancias y cualquier información relevante.
         </p>
       </div>
-
       <Card>
         <CardHeader>
-          <h1 className="text-base flex items-center space-x-2">
-            <FileText className="h-5 w-5" />
-            <span>Relato detallado</span>
-          </h1>
-          <h2>
-            Describe los hechos de manera cronológica y detallada (mínimo{" "}
-            {minLength} caracteres)
-          </h2>
+          <div>
+            <h1 className="text-base flex items-center space-x-2">
+              <FileText className="h-5 w-5" />
+              <span>Relato detallado</span>
+            </h1>
+            <h2>
+              Describe los hechos de manera cronológica y detallada (mínimo{" "}
+              {minLength} caracteres)
+            </h2>
+          </div>
         </CardHeader>
-        <CardBody className="space-y-4">
+        <CardBody className="space-y-2">
           <div className="relative">
             <Textarea
-              className="min-h-48 resize-none"
               placeholder="Describe detalladamente lo ocurrido. "
+              size="lg"
               value={description}
               onChange={(e) => handleDescriptionChange(e.target.value)}
             />
@@ -109,7 +110,6 @@ export function DescriptionStep({ formData, onUpdate }: DescriptionStepProps) {
           </div>
         </CardBody>
       </Card>
-
       {description && description.length >= minLength && (
         <Card className="bg-primary/5 border-primary/20">
           <CardBody className="p-4">

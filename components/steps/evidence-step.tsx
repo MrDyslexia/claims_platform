@@ -108,14 +108,16 @@ export function EvidenceStep({ formData, onUpdate }: EvidenceStepProps) {
       {/* Upload Area */}
       <Card>
         <CardHeader>
-          <h1 className="text-base flex items-center space-x-2">
-            <Upload className="h-5 w-5" />
-            <span>Subir archivos</span>
-          </h1>
-          <h2>
-            Formatos aceptados: PDF, DOC, DOCX, JPG, PNG, GIF (máximo 10MB por
-            archivo)
-          </h2>
+          <div>
+            <h1 className="text-base flex items-center space-x-2">
+              <Upload className="h-5 w-5" />
+              <span>Subir archivos</span>
+            </h1>
+            <h2>
+              Formatos aceptados: PDF, DOC, DOCX, JPG, PNG, GIF (máximo 10MB por
+              archivo)
+            </h2>
+          </div>
         </CardHeader>
         <CardBody>
           <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-accent/50 transition-colors">
@@ -158,8 +160,10 @@ export function EvidenceStep({ formData, onUpdate }: EvidenceStepProps) {
       {files.length > 0 && (
         <Card>
           <CardHeader>
-            <h1 className="text-base">Archivos subidos ({files.length})</h1>
-            <h2>Lista de documentos y evidencias agregadas</h2>
+            <div>
+              <h1 className="text-base">Archivos subidos ({files.length})</h1>
+              <h2>Lista de documentos y evidencias agregadas</h2>
+            </div>
           </CardHeader>
           <CardBody>
             <div className="space-y-2">

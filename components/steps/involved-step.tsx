@@ -19,7 +19,7 @@ interface InvolvedStepProps {
 
 export function InvolvedStep({ formData, onUpdate }: InvolvedStepProps) {
   const [involvedParties, setInvolvedParties] = useState<Array<any>>(
-    formData.involvedParties || [],
+    formData.involvedParties || []
   );
   const [newParty, setNewParty] = useState("");
   const [partyType, setPartyType] = useState("person");
@@ -45,7 +45,7 @@ export function InvolvedStep({ formData, onUpdate }: InvolvedStepProps) {
 
   const removeParty = (id: number) => {
     const updatedParties = involvedParties.filter(
-      (party: any) => party.id !== id,
+      (party: any) => party.id !== id
     );
 
     setInvolvedParties(updatedParties);
@@ -148,10 +148,12 @@ export function InvolvedStep({ formData, onUpdate }: InvolvedStepProps) {
       {involvedParties.length > 0 && (
         <Card>
           <CardHeader>
-            <h1 className="text-base">
-              Partes involucradas ({involvedParties.length})
-            </h1>
-            <h2>Lista de personas, empresas y entidades agregadas</h2>
+            <div>
+              <h1 className="text-base">
+                Partes involucradas ({involvedParties.length})
+              </h1>
+              <h2>Lista de personas, empresas y entidades agregadas</h2>
+            </div>
           </CardHeader>
           <CardBody className="p-0">
             <div className="space-y-2">

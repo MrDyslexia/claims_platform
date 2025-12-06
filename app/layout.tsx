@@ -35,10 +35,12 @@ export default function RootLayout({
     <html suppressHydrationWarning lang="en">
       <head />
       <body>
-        <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
+        <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
           <div className="relative flex flex-col h-screen">
             {/*<ConditionalNavbar />*/}
-            <main className="container mx-auto max-w-full">{children}</main>
+            <main className="container mx-auto max-w-full max-h-full">
+              {children}
+            </main>
           </div>
         </Providers>
       </body>

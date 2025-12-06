@@ -56,12 +56,12 @@ interface LocationStepProps {
 
 export function LocationStep({ formData, onUpdate }: LocationStepProps) {
   const [selectedCountry, setSelectedCountry] = useState(
-    formData.country || "",
+    formData.country || ""
   );
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredCountries = COUNTRIES.filter((country) =>
-    country.toLowerCase().includes(searchTerm.toLowerCase()),
+    country.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleCountrySelect = (country: string) => {
@@ -113,15 +113,17 @@ export function LocationStep({ formData, onUpdate }: LocationStepProps) {
       {/* Countries Grid */}
       <Card>
         <CardHeader>
-          <h1 className="text-base flex items-center space-x-2">
-            <Globe className="h-5 w-5" />
-            <span>Selecciona un país</span>
-          </h1>
-          <h2>
-            {searchTerm
-              ? `${filteredCountries.length} países encontrados`
-              : `${COUNTRIES.length} países disponibles`}
-          </h2>
+          <div>
+            <h1 className="text-base flex items-center space-x-2">
+              <Globe className="h-5 w-5" />
+              <span>Selecciona un país</span>
+            </h1>
+            <h2>
+              {searchTerm
+                ? `${filteredCountries.length} países encontrados`
+                : `${COUNTRIES.length} países disponibles`}
+            </h2>
+          </div>
         </CardHeader>
         <CardBody>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-80 overflow-y-auto">

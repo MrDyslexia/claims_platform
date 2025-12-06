@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { CheckboxGroup, Checkbox } from "@heroui/checkbox";
-import { Headphones, Package, Settings, ArrowLeft, Scale } from "lucide-react";
+import { Package, Settings, ArrowLeft, Scale, Headset } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 const CATEGORY_ICONS = {
-  "Servicio al Cliente": Headphones,
+  "Servicio al Cliente": Headset,
   "Productos y Servicios": Package,
   "Procesos Internos": Settings,
   "Ley Karin": Scale,

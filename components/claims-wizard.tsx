@@ -58,7 +58,7 @@ const STEPS = [
   {
     id: 1,
     title: "Categoría",
-    description: "Selecciona el tipo de reclamo",
+    description: "Tipo de reclamo",
     icon: FileText,
   },
   {
@@ -411,7 +411,7 @@ export function ClaimsWizard() {
               {currentStepData?.icon && (
                 <currentStepData.icon
                   className="h-8 w-8 text-accent"
-                  color="#7828C8"
+                  color="#2A53CB"
                 />
               )}
             </div>
@@ -422,7 +422,7 @@ export function ClaimsWizard() {
             </div>
             <Chip
               className="absolute top-4 right-4"
-              color="secondary"
+              color="primary"
               size="md"
               variant="faded"
             >
@@ -431,7 +431,12 @@ export function ClaimsWizard() {
           </div>
           <Progress
             aria-label="Progreso del formulario"
-            color="secondary"
+            classNames={{
+              track: "drop-shadow-md border border-default",
+              indicator: "bg-linear-to-r from-blue-400 to-blue-800",
+              label: "tracking-wider font-medium text-default-600",
+              value: "text-foreground/60",
+            }}
             value={progress}
           />
           <Divider className="my-4" />
@@ -448,7 +453,7 @@ export function ClaimsWizard() {
 
               if (isActive) {
                 buttonClassName =
-                  "border-purple-600 bg-purple-100 text-purple-700 font-semibold";
+                  "border-blue-600 bg-blue-100 text-blue-700 font-semibold";
               } else if (isCompleted) {
                 buttonClassName =
                   "border-green-600 bg-green-100 text-green-700 hover:bg-green-200 font-medium";
@@ -492,14 +497,18 @@ export function ClaimsWizard() {
               {currentStepData?.icon && (
                 <currentStepData.icon className="h-6 w-6 text-accent" />
               )}
-              <span>{currentStepData?.title}</span>
+              <span className="text-xl font-bold">
+                {currentStepData?.title}
+              </span>
               {currentValidation.isValid ? (
                 <CheckCircle className="h-5 w-5 text-green-500 ml-2" />
               ) : (
                 <AlertCircle className="h-5 w-5 text-orange-500 ml-2" />
               )}
             </h1>
-            <h2 className="text-base mt-1">{currentStepData?.description}</h2>
+            <h2 className="text-base mt-1 text-gray-500">
+              {currentStepData?.description}
+            </h2>
           </div>
         </CardHeader>
         <CardBody className="space-y-6">{renderStepContent()}</CardBody>
@@ -547,13 +556,12 @@ export function ClaimsWizard() {
               </Button>
             ) : (
               <Button
-                className="flex items-center space-x-2"
-                color="primary"
+                className="bg-[#202e5e] hover:bg-[#1a2550] text-white font-medium"
                 disabled={!currentValidation.isValid}
                 variant="solid"
                 onPress={handleNext}
               >
-                <span>Siguiente</span>
+                Siguiente
                 <ChevronRight className="h-4 w-4" />
               </Button>
             )}

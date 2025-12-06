@@ -22,7 +22,7 @@ export function IdentificationStep({
   onUpdate,
 }: IdentificationStepProps) {
   const [isAnonymous, setIsAnonymous] = useState<boolean>(
-    formData.isAnonymous ?? false,
+    formData.isAnonymous ?? false
   );
   const [personalData, setPersonalData] = useState({
     fullName: formData.fullName || "",
@@ -221,8 +221,10 @@ export function IdentificationStep({
       {/* Anonymous Toggle */}
       <Card>
         <CardHeader>
-          <h1 className="text-base">Tipo de reclamo</h1>
-          <h2>Selecciona si deseas mantener tu identidad en reserva</h2>
+          <div>
+            <h1 className="text-base">Tipo de reclamo</h1>
+            <h2>Selecciona si deseas mantener tu identidad en reserva</h2>
+          </div>
         </CardHeader>
         <CardBody className="space-y-4">
           <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -268,13 +270,15 @@ export function IdentificationStep({
       {!isAnonymous && (
         <Card>
           <CardHeader>
-            <h1 className="text-base flex items-center space-x-2">
-              <User className="h-5 w-5" />
-              <span>Datos personales</span>
-            </h1>
-            <h2>
-              Completa todos los campos para identificarte como reclamante
-            </h2>
+            <div>
+              <h1 className="text-base flex items-center space-x-2">
+                <User className="h-5 w-5" />
+                <span>Datos personales</span>
+              </h1>
+              <h2>
+                Completa todos los campos para identificarte como reclamante
+              </h2>
+            </div>
           </CardHeader>
           <CardBody className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

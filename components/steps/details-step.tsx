@@ -39,22 +39,11 @@ export function DetailsStep({ formData, onUpdate }: DetailsStepProps) {
 
   return (
     <div className="space-y-6">
-      <div className="p-4 overflow-hidden">
-        <h3 className="text-lg font-semibold mb-2">Información adicional</h3>
-        <p className="text-muted-foreground">
-          Proporciona detalles adicionales que consideres relevantes para tu
-          reclamo (máximo 240 caracteres)
-        </p>
-      </div>
-
       <Card>
         <CardHeader>
-          <h1 className="text-base flex items-center space-x-2">
-            <MessageSquare className="h-5 w-5" />
-            <span>Detalles adicionales</span>
-          </h1>
           <h2>
             Información complementaria que ayude a contextualizar tu reclamo
+            (máximo 240 caracteres).
           </h2>
         </CardHeader>
         <CardBody className="space-y-4">
