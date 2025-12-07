@@ -1,9 +1,8 @@
 "use client";
 
 import { Button } from "@heroui/button";
-import { Card, CardBody } from "@heroui/card";
+import { Card, CardBody, Image } from "@heroui/react";
 import Link from "next/link";
-import Image from "next/image";
 import {
   Search,
   LogIn,
@@ -26,28 +25,22 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100">
-      <div className="relative overflow-hidden">
-        {/* Background decorativo */}
-        <div className="absolute inset-0 bg-[#202e5e]" />
+      <div className="relative overflow-hidden bg-[#202e5e] mb-4">
         <div
           className="absolute inset-0 opacity-10"
           style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fillRule='evenodd'%3E%3Cg fill='%23ffffff' fillOpacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
           }}
         />
-
         <div className="relative container mx-auto px-4 pt-12 pb-20">
           {/* Logo y header */}
           <div className="flex flex-col items-center mb-10">
-            <div className="bg-white p-4 rounded-2xl shadow-2xl shadow-black/20 mb-8">
-              <Image
-                alt="Belator group logo"
-                height={100}
-                priority={true}
-                src="/icon.svg"
-                width={100}
-              />
-            </div>
+            <Image
+              alt="Belator group logo"
+              height={500}
+              src="/sub/Logo.svg"
+              width={500}
+            />
 
             <h1 className="text-3xl md:text-5xl font-bold text-white text-center mb-4 tracking-tight">
               Línea de Denuncias
@@ -79,9 +72,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-
-        {/* Curva decorativa */}
-        <div className="absolute bottom-0 left-0 right-0">
+        <div className="absolute bottom-[-1] w-full z-100">
           <svg
             className="w-full"
             fill="none"
@@ -90,13 +81,13 @@ export default function HomePage() {
           >
             <path
               d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z"
-              fill="#f8fafc"
+              fill="#FCFDFE"
             />
           </svg>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 -mt-6 relative z-10 pb-16">
+      <div className="container mx-auto px-4 mt-6 relative z-10 pb-16">
         <div className="max-w-4xl mx-auto">
           {/* Descripción */}
           <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 p-6 md:p-8 mb-8 border border-slate-100">

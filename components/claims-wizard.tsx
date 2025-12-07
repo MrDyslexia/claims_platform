@@ -175,9 +175,7 @@ export function ClaimsWizard() {
         setCategoryIcons(data.categoryIcons);
         setCountries(data.countries);
         setEnterprise(data.enterprise);
-      } catch (error) {
-        console.error("Failed to fetch claims data:", error);
-        // ClaimsData ya maneja el fallback con datos por defecto
+      } catch {
       } finally {
         setIsLoading(false);
       }
@@ -289,7 +287,6 @@ export function ClaimsWizard() {
         });
         submitData.append("evidenceCount", String(formData.evidence.length));
       }
-      console.log("[v0] FormData entries:", Array.from(submitData.entries()));
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/denuncias/public`,
         {
@@ -304,16 +301,17 @@ export function ClaimsWizard() {
 
       const result = await response.json();
 
-      console.log("[v0] Claim submitted successfully:", result);
+      if (result.success !== true) {
+        throw new Error("El servidor no procesó la solicitud correctamente.");
+      }
 
       alert(
-        "Reclamo enviado exitosamente. Recibirás una confirmación por email.",
+        "Reclamo enviado exitosamente. Gracias por utilizar nuestra plataforma.",
       );
 
       setFormData({});
       setCurrentStep(1);
-    } catch (error) {
-      console.error("[v0] Error submitting claim:", error);
+    } catch {
       setValidationError(
         "Error al enviar el reclamo. Por favor, intenta nuevamente.",
       );
