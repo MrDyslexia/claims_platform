@@ -10,6 +10,11 @@ import {
   Progress,
   Chip,
   Divider,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
 } from "@heroui/react";
 import {
   ChevronLeft,
@@ -18,6 +23,7 @@ import {
   Send,
   AlertCircle,
   CheckCircle,
+  AlertTriangle,
 } from "lucide-react";
 
 import { CategoryStep } from "./steps/category-step";
@@ -98,11 +104,7 @@ const validateStep = (
 
       return { isValid: true, message: "" };
 
-    case 5: // DetailsStep (moved from 4)
-      if (!formData.details || formData.details.trim().length === 0) {
-        return { isValid: false, message: "Proporciona detalles adicionales" };
-      }
-
+    case 5: // DetailsStep (moved from 4) - Optional with warning
       return { isValid: true, message: "" };
 
     case 6: // TimeStep (moved from 5)
@@ -164,6 +166,7 @@ export function ClaimsWizard() {
     { rut: string; nombre: string }[] | undefined
   >(undefined);
   const [isLoading, setIsLoading] = useState(true);
+  const [showDetailsAlert, setShowDetailsAlert] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -200,6 +203,15 @@ export function ClaimsWizard() {
 
     if (!validation.isValid) {
       setValidationError(validation.message);
+
+      return;
+    }
+
+    if (
+      currentStep === 5 &&
+      (!formData.details || formData.details.trim().length === 0)
+    ) {
+      setShowDetailsAlert(true);
 
       return;
     }
@@ -273,20 +285,19 @@ export function ClaimsWizard() {
         submitData.append("email", formData.email || "");
         submitData.append("phone", formData.phone || "");
       }
-
       submitData.append(
         "involvedParties",
         JSON.stringify(formData.involvedParties || []),
       );
 
       if (formData.evidence && formData.evidence.length > 0) {
-        formData.evidence.forEach((file: any, index: number) => {
+        formData.evidence.forEach((file: any) => {
           if (file.file instanceof File) {
-            submitData.append(`evidence_${index}`, file.file);
+            submitData.append("files", file.file);
           }
         });
-        submitData.append("evidenceCount", String(formData.evidence.length));
       }
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/denuncias/public`,
         {
@@ -296,27 +307,35 @@ export function ClaimsWizard() {
       );
 
       if (!response.ok) {
+        setValidationError(
+          "Error al enviar el reclamo. Por favor, intenta nuevamente.",
+        );
         throw new Error(`Error: ${response.status} ${response.statusText}`);
       }
-
       const result = await response.json();
 
-      if (result.success !== true) {
-        throw new Error("El servidor no procesó la solicitud correctamente.");
-      }
-
       alert(
-        "Reclamo enviado exitosamente. Gracias por utilizar nuestra plataforma.",
+        "Reclamo enviado exitosamente. Gracias por utilizar nuestra plataforma. Tu número de reclamo es: " +
+          result.numero +
+          " y tu clave de seguimiento es: " +
+          result.clave,
       );
-
       setFormData({});
       setCurrentStep(1);
     } catch {
-      setValidationError(
-        "Error al enviar el reclamo. Por favor, intenta nuevamente.",
+      alert(
+        "Ocurrió un error al enviar el reclamo. Por favor, intenta nuevamente más tarde.",
       );
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleContinueWithoutDetails = () => {
+    setShowDetailsAlert(false);
+    setValidationError("");
+    if (currentStep < STEPS.length) {
+      setCurrentStep(currentStep + 1);
     }
   };
 
@@ -394,6 +413,49 @@ export function ClaimsWizard() {
 
   return (
     <div className="space-y-6">
+      <Modal
+        isOpen={showDetailsAlert}
+        placement="center"
+        onClose={() => setShowDetailsAlert(false)}
+      >
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            <div className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5" />
+              <span>Campo opcional sin completar</span>
+            </div>
+          </ModalHeader>
+          <ModalBody>
+            <p className="text-gray-600">
+              No has proporcionado detalles adicionales sobre tu reclamo o
+              denuncia.
+            </p>
+            <p className="text-gray-600 mt-2">
+              Para una <strong>mejor atención y seguimiento</strong> de tu caso,
+              te recomendamos agregar información adicional que pueda ser
+              relevante, como nombres, fechas, lugares o cualquier otro detalle
+              que consideres importante.
+            </p>
+            <p className="text-gray-500 text-sm mt-3 italic">
+              Este campo es opcional, puedes continuar sin completarlo si lo
+              prefieres.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="light" onPress={() => setShowDetailsAlert(false)}>
+              Volver y agregar detalles
+            </Button>
+            <Button
+              color="warning"
+              variant="flat"
+              onPress={handleContinueWithoutDetails}
+            >
+              Continuar sin detalles
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
       <Card>
         <CardBody className="p-6">
           <div className="flex mb-4 gap-2">

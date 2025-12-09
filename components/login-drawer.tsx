@@ -57,7 +57,7 @@ export default function LoginDrawer({
       await login(email, password);
       const role = getPrimaryRole();
       let route = "/";
-
+      console.log("Rol primario del usuario:", role);
       switch (role) {
         case "administrador":
           route = "/admin";

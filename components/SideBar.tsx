@@ -1,71 +1,13 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { Button, Divider, Avatar, Chip } from "@heroui/react";
-import {
-  LayoutDashboard,
-  FileText,
-  Users,
-  Building2,
-  Settings,
-  BarChart3,
-  Shield,
-  LogOut,
-  ChevronRight,
-} from "lucide-react";
+import { Button, Divider, Avatar, Chip, Image } from "@heroui/react";
+import { LogOut, ChevronRight } from "lucide-react";
 
 import { useAuth } from "@/lib/auth/auth-context";
+import menuItems from "@/config/menu_items";
 
-const menuItems = [
-  {
-    label: "Dashboard",
-    href: "/admin",
-    icon: LayoutDashboard,
-    permission: "view_dashboard",
-  },
-  {
-    label: "Reclamos",
-    href: "/admin/claims",
-    icon: FileText,
-    permission: "view_claims",
-  },
-  {
-    label: "Usuarios",
-    href: "/admin/users",
-    icon: Users,
-    permission: "manage_users",
-    submenu: [
-      { label: "Lista de Usuarios", href: "/admin/users" },
-      { label: "Roles y Permisos", href: "/admin/users/roles" },
-    ],
-  },
-  {
-    label: "Empresas",
-    href: "/admin/companies",
-    icon: Building2,
-    permission: "manage_companies",
-  },
-  {
-    label: "Reportes",
-    href: "/admin/reports",
-    icon: BarChart3,
-    permission: "view_reports",
-  },
-  {
-    label: "Auditoría",
-    href: "/admin/audit",
-    icon: Shield,
-    permission: "view_audit",
-  },
-  {
-    label: "Configuración",
-    href: "/admin/settings",
-    icon: Settings,
-    permission: "manage_settings",
-  },
-];
-
-export function AdminSidebar() {
+export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, hasPermission } = useAuth();
@@ -76,35 +18,39 @@ export function AdminSidebar() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-default-50 dark:bg-default-100/50 border-r border-divider">
+    <div className="flex flex-col h-full bg-[#202E5E] text-white border-r border-[#2a3a6e]">
       {/* Header */}
-      <div className="p-4 border-b border-divider">
+      <div className="p-4 border-b border-[#2a3a6e]">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-            <Shield className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+          <div className="p-2 bg-white/10 rounded-lg">
+            <Image
+              alt="Logo Belator"
+              className="h-10 w-auto object-contain filter brightness-0 invert"
+              src="/icon.svg"
+            />
           </div>
           <div>
-            <h2 className="font-bold text-lg">Admin Panel</h2>
-            <p className="text-xs text-muted-foreground">Sistema de Reclamos</p>
+            <h2 className="font-bold text-lg text-white">
+              {user?.roles[0].nombre}
+            </h2>
+            <p className="text-xs text-white/60">Sistema de Reclamos</p>
           </div>
         </div>
       </div>
 
       {/* User Info */}
-      <div className="p-4 border-b border-divider">
+      <div className="p-4 border-b border-[#2a3a6e]">
         <div className="flex items-center gap-3">
           <Avatar
-            className="bg-purple-600 text-white"
+            className="bg-white/20 text-white"
             name={`${user?.nombre} ${user?.apellido}`}
             size="sm"
           />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">
+            <p className="text-sm font-medium truncate text-white">
               {user?.nombre} {user?.apellido}
             </p>
-            <p className="text-xs text-muted-foreground truncate">
-              {user?.email}
-            </p>
+            <p className="text-xs text-white/60 truncate">{user?.email}</p>
           </div>
         </div>
         {user?.roles && user.roles.length > 0 && (
@@ -112,7 +58,10 @@ export function AdminSidebar() {
             {user.roles.map((role) => (
               <Chip
                 key={role.id_rol}
-                color="secondary"
+                classNames={{
+                  base: "bg-white/10 border-white/20",
+                  content: "text-white text-xs",
+                }}
                 size="sm"
                 variant="flat"
               >
@@ -142,8 +91,8 @@ export function AdminSidebar() {
                 <Button
                   className={`w-full justify-start ${
                     isActive
-                      ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-semibold"
-                      : "bg-transparent hover:bg-default-100"
+                      ? "bg-white/20 text-white font-semibold"
+                      : "bg-transparent text-white/70 hover:bg-white/10 hover:text-white"
                   }`}
                   endContent={
                     isActive ? <ChevronRight className="h-4 w-4" /> : null
@@ -161,8 +110,8 @@ export function AdminSidebar() {
                         key={subItem.href}
                         className={`w-full justify-start text-sm ${
                           pathname === subItem.href
-                            ? "text-purple-700 dark:text-purple-300 font-medium"
-                            : "text-muted-foreground hover:text-foreground"
+                            ? "text-white font-medium"
+                            : "text-white/50 hover:text-white"
                         }`}
                         size="sm"
                         variant="light"
@@ -179,12 +128,12 @@ export function AdminSidebar() {
         </div>
       </nav>
 
-      <Divider />
+      <Divider className="bg-[#2a3a6e]" />
 
       {/* Logout */}
       <div className="p-2">
         <Button
-          className="w-full justify-start text-red-600 dark:text-red-400"
+          className="w-full justify-start text-white hover:text-red-200 hover:bg-red-500/20"
           startContent={<LogOut className="h-4 w-4" />}
           variant="light"
           onPress={handleLogout}

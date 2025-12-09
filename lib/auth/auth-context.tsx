@@ -110,10 +110,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(authUser);
         } catch {
           // Si falla obtener el usuario, crear uno temporal basado en el email
-          const mockUser = getMockUserFromEmail(email);
-
-          localStorage.setItem("user_data", JSON.stringify(mockUser));
-          setUser(mockUser);
+          alert(
+            "No se pudo obtener la información del usuario. Por favor, contacte al administrador.",
+          );
         }
       }
     } catch (error) {
@@ -194,97 +193,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       permissions: userData.permisos || [],
     };
   };
-
-  const getMockUserFromEmail = (email: string): AuthUser => {
-    const baseUser = {
-      id_usuario: 1,
-      password_hash: "",
-      activo: true,
-      fecha_creacion: new Date(),
-    };
-
-    // Determinar rol basado en el email
-    if (email.includes("admin")) {
-      return {
-        ...baseUser,
-        nombre: "Admin",
-        apellido: "Sistema",
-        email: email,
-        roles: [{ id_rol: 1, nombre: "Administrador", activo: true }],
-        permissions: [
-          "view_dashboard",
-          "view_claims",
-          "edit_claims",
-          "manage_users",
-          "view_reports",
-          "manage_companies",
-          "manage_settings",
-          "view_audit",
-        ],
-      };
-    } else if (email.includes("analista")) {
-      return {
-        ...baseUser,
-        id_usuario: 2,
-        nombre: "María",
-        apellido: "González",
-        email: email,
-        empresa_id: 1,
-        empresa: {
-          id_empresa: 1,
-          nombre: "TechCorp Solutions",
-          rut: "76.123.456-7",
-          razon_social: "TechCorp Solutions SpA",
-          activo: true,
-          created_at: undefined,
-          updated_at: undefined,
-        },
-        roles: [{ id_rol: 3, nombre: "Analista", activo: true }],
-        permissions: [
-          "view_dashboard",
-          "view_claims",
-          "view_reports",
-          "view_analytics",
-        ],
-      };
-    } else if (email.includes("supervisor")) {
-      return {
-        ...baseUser,
-        id_usuario: 3,
-        nombre: "Carlos",
-        apellido: "Rodríguez",
-        email: email,
-        empresa_id: 1,
-        empresa: {
-          id_empresa: 1,
-          nombre: "TechCorp Solutions",
-          rut: "76.123.456-7",
-          razon_social: "TechCorp Solutions SpA",
-          activo: true,
-          created_at: undefined,
-          updated_at: undefined,
-        },
-        roles: [{ id_rol: 2, nombre: "Supervisor", activo: true }],
-        permissions: [
-          "view_dashboard",
-          "view_claims",
-          "edit_claims",
-          "resolve_claims",
-          "add_comments",
-        ],
-      };
-    }
-
-    return {
-      ...baseUser,
-      nombre: "Usuario",
-      apellido: "Desconocido",
-      email: email,
-      roles: [],
-      permissions: [],
-    };
-  };
-
   const logout = async () => {
     const token = localStorage.getItem("auth_token");
 
@@ -308,6 +216,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const hasPermission = (permission: string): boolean => {
+    console.log("Checking permission:", permission, user?.permissions);
     return user?.permissions.includes(permission) ?? false;
   };
 
@@ -323,12 +232,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user || user.roles.length === 0) return null;
 
     return user.roles[0].nombre.toLowerCase();
-
-    // if (roleName.includes("admin")) return "admin";
-    // if (roleName.includes("analista")) return "analista";
-    // if (roleName.includes("supervisor")) return "supervisor";
-
-    return null;
   };
 
   return (

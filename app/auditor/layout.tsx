@@ -3,7 +3,7 @@
 import type React from "react";
 
 import { ProtectedRoute } from "@/components/protected-route";
-import { AdminSidebar } from "@/components/admin-sidebar";
+import { Sidebar } from "@/components/SideBar";
 
 export default function AdminLayout({
   children,
@@ -15,7 +15,7 @@ export default function AdminLayout({
       <div className="flex h-screen overflow-hidden">
         {/* Sidebar */}
         <aside className="w-64 flex-shrink-0">
-          <AdminSidebar />
+          <Sidebar />
         </aside>
 
         {/* Main Content */}

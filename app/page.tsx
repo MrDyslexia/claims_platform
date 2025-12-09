@@ -19,7 +19,7 @@ import { useState } from "react";
 
 import { ClaimsWizard } from "@/components/claims-wizard";
 import LoginDrawer from "@/components/login-drawer";
-
+import LogoCarousel from "@/components/LogoCarousel";
 export default function HomePage() {
   const [isLoginDrawerOpen, setIsLoginDrawerOpen] = useState(false);
 
@@ -32,7 +32,7 @@ export default function HomePage() {
             backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fillRule='evenodd'%3E%3Cg fill='%23ffffff' fillOpacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
           }}
         />
-        <div className="relative container mx-auto px-4 pt-12 pb-20">
+        <div className="relative container mx-auto px-4 pb-20">
           {/* Logo y header */}
           <div className="flex flex-col items-center mb-10">
             <Image
@@ -51,7 +51,7 @@ export default function HomePage() {
           </div>
 
           {/* Badges de confianza */}
-          <div className="flex flex-wrap justify-center gap-3 md:gap-6 mb-10">
+          <div className="flex flex-wrap justify-center gap-3 md:gap-6 mb-8">
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
               <Shield className="w-4 h-4 text-emerald-300" />
               <span className="text-sm text-white font-medium">
@@ -71,8 +71,11 @@ export default function HomePage() {
               </span>
             </div>
           </div>
+
+          <LogoCarousel />
         </div>
-        <div className="absolute bottom-[-1] w-full z-100">
+
+        <div className="absolute bottom-[-1] w-full z-10">
           <svg
             className="w-full"
             fill="none"
