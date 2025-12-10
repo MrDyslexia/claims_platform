@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardBody, CardHeader, cn, Input, Switch } from "@heroui/react";
+import { Card, CardBody, CardHeader, Input, Switch } from "@heroui/react";
 import {
   UserX,
   User,
@@ -22,7 +22,7 @@ export function IdentificationStep({
   onUpdate,
 }: IdentificationStepProps) {
   const [isAnonymous, setIsAnonymous] = useState<boolean>(
-    formData.isAnonymous ?? false
+    formData.isAnonymous ?? false,
   );
   const [personalData, setPersonalData] = useState({
     fullName: formData.fullName || "",

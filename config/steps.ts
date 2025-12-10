@@ -16,7 +16,7 @@ const STEPS = [
   },
   {
     id: 2,
-    title: "Identificación",
+    title: "Datos",
     description: "Datos personales o anónimo",
     icon: User,
   },
@@ -56,6 +56,12 @@ const STEPS = [
     title: "Evidencias",
     description: "Documentos y fotografías",
     icon: FileText,
+  },
+  {
+    id: 10,
+    title: "Resumen",
+    description: "Resumen del reclamo",
+    icon: MessageSquare,
   },
 ];
 

@@ -16,4 +16,5 @@ export default interface FormData {
   email?: string;
   phone?: string;
   skipDetailsWarning?: boolean;
+  skipEvidenceWarning?: boolean;
 }

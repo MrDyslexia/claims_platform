@@ -91,7 +91,7 @@ export default function HomePage() {
       </div>
 
       <div className="container mx-auto px-4 mt-6 relative z-10 pb-16">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           {/* Descripción */}
           <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 p-6 md:p-8 mb-8 border border-slate-100">
             <div className="flex items-start gap-4 mb-6">

@@ -1,7 +1,7 @@
 "use client";
 import type FormData from "@/types/interface";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   Card,
   CardBody,
@@ -20,7 +20,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Shield,
-  Send,
   AlertCircle,
   CheckCircle,
   AlertTriangle,
@@ -45,10 +44,12 @@ interface SubmissionResult {
   clave: string;
 }
 
-const validateStep = (
-  step: number,
-  formData: FormData,
-): { isValid: boolean; message: string } => {
+interface ValidationResult {
+  isValid: boolean;
+  message: string;
+}
+
+const validateStep = (step: number, formData: FormData): ValidationResult => {
   switch (step) {
     case 1: // CategoryStep
       if (!formData.category) {
@@ -148,7 +149,14 @@ const validateStep = (
 
       return { isValid: true, message: "" };
 
-    case 9: // EvidenceStep (moved from 8) - Optional
+    case 9: // EvidenceStep (moved from 8) - Optional but requires confirmation
+      if (
+        (!formData.evidence || formData.evidence.length === 0) &&
+        !formData.skipEvidenceWarning
+      ) {
+        return { isValid: false, message: "" };
+      }
+
       return { isValid: true, message: "" };
 
     case 10: // ConfirmationStep
@@ -184,8 +192,11 @@ export function ClaimsWizard() {
   >(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [showDetailsAlert, setShowDetailsAlert] = useState(false);
+  const [showEvidenceAlert, setShowEvidenceAlert] = useState(false);
   const [submissionResult, setSubmissionResult] =
     useState<SubmissionResult | null>(null); // Added submission result state
+
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -206,6 +217,15 @@ export function ClaimsWizard() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (contentRef.current && currentStep > 1) {
+      contentRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [currentStep]);
+
   const handleFormUpdate = useCallback((newData: Partial<FormData>) => {
     setFormData((prev) => {
       const merged = { ...prev, ...newData };
@@ -225,6 +245,16 @@ export function ClaimsWizard() {
         !formData.skipDetailsWarning
       ) {
         setShowDetailsAlert(true);
+
+        return;
+      }
+    }
+    if (currentStep === 9) {
+      if (
+        (!formData.evidence || formData.evidence.length === 0) &&
+        !formData.skipEvidenceWarning
+      ) {
+        setShowEvidenceAlert(true);
 
         return;
       }
@@ -277,20 +307,8 @@ export function ClaimsWizard() {
   };
 
   const handleSubmit = async () => {
-    for (let i = 1; i <= 9; i++) {
-      const validation = validateStep(i, formData);
-
-      if (!validation.isValid) {
-        setValidationError(`Error en paso ${i}: ${validation.message}`);
-        setCurrentStep(i);
-
-        return;
-      }
-    }
-
     setIsSubmitting(true);
     setValidationError("");
-
     try {
       const submitData = new FormData();
 
@@ -323,7 +341,6 @@ export function ClaimsWizard() {
           }
         });
       }
-
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/denuncias/public`,
         {
@@ -357,6 +374,16 @@ export function ClaimsWizard() {
   const handleContinueWithoutDetails = () => {
     setShowDetailsAlert(false);
     handleFormUpdate({ skipDetailsWarning: true });
+    setValidationError("");
+    if (currentStep < STEPS.length) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handleContinueWithoutEvidence = () => {
+    handleFormUpdate({ skipEvidenceWarning: true });
+    handleSubmit();
+    setShowEvidenceAlert(false);
     setValidationError("");
     if (currentStep < STEPS.length) {
       setCurrentStep(currentStep + 1);
@@ -457,7 +484,7 @@ export function ClaimsWizard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div ref={contentRef} className="space-y-6">
       <Modal
         isOpen={showDetailsAlert}
         placement="center"
@@ -496,6 +523,47 @@ export function ClaimsWizard() {
               onPress={handleContinueWithoutDetails}
             >
               Continuar sin detalles
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal
+        isOpen={showEvidenceAlert}
+        placement="center"
+        onClose={() => setShowEvidenceAlert(false)}
+      >
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            <div className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5" />
+              <span>Evidencia sin adjuntar</span>
+            </div>
+          </ModalHeader>
+          <ModalBody>
+            <p className="text-gray-600">
+              No has adjuntado ninguna evidencia sobre tu reclamo o denuncia.
+            </p>
+            <p className="text-gray-600 mt-2">
+              Para una <strong>mejor investigación y resolución</strong> de tu
+              caso, te recomendamos adjuntar documentos, fotografías, capturas
+              de pantalla, o cualquier archivo que respalde tu denuncia.
+            </p>
+            <p className="text-gray-500 text-sm mt-3 italic">
+              Este campo es opcional, puedes continuar sin adjuntar evidencia si
+              lo prefieres.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="light" onPress={() => setShowEvidenceAlert(false)}>
+              Volver y adjuntar evidencia
+            </Button>
+            <Button
+              color="warning"
+              variant="flat"
+              onPress={handleContinueWithoutEvidence}
+            >
+              Continuar sin evidencia
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -579,7 +647,7 @@ export function ClaimsWizard() {
                       ) : (
                         <Icon className="h-5 w-5 mb-1" />
                       )}
-                      <span className="text-xs font-medium text-center leading-tight">
+                      <span className="text-[10px] sm:text-xs font-medium text-center leading-tight">
                         {step.title}
                       </span>
                     </button>
@@ -651,30 +719,19 @@ export function ClaimsWizard() {
                 <span>Información segura y confidencial</span>
               </div>
 
-              {currentStep === 9 ? (
-                <Button
-                  className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white font-medium"
-                  disabled={!currentValidation.isValid || isSubmitting}
-                  isLoading={isSubmitting}
-                  variant="solid"
-                  onPress={handleSubmit}
-                >
-                  <Send className="h-4 w-4" />
-                  {isSubmitting ? "Enviando..." : "Enviar Reclamo"}
-                </Button>
-              ) : (
-                <Button
-                  className="bg-[#202e5e] hover:bg-[#1a2550] text-white font-medium"
-                  disabled={
-                    currentStep === 5 ? false : !currentValidation.isValid
-                  }
-                  variant="solid"
-                  onPress={handleNext}
-                >
-                  Siguiente
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              )}
+              <Button
+                className="bg-[#202e5e] hover:bg-[#1a2550] text-white font-medium"
+                disabled={
+                  currentStep === 5 || currentStep === 9
+                    ? false
+                    : !currentValidation.isValid
+                }
+                variant="solid"
+                onPress={handleNext}
+              >
+                Siguiente
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           </CardBody>
         </Card>
