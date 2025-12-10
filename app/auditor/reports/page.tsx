@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardBody, CardHeader, Button } from "@heroui/react";
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  Button,
+  Select,
+  SelectItem,
+} from "@heroui/react";
 import {
   Download,
   FileText,
@@ -66,38 +73,39 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between w-full">
         <div>
           <h1 className="text-3xl font-bold">Reportes y Análisis</h1>
           <p className="text-muted-foreground mt-1">
             Visualiza estadísticas y métricas del sistema
           </p>
         </div>
-        <div className="flex gap-2">
-          <div className="flex flex-col gap-1">
-            <label
-              className="text-xs text-muted-foreground"
-              htmlFor="period-select"
-            >
-              Período
-            </label>
-            <select
-              className="w-48 px-3 py-2 rounded-lg border border-default-200 bg-default-50 dark:bg-default-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              id="period-select"
-              value={reportPeriod}
-              onChange={(e) => setReportPeriod(e.target.value)}
-            >
-              <option value="weekly">Semanal</option>
-              <option value="monthly">Mensual</option>
-              <option value="quarterly">Trimestral</option>
-              <option value="yearly">Anual</option>
-            </select>
-          </div>
-          <Button
-            color="primary"
-            startContent={<Download className="h-4 w-4" />}
+        <div className="flex gap-3 items-end">
+          <Select
+            className="w-[200px]"
+            classNames={{
+              trigger: "h-10",
+            }}
+            id="period-select"
+            label="Periodo"
+            selectedKeys={[reportPeriod]}
+            size="sm"
+            variant="bordered"
+            onSelectionChange={(keys) =>
+              setReportPeriod(Array.from(keys)[0] as string)
+            }
           >
-            Exportar Reporte
+            <SelectItem key="weekly">Semanal</SelectItem>
+            <SelectItem key="monthly">Mensual</SelectItem>
+            <SelectItem key="quarterly">Trimestral</SelectItem>
+            <SelectItem key="yearly">Anual</SelectItem>
+          </Select>
+          <Button
+            className="bg-blue-900 text-white hover:bg-blue-800 "
+            size="lg"
+            startContent={<Download size={20} />}
+          >
+            Exportar
           </Button>
         </div>
       </div>

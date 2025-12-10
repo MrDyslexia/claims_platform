@@ -9,6 +9,8 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
+import { Alert, Button } from "@heroui/react";
 
 import { authAPI } from "./api";
 
@@ -24,19 +26,25 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
   hasRole: (roleName: string) => boolean;
   getPrimaryRole: () => string | null;
+  getRoleRoute: (roles: any[]) => string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Jerarquía de roles (mayor prioridad = índice menor)
+const ROLE_HIERARCHY = ["administrador", "supervisor", "analista", "auditor"];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionExists, setSessionExists] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     checkSession();
@@ -62,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem("user_data");
         setIsLoading(false);
         setToken(null);
+        setUser(null);
 
         return;
       }
@@ -74,19 +83,104 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (userData) {
         const parsedUser = JSON.parse(userData);
 
+        //Sesión restaurada:
         setUser(parsedUser);
+        setSessionExists(true);
       }
     } catch {
-      // Error al verificar la sesión - silenciosamente continuar
+      // Limpiar en caso de error
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("token_exp");
+      localStorage.removeItem("user_data");
+      setUser(null);
+      setToken(null);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const convertUserData = (userData: any): AuthUser => {
+    // Función unificada para convertir datos de usuario
+    const nombreCompleto = userData.nombre_completo || "";
+    const [nombre, ...apellidoParts] = nombreCompleto.split(" ");
+    const apellido = apellidoParts.join(" ") || "";
+
+    const authUser: AuthUser = {
+      id_usuario: userData.id || userData.id_usuario,
+      nombre: nombre || "Usuario",
+      apellido: apellido || "",
+      email: userData.email,
+      password_hash: "",
+      activo: userData.activo !== false,
+      fecha_creacion: userData.fecha_creacion
+        ? new Date(userData.fecha_creacion)
+        : new Date(),
+      empresa_id: userData.empresa_id || userData.empresa?.id,
+      empresa: userData.empresa
+        ? {
+            id_empresa: userData.empresa.id || userData.empresa.id_empresa,
+            nombre: userData.empresa.nombre,
+            rut: userData.empresa.rut,
+            razon_social: userData.empresa.razon_social,
+            activo: userData.empresa.activo !== false,
+            created_at: userData.empresa.created_at,
+            updated_at: userData.empresa.updated_at,
+          }
+        : undefined,
+      roles: (userData.roles || []).map((rol: any) => ({
+        id_rol: rol.id || rol.id_rol,
+        nombre: rol.nombre,
+        activo: rol.activo !== false,
+      })),
+      permissions: userData.permisos || userData.permissions || [],
+    };
+
+    return authUser;
+  };
+  const getRoleRoute = (roles: any[]): string => {
+    if (!roles || roles.length === 0) {
+      return "/";
+    }
+
+    const roleRoutes: Record<string, string> = {
+      administrador: "/admin",
+      admin: "/admin",
+      analista: "/analyst",
+      supervisor: "/supervisor",
+      auditor: "/auditor",
+    };
+
+    // Buscar el rol de mayor prioridad
+    for (const priorityRole of ROLE_HIERARCHY) {
+      const foundRole = roles.find(
+        (r) => r.nombre.toLowerCase().trim() === priorityRole,
+      );
+
+      if (foundRole) {
+        const route = roleRoutes[priorityRole];
+
+        return route;
+      }
+    }
+
+    // Si no se encuentra ningún rol en la jerarquía, usar el primero
+    const firstRole = roles[0].nombre.toLowerCase().trim();
+    const route = roleRoutes[firstRole] || "/";
+
+    return route;
+  };
+  const login = async (email: string, password: string): Promise<AuthUser> => {
     setIsLoading(true);
+
+    // Primero limpiar cualquier sesión anterior
+
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("token_exp");
+    localStorage.removeItem("user_data");
+    setUser(null);
+    setToken(null);
+
     try {
-      // Llamar a la API de login del backend
       const response = await authAPI.login(email, password);
 
       // Guardar el token
@@ -94,117 +188,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem("token_exp", response.exp.toString());
       setToken(response.token);
 
+      let authUser: AuthUser;
+
       // Si el login retorna información del usuario, usarla directamente
       if (response.user) {
-        const authUser = convertLoginUserToAuthUser(response.user);
-
-        localStorage.setItem("user_data", JSON.stringify(authUser));
-        setUser(authUser);
+        authUser = convertUserData(response.user);
       } else {
         // Fallback: Obtener información del usuario desde el backend
-        try {
-          const userData = await authAPI.getCurrentUser(response.token);
-          const authUser = convertToAuthUser(userData);
 
-          localStorage.setItem("user_data", JSON.stringify(authUser));
-          setUser(authUser);
-        } catch {
-          // Si falla obtener el usuario, crear uno temporal basado en el email
-          alert(
-            "No se pudo obtener la información del usuario. Por favor, contacte al administrador.",
-          );
-        }
+        const userData = await authAPI.getCurrentUser(response.token);
+
+        authUser = convertUserData(userData);
       }
-    } catch (error) {
-      throw error;
+
+      // Validar que el usuario tenga al menos un rol
+      if (!authUser.roles || authUser.roles.length === 0) {
+        throw new Error("El usuario no tiene roles asignados");
+      }
+
+      // Guardar en localStorage y estado ANTES de retornar
+      localStorage.setItem("user_data", JSON.stringify(authUser));
+      setUser(authUser);
+
+      // Retornar el usuario autenticado
+      return authUser;
+    } catch {
+      // Limpiar datos en caso de error
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("token_exp");
+      localStorage.removeItem("user_data");
+      setToken(null);
+      setUser(null);
+      throw new Error("Error al iniciar sesión. Verifique sus credenciales.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const convertLoginUserToAuthUser = (loginUser: any): AuthUser => {
-    // Convertir los datos del login al formato AuthUser
-    const [nombre, ...apellidoParts] = (loginUser.nombre_completo || "").split(
-      " ",
-    );
-    const apellido = apellidoParts.join(" ") || "";
-
-    return {
-      id_usuario: loginUser.id,
-      nombre: nombre || "Usuario",
-      apellido: apellido || "",
-      email: loginUser.email,
-      password_hash: "",
-      activo: true,
-      fecha_creacion: new Date(),
-      empresa_id: loginUser.empresa_id || loginUser.empresa?.id,
-      empresa: loginUser.empresa
-        ? {
-            id_empresa: loginUser.empresa.id,
-            nombre: loginUser.empresa.nombre,
-            rut: loginUser.empresa.rut,
-            razon_social: loginUser.empresa.razon_social,
-            activo: true,
-            created_at: undefined,
-            updated_at: undefined,
-          }
-        : undefined,
-      roles: (loginUser.roles || []).map((rol: any) => ({
-        id_rol: rol.id,
-        nombre: rol.nombre,
-        activo: true,
-      })),
-      permissions: loginUser.permisos || [],
-    };
-  };
-
-  const convertToAuthUser = (userData: any): AuthUser => {
-    // Convertir los datos del backend al formato AuthUser
-    const [nombre, ...apellidoParts] = (userData.nombre_completo || "").split(
-      " ",
-    );
-    const apellido = apellidoParts.join(" ") || "";
-
-    return {
-      id_usuario: userData.id,
-      nombre: nombre || "Usuario",
-      apellido: apellido || "",
-      email: userData.email,
-      password_hash: "",
-      activo: userData.activo,
-      fecha_creacion: new Date(),
-      empresa_id: userData.empresa?.id,
-      empresa: userData.empresa
-        ? {
-            id_empresa: userData.empresa.id,
-            nombre: userData.empresa.nombre,
-            rut: userData.empresa.rut,
-            razon_social: userData.empresa.razon_social,
-            activo: true,
-            created_at: undefined,
-            updated_at: undefined,
-          }
-        : undefined,
-      roles: (userData.roles || []).map((rol: any) => ({
-        id_rol: rol.id,
-        nombre: rol.nombre,
-        activo: true,
-      })),
-      permissions: userData.permisos || [],
-    };
-  };
   const logout = async () => {
-    const token = localStorage.getItem("auth_token");
+    const currentToken = localStorage.getItem("auth_token");
 
     try {
-      if (token) {
+      if (currentToken) {
         // Llamar al backend para revocar la sesión
-        await authAPI.logout(token);
+        await authAPI.logout(currentToken);
       }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error("Error during logout:", error);
-      // Continuamos con el logout local incluso si hay error
+    } catch {
+      // Ignorar errores en el logout
+      return;
     } finally {
       // Limpiar datos locales
       localStorage.removeItem("auth_token");
@@ -216,22 +247,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const hasPermission = (permission: string): boolean => {
-    console.log("Checking permission:", permission, user?.permissions);
-    return user?.permissions.includes(permission) ?? false;
+    if (!user || !user.permissions) return false;
+
+    return user.permissions.includes(permission);
   };
 
   const hasRole = (roleName: string): boolean => {
-    return (
-      user?.roles.some(
-        (role) => role.nombre.toLowerCase() === roleName.toLowerCase(),
-      ) ?? false
+    if (!user || !user.roles) return false;
+
+    const normalizedRoleName = roleName.toLowerCase().trim();
+
+    return user.roles.some(
+      (role) => role.nombre.toLowerCase().trim() === normalizedRoleName,
     );
   };
 
   const getPrimaryRole = (): string | null => {
-    if (!user || user.roles.length === 0) return null;
+    if (!user || !user.roles || user.roles.length === 0) {
+      return null;
+    }
 
-    return user.roles[0].nombre.toLowerCase();
+    // Si solo hay un rol, retornarlo
+    if (user.roles.length === 1) {
+      return user.roles[0].nombre.toLowerCase();
+    }
+
+    // Si hay múltiples roles, retornar el de mayor prioridad según la jerarquía
+    let highestPriorityRole = user.roles[0];
+    let highestPriorityIndex = ROLE_HIERARCHY.length;
+
+    for (const role of user.roles) {
+      const normalizedRoleName = role.nombre.toLowerCase().trim();
+      const priorityIndex = ROLE_HIERARCHY.indexOf(normalizedRoleName);
+
+      // Si el rol está en la jerarquía y tiene mayor prioridad
+      if (priorityIndex !== -1 && priorityIndex < highestPriorityIndex) {
+        highestPriorityIndex = priorityIndex;
+        highestPriorityRole = role;
+      }
+    }
+
+    return highestPriorityRole.nombre.toLowerCase();
   };
 
   return (
@@ -246,8 +302,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         hasPermission,
         hasRole,
         getPrimaryRole,
+        getRoleRoute,
       }}
     >
+      {sessionExists && (
+        <Alert
+          className="absolute top-4 right-4 z-50 w-md"
+          color="primary"
+          description="Se ha detectado una sesión activa. Puedes continuar donde lo dejaste."
+          endContent={
+            <Button
+              color="primary"
+              size="md"
+              variant="flat"
+              onPress={() => {
+                setSessionExists(false);
+                router.push(getRoleRoute(user?.roles || []));
+              }}
+            >
+              Ingresar
+            </Button>
+          }
+          title="Sesión restaurada"
+          variant="flat"
+        />
+      )}
       {children}
     </AuthContext.Provider>
   );

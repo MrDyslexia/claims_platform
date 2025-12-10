@@ -7,7 +7,6 @@ import {
   Card,
   CardBody,
   Chip,
-  Divider,
   Dropdown,
   DropdownItem,
   DropdownMenu,
@@ -30,7 +29,6 @@ import {
   TableHeader,
   TableRow,
   Tabs,
-  Textarea,
   useDisclosure,
 } from "@heroui/react";
 import {
@@ -47,7 +45,6 @@ import {
   Paperclip,
   Plus,
   Search,
-  Send,
   User,
 } from "lucide-react";
 
@@ -59,8 +56,6 @@ const priorityColors = {
   alta: "danger",
   critica: "danger",
 } as const;
-
-
 
 const statusColors: Record<string, any> = {
   Pendiente: "primary",
@@ -404,9 +399,6 @@ export default function ClaimsPage() {
             Administra y da seguimiento a todos los reclamos
           </p>
         </div>
-        <Button color="primary" startContent={<Plus className="h-4 w-4" />}>
-          Nuevo Reclamo
-        </Button>
       </div>
 
       {/* Error Display */}
@@ -648,7 +640,7 @@ export default function ClaimsPage() {
               <ModalBody>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Main Content */}
-                  <div className="lg:col-span-2 space-y-6">
+                  <div className="lg:col-span-2">
                     {/* Description */}
                     <Card>
                       <CardBody>
@@ -668,11 +660,13 @@ export default function ClaimsPage() {
                     </Card>
 
                     {/* Tabs */}
+                    <Tabs aria-label="Options" />
                     <Card>
                       <CardBody className="p-0">
                         <Tabs
                           aria-label="Claim details tabs"
                           className="w-full"
+                          variant="underlined"
                         >
                           <Tab
                             key="comments"
@@ -722,51 +716,6 @@ export default function ClaimsPage() {
                                     </div>
                                   </div>
                                 ))}
-                              </div>
-                              <Divider />
-                              <div className="space-y-2">
-                                {commentError && (
-                                  <div className="bg-red-50 border border-red-200 rounded-lg p-2">
-                                    <p className="text-sm text-red-700">
-                                      {commentError}
-                                    </p>
-                                  </div>
-                                )}
-                                <Textarea
-                                  disabled={isSubmittingComment}
-                                  minRows={3}
-                                  placeholder="Agregar un comentario..."
-                                  value={newComment}
-                                  onChange={(e) =>
-                                    setNewComment(e.target.value)
-                                  }
-                                />
-                                <div className="flex items-center justify-end gap-2">
-                                  <Button
-                                    disabled={isSubmittingComment}
-                                    size="sm"
-                                    variant="bordered"
-                                    onClick={() =>
-                                      setIsCommentInternal(!isCommentInternal)
-                                    }
-                                  >
-                                    {isCommentInternal ? "Interno" : "Público"}
-                                  </Button>
-                                  <Button
-                                    color="primary"
-                                    disabled={
-                                      isSubmittingComment || !newComment.trim()
-                                    }
-                                    isLoading={isSubmittingComment}
-                                    size="sm"
-                                    startContent={<Send className="h-4 w-4" />}
-                                    onClick={handleSendComment}
-                                  >
-                                    {isSubmittingComment
-                                      ? "Enviando..."
-                                      : "Enviar"}
-                                  </Button>
-                                </div>
                               </div>
                             </div>
                           </Tab>
@@ -865,8 +814,6 @@ export default function ClaimsPage() {
                       </CardBody>
                     </Card>
                   </div>
-
-                  {/* Sidebar */}
                   <div className="space-y-4">
                     {/* Claim Info */}
                     <Card>
@@ -967,68 +914,38 @@ export default function ClaimsPage() {
                     <Card>
                       <CardBody className="space-y-4">
                         <h3 className="font-semibold">Gestión</h3>
-                        {/* Priority Selector */}
                         <div>
                           <p className="text-xs text-muted-foreground mb-1.5">
-                            Prioridad
+                            Asignar Supervisor:
                           </p>
-                          <Select
-                            aria-label="Seleccionar prioridad"
-                            className="max-w-xs"
-                            defaultSelectedKeys={[
-                              selectedClaim?.prioridad || "MEDIA",
-                            ]}
-                            isDisabled={isUpdatingPriority}
-                            onChange={(e) =>
-                              handlePriorityChange(e.target.value)
-                            }
-                          >
-                            <SelectItem key="baja">Baja</SelectItem>
-                            <SelectItem key="media">Media</SelectItem>
-                            <SelectItem key="alta">Alta</SelectItem>
-                            <SelectItem key="critica">Crítica</SelectItem>
-                          </Select>
-                        </div>
-
-                        {/* Supervisor Assignment */}
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1.5">
-                            Asignar Supervisor
-                          </p>
-                          <Select
-                            aria-label="Asignar supervisor"
-                            className="max-w-xs"
-                            isDisabled={isAssigningSupervisor}
-                            onChange={(e) =>
-                              handleAssignSupervisor(e.target.value)
-                            }
-                            placeholder="Seleccionar supervisor"
-                            selectedKeys={
-                              selectedClaim?.supervisor?.id
-                                ? [String(selectedClaim.supervisor.id)]
-                                : []
-                            }
-                          >
-                            {supervisors.map((supervisor) => (
-                              <SelectItem key={supervisor.id_usuario}>
-                                {`${supervisor.nombre} ${supervisor.apellido}`}
-                              </SelectItem>
-                            ))}
-                          </Select>
+                          <div className="flex items-center gap-2">
+                            {selectedClaim?.supervisor ? (
+                              <>
+                                <Avatar
+                                  name={selectedClaim.supervisor.nombre}
+                                  size="sm"
+                                />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium">
+                                    {selectedClaim.supervisor.nombre}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {selectedClaim.supervisor.email}
+                                  </p>
+                                </div>
+                              </>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">
+                                Sin asignar
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </CardBody>
                     </Card>
                   </div>
                 </div>
               </ModalBody>
-              <ModalFooter>
-                <Button variant="light" onPress={onClose}>
-                  Cerrar
-                </Button>
-                <Button color="primary" onPress={onClose}>
-                  Guardar Cambios
-                </Button>
-              </ModalFooter>
             </>
           )}
         </ModalContent>

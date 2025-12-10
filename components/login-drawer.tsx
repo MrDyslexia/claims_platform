@@ -3,8 +3,8 @@
 
 import type React from "react";
 
-import { useState, useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Drawer,
   DrawerContent,
@@ -28,20 +28,10 @@ export default function LoginDrawer({
   onOpenChange,
 }: LoginDrawerProps) {
   const router = useRouter();
-  const pathname = usePathname();
-  const { login, isLoading, getPrimaryRole } = useAuth();
+  const { login, isLoading, getRoleRoute } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [targetRoute, setTargetRoute] = useState<string | null>(null);
-
-  // Efecto para cerrar el drawer cuando la ruta cambie a la ruta objetivo
-  useEffect(() => {
-    if (targetRoute && pathname === targetRoute) {
-      onOpenChange(false);
-      setTargetRoute(null);
-    }
-  }, [pathname, targetRoute, onOpenChange]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,31 +44,17 @@ export default function LoginDrawer({
     }
 
     try {
-      await login(email, password);
-      const role = getPrimaryRole();
-      let route = "/";
-      console.log("Rol primario del usuario:", role);
-      switch (role) {
-        case "administrador":
-          route = "/admin";
-          break;
-        case "analista":
-          route = "/analyst";
-          break;
-        case "supervisor":
-          route = "/supervisor";
-          break;
-        case "auditor":
-          route = "/auditor";
-          break;
-        default:
-          route = "/";
-      }
+      const authenticatedUser = await login(email, password);
+      const route = getRoleRoute(authenticatedUser.roles);
 
-      // Guardar la ruta objetivo para monitorearla
-      setTargetRoute(route);
+      onOpenChange(false);
 
-      // Realizar la navegación
+      // Limpiar el formulario
+      setEmail("");
+      setPassword("");
+      setError("");
+
+      // Navegar a la ruta correspondiente
       router.push(route);
     } catch (err) {
       const errorMessage =
