@@ -35,9 +35,16 @@ import { InvolvedStep } from "./steps/involved-step";
 import { DescriptionStep } from "./steps/description-step";
 import { EvidenceStep } from "./steps/evidence-step";
 import { IdentificationStep } from "./steps/identification-step";
+import { ConfirmationStep } from "./steps/confirmation-step"; // Added confirmation step
 
 import STEPS from "@/config/steps";
 import ClaimsData from "@/API/claims_data";
+
+interface SubmissionResult {
+  numero: string;
+  clave: string;
+}
+
 const validateStep = (
   step: number,
   formData: FormData,
@@ -144,6 +151,9 @@ const validateStep = (
     case 9: // EvidenceStep (moved from 8) - Optional
       return { isValid: true, message: "" };
 
+    case 10: // ConfirmationStep
+      return { isValid: true, message: "" };
+
     default:
       return { isValid: true, message: "" };
   }
@@ -174,6 +184,8 @@ export function ClaimsWizard() {
   >(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [showDetailsAlert, setShowDetailsAlert] = useState(false);
+  const [submissionResult, setSubmissionResult] =
+    useState<SubmissionResult | null>(null); // Added submission result state
 
   useEffect(() => {
     async function fetchData() {
@@ -193,6 +205,7 @@ export function ClaimsWizard() {
 
     fetchData();
   }, []);
+
   const handleFormUpdate = useCallback((newData: Partial<FormData>) => {
     setFormData((prev) => {
       const merged = { ...prev, ...newData };
@@ -239,6 +252,10 @@ export function ClaimsWizard() {
   };
 
   const handleStepClick = (stepId: number) => {
+    if (stepId === 10) {
+      return;
+    }
+
     if (stepId < currentStep) {
       setValidationError("");
       setCurrentStep(stepId);
@@ -260,7 +277,7 @@ export function ClaimsWizard() {
   };
 
   const handleSubmit = async () => {
-    for (let i = 1; i <= STEPS.length; i++) {
+    for (let i = 1; i <= 9; i++) {
       const validation = validateStep(i, formData);
 
       if (!validation.isValid) {
@@ -323,14 +340,11 @@ export function ClaimsWizard() {
       }
       const result = await response.json();
 
-      alert(
-        "Reclamo enviado exitosamente. Gracias por utilizar nuestra plataforma. Tu número de reclamo es: " +
-          result.numero +
-          " y tu clave de seguimiento es: " +
-          result.clave,
-      );
-      setFormData({});
-      setCurrentStep(1);
+      setSubmissionResult({
+        numero: result.numero,
+        clave: result.clave,
+      });
+      setCurrentStep(10);
     } catch {
       alert(
         "Ocurrió un error al enviar el reclamo. Por favor, intenta nuevamente más tarde.",
@@ -347,6 +361,13 @@ export function ClaimsWizard() {
     if (currentStep < STEPS.length) {
       setCurrentStep(currentStep + 1);
     }
+  };
+
+  const handleReturnHome = () => {
+    setFormData({});
+    setCurrentStep(1);
+    setSubmissionResult(null);
+    setValidationError("");
   };
 
   const renderStepContent = () => {
@@ -404,6 +425,20 @@ export function ClaimsWizard() {
         );
       case 9:
         return <EvidenceStep formData={formData} onUpdate={handleFormUpdate} />;
+      case 10:
+        return submissionResult ? (
+          <ConfirmationStep
+            claimNumber={submissionResult.numero}
+            hasEmail={
+              formData.isAnonymous
+                ? !!(formData.email && formData.email.trim().length > 0)
+                : !!(formData.email && formData.email.trim().length > 0)
+            }
+            isAnonymous={formData.isAnonymous || false}
+            trackingKey={submissionResult.clave}
+            onReturnHome={handleReturnHome}
+          />
+        ) : null;
       default:
         return (
           <div className="flex items-center justify-center h-64 text-muted-foreground">
@@ -466,115 +501,125 @@ export function ClaimsWizard() {
         </ModalContent>
       </Modal>
 
-      <Card>
-        <CardBody className="p-6">
-          <div className="flex mb-4 gap-2">
-            <div className="flex items-center space-x-2">
-              {currentStepData?.icon && (
-                <currentStepData.icon
-                  className="h-8 w-8 text-accent"
-                  color="#2A53CB"
-                />
-              )}
-            </div>
-            <div className="flex items-center space-x-2">
-              <h1 className="text-base mt-1">
-                {currentStepData?.title}: {currentStepData?.description}
-              </h1>
-            </div>
-            <Chip
-              className="absolute top-4 right-4"
-              color="primary"
-              size="md"
-              variant="faded"
-            >
-              {currentStep} / {STEPS.length}
-            </Chip>
-          </div>
-          <Progress
-            aria-label="Progreso del formulario"
-            classNames={{
-              track: "drop-shadow-md border border-default",
-              indicator: "bg-linear-to-r from-blue-400 to-blue-800",
-              label: "tracking-wider font-medium text-default-600",
-              value: "text-foreground/60",
-            }}
-            value={progress}
-          />
-          <Divider className="my-4" />
-          <div className="grid grid-cols-3 md:grid-cols-9 gap-2">
-            {STEPS.map((step) => {
-              const Icon = step.icon;
-              const isActive = step.id === currentStep;
-              const isCompleted =
-                step.id < currentStep && isStepCompleted(step.id, formData);
-              const isAccessible =
-                step.id <= currentStep ||
-                isStepCompleted(step.id - 1, formData);
-              let buttonClassName = "";
+      {currentStep !== 10 && (
+        <>
+          <Card>
+            <CardBody className="p-6">
+              <div className="flex mb-4 gap-2">
+                <div className="flex items-center space-x-2">
+                  {currentStepData?.icon && (
+                    <currentStepData.icon
+                      className="h-8 w-8 text-accent"
+                      color="#2A53CB"
+                    />
+                  )}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <h1 className="text-base mt-1">
+                    {currentStepData?.title}: {currentStepData?.description}
+                  </h1>
+                </div>
+                <Chip
+                  className="absolute top-4 right-4"
+                  color="primary"
+                  size="md"
+                  variant="faded"
+                >
+                  {currentStep} / {STEPS.length}
+                </Chip>
+              </div>
+              <Progress
+                aria-label="Progreso del formulario"
+                classNames={{
+                  track: "drop-shadow-md border border-default",
+                  indicator: "bg-linear-to-r from-blue-400 to-blue-800",
+                  label: "tracking-wider font-medium text-default-600",
+                  value: "text-foreground/60",
+                }}
+                value={progress}
+              />
+              <Divider className="my-4" />
+              <div className="grid grid-cols-3 md:grid-cols-10 gap-2">
+                {STEPS.map((step) => {
+                  const Icon = step.icon;
+                  const isActive = step.id === currentStep;
+                  const isCompleted =
+                    step.id < currentStep && isStepCompleted(step.id, formData);
+                  const isAccessible =
+                    step.id <= currentStep ||
+                    isStepCompleted(step.id - 1, formData);
+                  let buttonClassName = "";
 
-              if (isActive) {
-                buttonClassName =
-                  "border-blue-600 bg-blue-100 text-blue-700 font-semibold";
-              } else if (isCompleted) {
-                buttonClassName =
-                  "border-green-600 bg-green-100 text-green-700 hover:bg-green-200 font-medium";
-              } else if (!isAccessible) {
-                buttonClassName =
-                  "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-50";
-              } else {
-                buttonClassName =
-                  "border-gray-300 bg-white hover:bg-gray-100 text-gray-500 hover:text-gray-700";
-              }
+                  if (isActive) {
+                    buttonClassName =
+                      "border-blue-600 bg-blue-100 text-blue-700 font-semibold";
+                  } else if (isCompleted) {
+                    buttonClassName =
+                      "border-green-600 bg-green-100 text-green-700 hover:bg-green-200 font-medium";
+                  } else if (!isAccessible) {
+                    buttonClassName =
+                      "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-50";
+                  } else {
+                    buttonClassName =
+                      "border-gray-300 bg-white hover:bg-gray-100 text-gray-500 hover:text-gray-700";
+                  }
 
-              return (
-                <button
-                  key={step.id}
-                  className={`
+                  return (
+                    <button
+                      key={step.id}
+                      className={`
                     flex flex-col items-center p-3 rounded-lg border-2 transition-all duration-200
                     ${buttonClassName}
                   `}
-                  disabled={!isAccessible}
-                  onClick={() => handleStepClick(step.id)}
-                >
-                  {isCompleted ? (
-                    <CheckCircle className="h-5 w-5 mb-1 text-green-600" />
-                  ) : (
-                    <Icon className="h-5 w-5 mb-1" />
-                  )}
-                  <span className="text-xs font-medium text-center leading-tight">
-                    {step.title}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </CardBody>
-      </Card>
+                      disabled={!isAccessible}
+                      onClick={() => handleStepClick(step.id)}
+                    >
+                      {isCompleted ? (
+                        <CheckCircle className="h-5 w-5 mb-1 text-green-600" />
+                      ) : (
+                        <Icon className="h-5 w-5 mb-1" />
+                      )}
+                      <span className="text-xs font-medium text-center leading-tight">
+                        {step.title}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </CardBody>
+          </Card>
 
-      <Card className="min-h-[400px]">
-        <CardHeader>
-          <div className="flex-1">
-            <h1 className="flex items-center space-x-2">
-              {currentStepData?.icon && (
-                <currentStepData.icon className="h-6 w-6 text-accent" />
-              )}
-              <span className="text-xl font-bold">
-                {currentStepData?.title}
-              </span>
-              {currentValidation.isValid ? (
-                <CheckCircle className="h-5 w-5 text-green-500 ml-2" />
-              ) : (
-                <AlertCircle className="h-5 w-5 text-orange-500 ml-2" />
-              )}
-            </h1>
-            <h2 className="text-base mt-1 text-gray-500">
-              {currentStepData?.description}
-            </h2>
-          </div>
-        </CardHeader>
-        <CardBody className="space-y-6">{renderStepContent()}</CardBody>
-      </Card>
+          <Card className="min-h-[400px]">
+            <CardHeader>
+              <div className="flex-1">
+                <h1 className="flex items-center space-x-2">
+                  {currentStepData?.icon && (
+                    <currentStepData.icon className="h-6 w-6 text-accent" />
+                  )}
+                  <span className="text-xl font-bold">
+                    {currentStepData?.title}
+                  </span>
+                  {currentValidation.isValid ? (
+                    <CheckCircle className="h-5 w-5 text-green-500 ml-2" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 text-orange-500 ml-2" />
+                  )}
+                </h1>
+                <h2 className="text-base mt-1 text-gray-500">
+                  {currentStepData?.description}
+                </h2>
+              </div>
+            </CardHeader>
+            <CardBody className="space-y-6">{renderStepContent()}</CardBody>
+          </Card>
+        </>
+      )}
+
+      {currentStep === 10 && (
+        <Card>
+          <CardBody className="p-8">{renderStepContent()}</CardBody>
+        </Card>
+      )}
 
       {validationError && (
         <Card className="bg-red-50 border-red-200">
@@ -587,51 +632,53 @@ export function ClaimsWizard() {
         </Card>
       )}
 
-      <Card>
-        <CardBody className="p-6">
-          <div className="flex justify-between">
-            <Button
-              className="flex items-center space-x-2"
-              disabled={currentStep === 1}
-              variant="bordered"
-              onPress={handlePrevious}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              <span>Anterior</span>
-            </Button>
+      {currentStep !== 10 && (
+        <Card>
+          <CardBody className="p-6">
+            <div className="flex justify-between">
+              <Button
+                className="flex items-center space-x-2"
+                disabled={currentStep === 1}
+                variant="bordered"
+                onPress={handlePrevious}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span>Anterior</span>
+              </Button>
 
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-              <Shield className="h-4 w-4" />
-              <span>Información segura y confidencial</span>
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                <Shield className="h-4 w-4" />
+                <span>Información segura y confidencial</span>
+              </div>
+
+              {currentStep === 9 ? (
+                <Button
+                  className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white font-medium"
+                  disabled={!currentValidation.isValid || isSubmitting}
+                  isLoading={isSubmitting}
+                  variant="solid"
+                  onPress={handleSubmit}
+                >
+                  <Send className="h-4 w-4" />
+                  {isSubmitting ? "Enviando..." : "Enviar Reclamo"}
+                </Button>
+              ) : (
+                <Button
+                  className="bg-[#202e5e] hover:bg-[#1a2550] text-white font-medium"
+                  disabled={
+                    currentStep === 5 ? false : !currentValidation.isValid
+                  }
+                  variant="solid"
+                  onPress={handleNext}
+                >
+                  Siguiente
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              )}
             </div>
-
-            {currentStep === STEPS.length ? (
-              <Button
-                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white font-medium"
-                disabled={!currentValidation.isValid || isSubmitting}
-                isLoading={isSubmitting}
-                variant="solid"
-                onPress={handleSubmit}
-              >
-                <Send className="h-4 w-4" />
-                {isSubmitting ? "Enviando..." : "Enviar Reclamo"}
-              </Button>
-            ) : (
-              <Button
-                className="bg-[#202e5e] hover:bg-[#1a2550] text-white font-medium"
-                disabled={
-                  currentStep === 5 ? false : !currentValidation.isValid
-                }
-                variant="solid"
-                onPress={handleNext}
-              >
-                Siguiente
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        </CardBody>
-      </Card>
+          </CardBody>
+        </Card>
+      )}
     </div>
   );
 }
