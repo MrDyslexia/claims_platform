@@ -104,8 +104,15 @@ const validateStep = (
 
       return { isValid: true, message: "" };
 
-    case 5: // DetailsStep (moved from 4) - Optional with warning
-      return { isValid: true, message: "" };
+    case 5:
+      if (formData.details && formData.details.trim().length > 0) {
+        return { isValid: true, message: "" };
+      }
+      if (formData.skipDetailsWarning === true) {
+        return { isValid: true, message: "" };
+      }
+
+      return { isValid: false, message: "" };
 
     case 6: // TimeStep (moved from 5)
       if (!formData.timeframe) {
@@ -199,19 +206,21 @@ export function ClaimsWizard() {
   const currentValidation = validateStep(currentStep, formData);
 
   const handleNext = () => {
+    if (currentStep === 5) {
+      if (
+        (!formData.details || formData.details.trim().length === 0) &&
+        !formData.skipDetailsWarning
+      ) {
+        setShowDetailsAlert(true);
+
+        return;
+      }
+    }
+
     const validation = validateStep(currentStep, formData);
 
     if (!validation.isValid) {
       setValidationError(validation.message);
-
-      return;
-    }
-
-    if (
-      currentStep === 5 &&
-      (!formData.details || formData.details.trim().length === 0)
-    ) {
-      setShowDetailsAlert(true);
 
       return;
     }
@@ -333,6 +342,7 @@ export function ClaimsWizard() {
 
   const handleContinueWithoutDetails = () => {
     setShowDetailsAlert(false);
+    handleFormUpdate({ skipDetailsWarning: true });
     setValidationError("");
     if (currentStep < STEPS.length) {
       setCurrentStep(currentStep + 1);
@@ -609,7 +619,9 @@ export function ClaimsWizard() {
             ) : (
               <Button
                 className="bg-[#202e5e] hover:bg-[#1a2550] text-white font-medium"
-                disabled={!currentValidation.isValid}
+                disabled={
+                  currentStep === 5 ? false : !currentValidation.isValid
+                }
                 variant="solid"
                 onPress={handleNext}
               >

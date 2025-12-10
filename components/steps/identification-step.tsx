@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardBody, CardHeader, Input, Switch } from "@heroui/react";
+import { Card, CardBody, CardHeader, cn, Input, Switch } from "@heroui/react";
 import {
   UserX,
   User,
@@ -212,7 +212,7 @@ export function IdentificationStep({
         <h3 className="text-lg font-semibold mb-2">
           Identificación del reclamante
         </h3>
-        <p className="text-muted-foreground mb-6">
+        <p className="text-muted-foreground">
           Elige si deseas realizar el reclamo de forma anónima o proporcionar
           tus datos personales
         </p>
@@ -222,16 +222,18 @@ export function IdentificationStep({
       <Card>
         <CardHeader>
           <div>
-            <h1 className="text-base">Tipo de reclamo</h1>
-            <h2>Selecciona si deseas mantener tu identidad en reserva</h2>
+            <p className="font-semibold text-base">Tipo de reclamo</p>
+            <p className="text-sm text-muted-foreground">
+              Selecciona si deseas mantener tu identidad en reserva
+            </p>
           </div>
         </CardHeader>
         <CardBody className="space-y-4">
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div className="flex items-center space-x-3">
-              <UserX className="h-6 w-6 text-muted-foreground" />
+              <UserX className="h-5 w-5 text-muted-foreground" />
               <div>
-                <h1 className="text-base font-medium">Reclamo anónimo</h1>
+                <p className="font-medium">Reclamo anónimo</p>
                 <p className="text-sm text-muted-foreground">
                   Tu identidad se mantendrá confidencial
                 </p>
@@ -239,29 +241,79 @@ export function IdentificationStep({
             </div>
             <Switch
               checked={isAnonymous}
+              classNames={{
+                wrapper: "group-data-[selected=true]:bg-[#2B448D]",
+              }}
               id="anonymous-mode"
               onChange={(e) => handleAnonymousToggle(e.target.checked)}
             />
           </div>
 
           {isAnonymous && (
-            <Card className="bg-orange-50/50 border-orange-200">
-              <CardBody className="p-4">
-                <div className="flex items-start space-x-3">
-                  <Shield className="h-5 w-5 text-orange-600 mt-0.5" />
-                  <div className="text-sm">
-                    <p className="font-medium text-orange-700 mb-1">
-                      Reclamo anónimo activado
-                    </p>
-                    <p className="text-orange-600">
-                      Tu reclamo será procesado sin revelar tu identidad. Ten en
-                      cuenta que esto puede limitar las opciones de seguimiento
-                      y comunicación directa sobre el caso.
-                    </p>
+            <div className="space-y-3">
+              <Card className="bg-orange-50/50 border-orange-200">
+                <CardBody className="p-0">
+                  <div className="flex items-stretch gap-4">
+                    <div className="flex items-center justify-center p-3 bg-orange-100 rounded-l-lg border-r border-orange-200">
+                      <Shield className="h-7 w-7 text-orange-600" />
+                    </div>
+                    <div className="flex-1 p-2">
+                      <p className="font-semibold text-orange-900 mb-2 text-base">
+                        Reclamo anónimo activado
+                      </p>
+                      <p className="text-sm text-orange-700 leading-relaxed">
+                        Tu reclamo será procesado sin revelar tu identidad. Ten
+                        en cuenta que esto puede limitar las opciones de
+                        seguimiento y comunicación directa sobre el caso.
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </CardBody>
-            </Card>
+                </CardBody>
+              </Card>
+
+              <Card className="bg-orange-50/50 border-orange-200">
+                <CardBody className="p-0">
+                  <div className="flex items-stretch gap-4">
+                    <div className="flex items-center justify-center p-3 bg-orange-100 rounded-l-lg border-r border-orange-200">
+                      <Mail className="h-7 w-7 text-orange-600" />
+                    </div>
+                    <div className="flex-1 space-y-3 p-2">
+                      <div>
+                        <p className="font-semibold text-orange-900 mb-2 text-base">
+                          Envío de número de seguimiento
+                        </p>
+                        <p className="text-sm text-orange-700 leading-relaxed">
+                          Tienes la opción de proporcionar un correo electrónico
+                          de contacto para recibir un número de seguimiento de
+                          tu reclamo, sin asociar tu identidad al mismo.
+                        </p>
+                      </div>
+                      <Input
+                        classNames={{
+                          description: "text-green-600 font-medium text-xs",
+                        }}
+                        color="warning"
+                        description={
+                          validationSuccess.email ? "✓ Correo válido" : ""
+                        }
+                        errorMessage={validationErrors.email}
+                        id="email"
+                        isInvalid={!!validationErrors.email}
+                        placeholder="tu@email.com"
+                        size="md"
+                        type="email"
+                        value={personalData.email}
+                        variant="bordered"
+                        onBlur={(e) => handleFieldBlur("email", e.target.value)}
+                        onChange={(e) =>
+                          handlePersonalDataChange("email", e.target.value)
+                        }
+                      />
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+            </div>
           )}
         </CardBody>
       </Card>
@@ -271,23 +323,26 @@ export function IdentificationStep({
         <Card>
           <CardHeader>
             <div>
-              <h1 className="text-base flex items-center space-x-2">
+              <p className="font-semibold text-base flex items-center gap-2">
                 <User className="h-5 w-5" />
                 <span>Datos personales</span>
-              </h1>
-              <h2>
+              </p>
+              <p className="text-sm text-muted-foreground">
                 Completa todos los campos para identificarte como reclamante
-              </h2>
+              </p>
             </div>
           </CardHeader>
           <CardBody className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Full Name */}
               <div className="space-y-2">
-                <h1 className="flex items-center space-x-2">
+                <label
+                  className="flex items-center gap-2 text-sm font-medium"
+                  htmlFor="fullName"
+                >
                   <UserCheck className="h-4 w-4" />
                   <span>Nombre completo *</span>
-                </h1>
+                </label>
                 <Input
                   id="fullName"
                   placeholder="Ingresa tu nombre completo"
@@ -300,10 +355,13 @@ export function IdentificationStep({
 
               {/* RUT */}
               <div className="space-y-2">
-                <h1 className="flex items-center space-x-2">
+                <label
+                  className="flex items-center gap-2 text-sm font-medium"
+                  htmlFor="rut"
+                >
                   <CreditCard className="h-4 w-4" />
                   <span>RUT *</span>
-                </h1>
+                </label>
                 <Input
                   classNames={{
                     description: "text-green-600 font-medium text-xs",
@@ -321,10 +379,13 @@ export function IdentificationStep({
 
               {/* Email */}
               <div className="space-y-2">
-                <h1 className="flex items-center space-x-2">
+                <label
+                  className="flex items-center gap-2 text-sm font-medium"
+                  htmlFor="email"
+                >
                   <Mail className="h-4 w-4" />
                   <span>Correo electrónico *</span>
-                </h1>
+                </label>
                 <Input
                   classNames={{
                     description: "text-green-600 font-medium text-xs",
@@ -345,10 +406,13 @@ export function IdentificationStep({
 
               {/* Phone */}
               <div className="space-y-2">
-                <h1 className="flex items-center space-x-2">
+                <label
+                  className="flex items-center gap-2 text-sm font-medium"
+                  htmlFor="phone"
+                >
                   <Phone className="h-4 w-4" />
                   <span>Número de teléfono *</span>
-                </h1>
+                </label>
                 <Input
                   classNames={{
                     description: "text-green-600 font-medium text-xs",

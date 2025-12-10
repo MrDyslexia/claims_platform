@@ -15,4 +15,5 @@ export default interface FormData {
   rut?: string;
   email?: string;
   phone?: string;
+  skipDetailsWarning?: boolean;
 }
