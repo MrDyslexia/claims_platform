@@ -1,52 +1,40 @@
-"use client";
+"use client"
 
-import type React from "react";
+import { useState } from "react"
+import { Card, CardBody, Button, Image } from "@heroui/react"
+import { FileText, Clock, CheckCircle, Shield, AlertCircle } from "lucide-react"
+import { TrackSearch } from "@/components/track-search"
+import { ClaimDetail } from "@/components/claim-detail"
 
-import { Card, CardBody, Input, Button } from "@heroui/react";
-import { Search, FileText, Clock, CheckCircle, Lock } from "lucide-react";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
 export default function TrackClaimPage() {
-  const router = useRouter();
-  const [claimCode, setClaimCode] = useState("");
-  const [accessKey, setAccessKey] = useState("");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [view, setView] = useState<"search" | "loading" | "detail" | "error">("search")
+  const [claim, setClaim] = useState<any>(null)
+  const [error, setError] = useState("")
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setIsLoading(true);
+  const handleSearch = async (claimCode: string, accessKey: string) => {
+    setError("")
 
     if (!claimCode.trim()) {
-      setError("Por favor ingresa un código de reclamo");
-      setIsLoading(false);
-
-      return;
+      setError("Por favor ingresa un código de reclamo")
+      return
     }
 
     if (!accessKey.trim()) {
-      setError("Por favor ingresa tu clave de acceso");
-      setIsLoading(false);
-
-      return;
+      setError("Por favor ingresa tu clave de acceso")
+      return
     }
 
-    // Validate format (should be like: 2024-XXXXXXX)
+    // Validate format
     if (!/^\d{4}-\d{4,}$/.test(claimCode.trim())) {
-      setError(
-        "Formato de código inválido. Debe ser como: 2024-XXXX (al menos 4 dígitos después del guión)",
-      );
-      setIsLoading(false);
-
-      return;
+      setError("Formato inválido. Debe ser como: 2024-1234")
+      return
     }
+
+    setView("loading")
 
     try {
-      // Llamar a la función lookupDenuncia del backend
       const response = await fetch(`${API_BASE_URL}/denuncias/lookup`, {
         method: "POST",
         headers: {
@@ -56,157 +44,209 @@ export default function TrackClaimPage() {
           numero: claimCode.trim(),
           clave: accessKey.trim(),
         }),
-      });
+      })
 
       if (!response.ok) {
         if (response.status === 404) {
-          setError("Reclamo no encontrado");
+          setError("Reclamo no encontrado")
         } else if (response.status === 401) {
-          setError("Clave de acceso inválida");
+          setError("Clave de acceso inválida")
         } else {
-          const errorData = await response.json();
-
-          setError(errorData.error || "Error al consultar el reclamo");
+          const errorData = await response.json()
+          setError(errorData.error || "Error al consultar el reclamo")
         }
-        setIsLoading(false);
-
-        return;
+        setView("error")
+        return
       }
 
-      // Si la consulta es exitosa, navegar a la página de detalle
-      router.push(
-        `/track/${claimCode.trim()}?key=${encodeURIComponent(accessKey.trim())}`,
-      );
+      const data = await response.json()
+      setClaim(data)
+      setView("detail")
     } catch {
-      setError("Error al conectar con el servidor");
-      setIsLoading(false);
+      setError("Error al conectar con el servidor")
+      setView("error")
     }
-  };
+  }
+
+  const handleBack = () => {
+    setView("search")
+    setClaim(null)
+    setError("")
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-default-100 py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Seguimiento de Reclamo</h1>
-          <p className="text-lg text-default-600">
-            Ingresa tu código de reclamo para consultar el estado
-          </p>
-        </div>
-
-        {/* Search Form */}
-        <Card className="mb-12">
-          <CardBody className="p-8">
-            <form className="space-y-6" onSubmit={handleSubmit}>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <Input
-                    description="Ingresa el código que recibiste en el correo al enviar tu reclamo"
-                    errorMessage={error}
-                    isInvalid={!!error}
-                    label="Código de Reclamo"
-                    placeholder="2025-XXXXXXX"
-                    size="lg"
-                    startContent={
-                      <Search className="w-4 h-4 text-default-400" />
-                    }
-                    value={claimCode}
-                    variant="bordered"
-                    onChange={(e) => setClaimCode(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <Input
-                    description="Ingresa la clave de acceso enviada a tu correo"
-                    label="Clave de Acceso"
-                    placeholder="Ingresa tu clave de acceso"
-                    size="lg"
-                    startContent={<Lock className="w-4 h-4 text-default-400" />}
-                    type="password"
-                    value={accessKey}
-                    variant="bordered"
-                    onChange={(e) => setAccessKey(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <Button
-                className="w-full"
-                color="primary"
-                disabled={isLoading}
-                isLoading={isLoading}
-                size="lg"
-                startContent={<Search className="w-5 h-5" />}
-                type="submit"
-              >
-                Consultar Estado
-              </Button>
-            </form>
-          </CardBody>
-        </Card>
-
-        {/* Info Cards */}
-        <div className="grid md:grid-cols-3 gap-6">
-          <Card>
-            <CardBody className="text-center p-6">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <FileText className="w-6 h-6 text-primary" />
-              </div>
-              <h3 className="font-semibold mb-2">Información Detallada</h3>
-              <p className="text-sm text-default-600">
-                Consulta todos los detalles de tu reclamo
-              </p>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardBody className="text-center p-6">
-              <div className="w-12 h-12 bg-warning/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-6 h-6 text-warning" />
-              </div>
-              <h3 className="font-semibold mb-2">Estado en Tiempo Real</h3>
-              <p className="text-sm text-default-600">
-                Conoce el estado actual de tu reclamo
-              </p>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardBody className="text-center p-6">
-              <div className="w-12 h-12 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="w-6 h-6 text-success" />
-              </div>
-              <h3 className="font-semibold mb-2">Historial Completo</h3>
-              <p className="text-sm text-default-600">
-                Revisa todo el historial de tu reclamo
-              </p>
-            </CardBody>
-          </Card>
-        </div>
-
-        {/* Help Section */}
-        <Card className="mt-8 bg-default-50">
-          <CardBody className="p-6">
-            <h3 className="font-semibold mb-3">
-              ¿No tienes tu código de reclamo?
-            </h3>
-            <p className="text-sm text-default-600 mb-4">
-              El código de reclamo fue enviado a tu correo electrónico cuando
-              enviaste tu reclamo. Si no lo encuentras, revisa tu carpeta de
-              spam o contacta con soporte.
-            </p>
-            <div className="flex gap-4">
-              <Button as="a" href="/" size="sm" variant="flat">
-                Enviar Nuevo Reclamo
-              </Button>
-              <Button as="a" href="/contact" size="sm" variant="flat">
-                Contactar Soporte
-              </Button>
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100">
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#1a2647] via-[#202e5e] to-[#2a3f7a] mb-4">
+        <div
+          className="absolute inset-0 opacity-10"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fillRule='evenodd'%3E%3Cg fill='%23ffffff' fillOpacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          }}
+        />
+        <div className="relative container mx-auto px-4 pb-20">
+          <div className="flex flex-col items-center text-center">
+            <div className="mb-6">
+              <Image
+                alt="Belator group logo"
+                height={500}
+                src="/sub/Logo.svg"
+                width={500}
+                className="drop-shadow-2xl"
+              />
             </div>
-          </CardBody>
-        </Card>
+
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight">Seguimiento de Reclamo</h1>
+            <p className="text-lg md:text-xl text-blue-100 max-w-2xl font-light">
+              Ingresa tu código de reclamo para consultar el estado en tiempo real
+            </p>
+          </div>
+
+          {/* Badges de confianza */}
+          <div className="flex flex-wrap justify-center gap-3 md:gap-4 mt-10">
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-5 py-2.5 rounded-full border border-white/20 shadow-lg">
+              <Shield className="w-4 h-4 text-emerald-300" />
+              <span className="text-sm text-white font-medium">100% Confidencial</span>
+            </div>
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-5 py-2.5 rounded-full border border-white/20 shadow-lg">
+              <Clock className="w-4 h-4 text-amber-300" />
+              <span className="text-sm text-white font-medium">Actualización en Tiempo Real</span>
+            </div>
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-5 py-2.5 rounded-full border border-white/20 shadow-lg">
+              <CheckCircle className="w-4 h-4 text-sky-300" />
+              <span className="text-sm text-white font-medium">Historial Completo</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="absolute bottom-[-1] w-full z-10">
+          <svg className="w-full" fill="none" viewBox="0 0 1440 120" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z"
+              fill="#F9FAFB"
+            />
+          </svg>
+        </div>
       </div>
-    </div>
-  );
+
+      <div className="container mx-auto px-4 mt-6 relative z-10 pb-16">
+        <div className="max-w-6xl mx-auto">
+          {view === "search" && (
+            <>
+              {/* Search Form */}
+              <div className="mb-12">
+                <TrackSearch onSearch={handleSearch} error={error} />
+              </div>
+
+              {/* Feature Cards */}
+              <div className="grid md:grid-cols-3 gap-6 mb-10">
+                <Card className="border-2 border-slate-200 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                  <CardBody className="text-center p-8">
+                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg shadow-blue-500/30">
+                      <FileText className="w-8 h-8 text-white" />
+                    </div>
+                    <h3 className="font-bold text-lg mb-3 text-slate-800">Información Detallada</h3>
+                    <p className="text-sm text-slate-600 leading-relaxed">
+                      Consulta todos los detalles y el progreso de tu reclamo
+                    </p>
+                  </CardBody>
+                </Card>
+
+                <Card className="border-2 border-slate-200 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                  <CardBody className="text-center p-8">
+                    <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg shadow-amber-500/30">
+                      <Clock className="w-8 h-8 text-white" />
+                    </div>
+                    <h3 className="font-bold text-lg mb-3 text-slate-800">Estado en Tiempo Real</h3>
+                    <p className="text-sm text-slate-600 leading-relaxed">
+                      Conoce el estado actual y las actualizaciones más recientes
+                    </p>
+                  </CardBody>
+                </Card>
+
+                <Card className="border-2 border-slate-200 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                  <CardBody className="text-center p-8">
+                    <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg shadow-emerald-500/30">
+                      <CheckCircle className="w-8 h-8 text-white" />
+                    </div>
+                    <h3 className="font-bold text-lg mb-3 text-slate-800">Historial Completo</h3>
+                    <p className="text-sm text-slate-600 leading-relaxed">
+                      Revisa toda la línea de tiempo y comentarios del proceso
+                    </p>
+                  </CardBody>
+                </Card>
+              </div>
+
+              {/* Security Badge */}
+              <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 shadow-lg">
+                <CardBody className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                      <Shield className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-800 mb-1">Tu privacidad está protegida</h3>
+                      <p className="text-sm text-slate-600 leading-relaxed">
+                        Toda la información es tratada de forma confidencial y segura. Solo podrás acceder con tu código
+                        y clave de acceso únicos.
+                      </p>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+
+              {/* Help Section */}
+              <Card className="mt-8 bg-slate-50 border-2 border-slate-200">
+                <CardBody className="p-6">
+                  <h3 className="font-bold text-slate-800 mb-3">¿No encuentras tu código de reclamo?</h3>
+                  <p className="text-sm text-slate-600 mb-4 leading-relaxed">
+                    El código y la clave fueron enviados a tu correo electrónico cuando enviaste tu reclamo. Revisa tu
+                    carpeta de spam o contacta con soporte.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <Button as="a" href="/" size="sm" variant="flat" className="font-semibold">
+                      Enviar Nuevo Reclamo
+                    </Button>
+                  </div>
+                </CardBody>
+              </Card>
+            </>
+          )}
+
+          {view === "loading" && (
+            <Card className="border-2 border-slate-200 shadow-2xl">
+              <CardBody className="text-center p-16">
+                <div className="flex justify-center mb-6">
+                  <div className="animate-spin">
+                    <Clock className="w-16 h-16 text-[#202e5e]" />
+                  </div>
+                </div>
+                <h2 className="text-3xl font-bold mb-3 text-slate-800">Consultando reclamo...</h2>
+                <p className="text-slate-600 text-lg">Por favor espera mientras recuperamos la información</p>
+              </CardBody>
+            </Card>
+          )}
+
+          {view === "error" && (
+            <Card className="border-2 border-red-200 shadow-2xl bg-gradient-to-br from-red-50 to-rose-50">
+              <CardBody className="text-center p-16">
+                <AlertCircle className="w-20 h-20 text-red-500 mx-auto mb-6" />
+                <h2 className="text-3xl font-bold mb-3 text-slate-800">{error || "Error al cargar"}</h2>
+                <p className="text-slate-600 mb-8 text-lg">Por favor verifica tu código y clave e intenta nuevamente</p>
+                <Button
+                  color="primary"
+                  size="lg"
+                  onPress={handleBack}
+                  className="bg-gradient-to-r from-[#202e5e] to-[#1a2550] text-white font-semibold"
+                >
+                  Volver a Intentar
+                </Button>
+              </CardBody>
+            </Card>
+          )}
+
+          {view === "detail" && claim && <ClaimDetail claim={claim} onBack={handleBack} />}
+        </div>
+      </div>
+    </main>
+  )
 }

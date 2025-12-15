@@ -1,22 +1,15 @@
-"use client";
+"use client"
 
-import { usePathname, useRouter } from "next/navigation";
-import Link from "next/link";
-import { Card } from "@heroui/react";
-import {
-  BarChart3,
-  FileText,
-  TrendingUp,
-  Building2,
-  LogOut,
-} from "lucide-react";
+import { usePathname, useRouter } from "next/navigation"
+import { Button, Divider, Avatar, Chip, Image } from "@heroui/react"
+import { LogOut, ChevronRight, BarChart3, FileText, TrendingUp } from "lucide-react"
 
-import { useAuth } from "@/lib/auth/auth-context";
+import { useAuth } from "@/lib/auth/auth-context"
 
 export function AnalystSidebar() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const { user, logout } = useAuth();
+  const pathname = usePathname()
+  const router = useRouter()
+  const { user, logout } = useAuth()
 
   const menuItems = [
     {
@@ -34,67 +27,102 @@ export function AnalystSidebar() {
       href: "/analyst/analytics",
       icon: TrendingUp,
     },
-  ];
+  ]
+
+  const handleLogout = async () => {
+    await logout()
+    router.push("/")
+  }
 
   return (
-    <aside className="w-64 border-r border-divider bg-content1 flex flex-col">
-      <div className="p-6 border-b border-divider">
+    <div className="flex flex-col h-full bg-[#202E5E] text-white border-r border-[#2a3a6e]">
+      {/* Header */}
+      <div className="p-4 border-b border-[#2a3a6e]">
         <div className="flex items-center gap-3">
-          <Building2 className="w-8 h-8 text-primary" />
+          <div className="p-2 bg-white/10 rounded-lg">
+            <Image
+              alt="Logo Belator"
+              className="h-10 w-auto object-contain filter brightness-0 invert"
+              src="/icon.svg"
+            />
+          </div>
           <div>
-            <h2 className="font-semibold text-foreground">Panel Analista</h2>
-            <p className="text-xs text-default-500">{user?.empresa?.nombre}</p>
+            <h2 className="font-bold text-lg text-white">{user?.roles?.[0]?.nombre || "Analista"}</h2>
+            <p className="text-xs text-white/60">Sistema de Reclamos</p>
           </div>
         </div>
       </div>
 
-      <nav className="flex-1 p-4 space-y-1">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href;
+      {/* User Info */}
+      <div className="p-4 border-b border-[#2a3a6e]">
+        <div className="flex items-center gap-3">
+          <Avatar className="bg-white/20 text-white" name={`${user?.nombre} ${user?.apellido}`} size="sm" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate text-white">
+              {user?.nombre} {user?.apellido}
+            </p>
+            <p className="text-xs text-white/60 truncate">{user?.email}</p>
+          </div>
+        </div>
+        {user?.roles && user.roles.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {user.roles.map((role) => (
+              <Chip
+                key={role.id_rol}
+                classNames={{
+                  base: "bg-white/10 border-white/20",
+                  content: "text-white text-xs",
+                }}
+                size="sm"
+                variant="flat"
+              >
+                {role.nombre}
+              </Chip>
+            ))}
+          </div>
+        )}
+      </div>
 
-          return (
-            <Link
-              key={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-default-700 hover:bg-default-100"
-              }`}
-              href={item.href}
-            >
-              <Icon className="w-5 h-5" />
-              <span className="font-medium">{item.label}</span>
-            </Link>
-          );
-        })}
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto p-2">
+        <div className="space-y-1">
+          {menuItems.map((item) => {
+            const Icon = item.icon
+            const isActive = pathname === item.href
+
+            return (
+              <Button
+                key={item.href}
+                className={`w-full justify-start ${
+                  isActive
+                    ? "bg-white/20 text-white font-semibold"
+                    : "bg-transparent text-white/70 hover:bg-white/10 hover:text-white"
+                }`}
+                endContent={isActive ? <ChevronRight className="h-4 w-4" /> : null}
+                startContent={<Icon className="h-4 w-4" />}
+                variant="light"
+                onPress={() => router.push(item.href)}
+              >
+                {item.label}
+              </Button>
+            )
+          })}
+        </div>
       </nav>
 
-      <div className="p-4 border-t border-divider">
-        <Card className="p-4 bg-default-50">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="text-primary font-semibold">
-                {user?.nombre?.charAt(0)}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">{user?.nombre}</p>
-              <p className="text-xs text-default-500">Analista</p>
-            </div>
-          </div>
-          <button
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-danger hover:bg-danger/10 rounded-lg transition-colors"
-            onClick={async () => {
-              await logout();
-              router.push("/");
-            }}
-          >
-            <LogOut className="w-4 h-4" />
-            Cerrar Sesión
-          </button>
-        </Card>
+      <Divider className="bg-[#2a3a6e]" />
+
+      {/* Logout */}
+      <div className="p-2">
+        <Button
+          className="w-full justify-start text-white hover:text-red-200 hover:bg-red-500/20"
+          startContent={<LogOut className="h-4 w-4" />}
+          variant="light"
+          onPress={handleLogout}
+        >
+          Cerrar Sesión
+        </Button>
       </div>
-    </aside>
-  );
+    </div>
+  )
 }

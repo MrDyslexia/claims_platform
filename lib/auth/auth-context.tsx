@@ -9,7 +9,7 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Alert, Button } from "@heroui/react";
 
 import { authAPI } from "./api";
@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [sessionExists, setSessionExists] = useState(false);
   const router = useRouter();
-
+  const rutaActual = usePathname();
   useEffect(() => {
     checkSession();
   }, []);
@@ -305,7 +305,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         getRoleRoute,
       }}
     >
-      {sessionExists && (
+      {(sessionExists && rutaActual == "/") && (
         <Alert
           className="absolute top-4 right-4 z-50 w-md"
           color="primary"
