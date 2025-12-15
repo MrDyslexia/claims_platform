@@ -20,7 +20,7 @@ router.use(authMiddleware);
  * @desc Crear nuevo rol
  * @access Privado - Requiere permiso CREATE_ROL
  */
-router.post('/', requirePermission('CREATE_ROL'), crearRol);
+router.post('/', requirePermission('roles:crear'), crearRol);
 
 /**
  * @route GET /api/roles/:id
@@ -41,14 +41,14 @@ router.get('/', listarRoles);
  * @desc Actualizar rol
  * @access Privado - Requiere permiso UPDATE_ROL
  */
-router.put('/:id', requirePermission('UPDATE_ROL'), actualizarRol);
+router.put('/:id', requirePermission('roles:editar'), actualizarRol);
 
 /**
  * @route DELETE /api/roles/:id
  * @desc Eliminar rol
  * @access Privado - Requiere permiso DELETE_ROL
  */
-router.delete('/:id', requirePermission('DELETE_ROL'), eliminarRol);
+router.delete('/:id', requirePermission('roles:eliminar'), eliminarRol);
 
 /**
  * @route POST /api/roles/:id/permisos
@@ -57,7 +57,7 @@ router.delete('/:id', requirePermission('DELETE_ROL'), eliminarRol);
  */
 router.post(
     '/:id/permisos',
-    requirePermission('MANAGE_ROL_PERMISOS'),
+    requirePermission('roles:gestionar_permisos'),
     asignarPermisosRol
 );
 

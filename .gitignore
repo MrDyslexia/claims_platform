@@ -9,3 +9,5 @@
 test-reports-endpoint.sh
 uploads
 public
+migrations
+*.sql

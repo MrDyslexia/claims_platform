@@ -3,6 +3,7 @@ import authRoutes from './auth.routes';
 import denunciaRoutes from './denuncia.routes';
 import exportRoutes from './export.routes';
 import empresaRoutes from './empresa.routes';
+import arquetipoRoutes from './arquetipo.routes';
 import rolRoutes from './rol.routes';
 import permisoRoutes from './permiso.routes';
 import usuarioRoutes from './usuario.routes';
@@ -33,6 +34,7 @@ router.use('/dashboard', dashboardRoutes);
 
 // Core Admin API routes
 router.use('/empresas', empresaRoutes);
+router.use('/arquetipos', arquetipoRoutes);
 router.use('/roles', rolRoutes);
 router.use('/permisos', permisoRoutes);
 router.use('/usuarios', usuarioRoutes);

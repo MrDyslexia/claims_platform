@@ -135,8 +135,8 @@ export const FORM_RELATIONSHIPS: RelationshipMetadata[] = [
 ];
 
 export const FORM_COUNTRIES: string[] = [
-  "Argentina",
   "Chile",
+  "Argentina",
   "Perú",
   "Francia",
   "Mexico",

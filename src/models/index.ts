@@ -6,6 +6,8 @@ import { defineTipoDenuncia } from './tipo-denuncia.model';
 import { defineCategoriaDenuncia } from './categoria-denuncia.model';
 import { defineEstadoDenuncia } from './estado-denuncia.model';
 import { defineCanalDenuncia } from './canal-denuncia.model';
+import { defineArquetipo } from './arquetipo.model';
+import { defineArquetipoPermiso } from './arquetipo-permiso.model';
 import { defineRol } from './rol.model';
 import { definePermiso } from './permiso.model';
 import { defineRolPermiso } from './rol-permiso.model';
@@ -39,6 +41,8 @@ export const initModels = (sequelize: Sequelize) => {
     const CategoriaDenuncia = defineCategoriaDenuncia(sequelize);
     const EstadoDenuncia = defineEstadoDenuncia(sequelize);
     const CanalDenuncia = defineCanalDenuncia(sequelize);
+    const Arquetipo = defineArquetipo(sequelize);
+    const ArquetipoPermiso = defineArquetipoPermiso(sequelize);
     const Rol = defineRol(sequelize);
     const Permiso = definePermiso(sequelize);
     const RolPermiso = defineRolPermiso(sequelize);
@@ -107,7 +111,25 @@ export const initModels = (sequelize: Sequelize) => {
         as: 'usuarios',
     });
 
-    // Rol <-> Permiso (many-to-many)
+    // Arquetipo <-> Permiso (many-to-many) - Permisos base del arquetipo
+    Arquetipo.belongsToMany(Permiso, {
+        through: ArquetipoPermiso,
+        foreignKey: 'arquetipo_id',
+        otherKey: 'permiso_id',
+        as: 'permisos',
+    });
+    Permiso.belongsToMany(Arquetipo, {
+        through: ArquetipoPermiso,
+        foreignKey: 'permiso_id',
+        otherKey: 'arquetipo_id',
+        as: 'arquetipos',
+    });
+
+    // Arquetipo -> Rol (one-to-many)
+    Arquetipo.hasMany(Rol, { foreignKey: 'arquetipo_id', as: 'roles' });
+    Rol.belongsTo(Arquetipo, { foreignKey: 'arquetipo_id', as: 'arquetipo' });
+
+    // Rol <-> Permiso (many-to-many) - Permisos personalizados del rol
     Rol.belongsToMany(Permiso, {
         through: RolPermiso,
         foreignKey: 'rol_id',
@@ -248,6 +270,8 @@ export const initModels = (sequelize: Sequelize) => {
         CategoriaDenuncia,
         EstadoDenuncia,
         CanalDenuncia,
+        Arquetipo,
+        ArquetipoPermiso,
         Rol,
         Permiso,
         RolPermiso,

@@ -15,24 +15,12 @@ async function bootstrap() {
     const app = express();
     app.use(helmet());
 
-    // Configure CORS: use env.cors as a whitelist array. If empty, allow all origins.
-    const allowedOrigins: string[] = env.cors || [];
+    // Configure CORS: allow all origins
     const corsOptions = {
-        origin: function (incomingOrigin: any, callback: any) {
-            // If no origin (e.g. server-to-server or curl), allow}
-            if (!incomingOrigin) return callback(null, true);
-            // If no whitelist provided, allow all origins
-            if (!allowedOrigins || allowedOrigins.length === 0)
-                return callback(null, true);
-            if (allowedOrigins.includes(incomingOrigin))
-                return callback(null, true);
-            return callback(
-                new Error(
-                    `Not allowed by CORS, origin denied ${incomingOrigin}`
-                )
-            );
-        },
+        origin: '*',
         credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
     };
 
     // Enable CORS for all routes and handle preflight requests globally
@@ -48,7 +36,7 @@ async function bootstrap() {
             next();
         }
     });
-    app.use(express.json({ limit: '5mb' }));
+    app.use(express.json({ limit: '20mb' }));
     app.use(requestLogger());
 
     app.get('/', (req, res) => res.json({ ok: true }));
@@ -67,6 +55,10 @@ async function bootstrap() {
 
     // Sync database in background (development only)
     // DISABLED: Causing "Too many keys" error. Use migrations instead.
+    // Para crear las nuevas tablas (arquetipo, arquetipo_permiso) ejecutar:
+    // ALTER TABLE rol ADD COLUMN arquetipo_id BIGINT;
+    // CREATE TABLE arquetipo (id BIGINT AUTO_INCREMENT PRIMARY KEY, codigo VARCHAR(50) UNIQUE, nombre VARCHAR(150), descripcion TEXT);
+    // CREATE TABLE arquetipo_permiso (arquetipo_id BIGINT, permiso_id BIGINT, PRIMARY KEY(arquetipo_id, permiso_id));
     // if (env.nodeEnv === 'development') {
     //     const { syncDatabase } = await import('./db/sequelize');
     //     syncDatabase({ alter: true }).catch((e) =>

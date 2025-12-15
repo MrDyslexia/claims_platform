@@ -346,7 +346,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
                 id_denuncia: claimData.id,
                 codigo_acceso: claimData.numero,
                 descripcion: claimData.descripcion,
-                prioridad: (claimData.prioridad_id as string)?.toLowerCase() || 'media',
+                prioridad: (claimData.prioridad_id as string)?.toLowerCase(),
                 id_estado: claimData.estado_id,
                 id_tipo: claimData.tipo_id,
                 id_empresa: claimData.empresa_id,

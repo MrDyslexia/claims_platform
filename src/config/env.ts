@@ -2,7 +2,7 @@ import 'dotenv/config';
 
 export const env = {
     nodeEnv: process.env.NODE_ENV || 'development',
-    port: Number(process.env.PORT || 3000),
+    port: Number(process.env.PORT || 3003),
     db: {
         host: process.env.DB_HOST || '127.0.0.1',
         port: Number(process.env.DB_PORT || 3306),

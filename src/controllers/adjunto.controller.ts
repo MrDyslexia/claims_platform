@@ -25,6 +25,12 @@ export const uploadMiddleware = upload.array(
     UPLOAD_CONFIG.MAX_FILES_PER_DENUNCIA
 );
 
+// Middleware para subir archivos desde el frontend público (usa 'files' como campo)
+export const uploadMiddlewarePublic = upload.array(
+    'files',
+    UPLOAD_CONFIG.MAX_FILES_PER_DENUNCIA
+);
+
 /**
  * Subir archivos adjuntos a una denuncia
  * POST /api/adjuntos/upload

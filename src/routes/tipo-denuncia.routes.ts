@@ -18,7 +18,7 @@ router.use(authMiddleware);
  * @desc Crear nuevo tipo de denuncia
  * @access Privado - Requiere permiso CREATE_TIPO_DENUNCIA
  */
-router.post('/', requirePermission('CREATE_TIPO_DENUNCIA'), crearTipoDenuncia);
+router.post('/', requirePermission('tipos:crear'), crearTipoDenuncia);
 
 /**
  * @route GET /api/tipos-denuncia/:id
@@ -41,7 +41,7 @@ router.get('/', listarTiposDenuncia);
  */
 router.put(
     '/:id',
-    requirePermission('UPDATE_TIPO_DENUNCIA'),
+    requirePermission('tipos:editar'),
     actualizarTipoDenuncia
 );
 
@@ -52,7 +52,7 @@ router.put(
  */
 router.delete(
     '/:id',
-    requirePermission('DELETE_TIPO_DENUNCIA'),
+    requirePermission('tipos:eliminar'),
     eliminarTipoDenuncia
 );
 

@@ -28,7 +28,7 @@ router.get('/:id', obtenerCanal);
 router.post(
     '/',
     authMiddleware,
-    requirePermission('GESTIONAR_CANALES'),
+    requirePermission('canales:gestionar'),
     crearCanal
 );
 
@@ -36,7 +36,7 @@ router.post(
 router.put(
     '/:id',
     authMiddleware,
-    requirePermission('GESTIONAR_CANALES'),
+    requirePermission('canales:gestionar'),
     actualizarCanal
 );
 
@@ -44,7 +44,7 @@ router.put(
 router.delete(
     '/:id',
     authMiddleware,
-    requirePermission('GESTIONAR_CANALES'),
+    requirePermission('canales:gestionar'),
     desactivarCanal
 );
 

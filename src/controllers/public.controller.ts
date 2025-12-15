@@ -29,6 +29,7 @@ export const obtenerMetadataFormulario = async (
                 cat.nombre.toUpperCase().replace(/\s+/g, '_'), // Fallback ID generation
             name: cat.nombre,
             description: cat.descripcion,
+            icon: cat.icono,
             subcategories: cat.tipos.map((tipo: any) => ({
                 code: tipo.codigo,
                 name: tipo.nombre,
@@ -37,8 +38,7 @@ export const obtenerMetadataFormulario = async (
 
         return res.json({
             countries:FORM_METADATA.countries,
-            categories, // Override static categories with DB ones
-            generatedAt: new Date().toISOString(),
+            categories,
         });
     } catch (e: any) {
         return res.status(500).json({ error: e.message });

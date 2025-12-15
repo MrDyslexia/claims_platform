@@ -41,7 +41,7 @@ router.get('/', listarUsuarios);
  * @desc Crear nuevo usuario (admin)
  * @access Privado - Requiere permiso CREATE_USUARIO
  */
-router.post('/', requirePermission('CREATE_USUARIO'), crearUsuario);
+router.post('/', requirePermission('usuarios:crear'), crearUsuario);
 
 /**
  * @route GET /api/usuarios/:id
@@ -55,7 +55,7 @@ router.get('/:id', obtenerUsuario);
  * @desc Actualizar usuario
  * @access Privado - Requiere permiso UPDATE_USUARIO
  */
-router.put('/:id', requirePermission('UPDATE_USUARIO'), actualizarUsuario);
+router.put('/:id', requirePermission('usuarios:editar'), actualizarUsuario);
 
 /**
  * @route POST /api/usuarios/:id/cambiar-contraseña
@@ -69,7 +69,7 @@ router.post('/:id/cambiar-contraseña', cambiarContraseña);
  * @desc Eliminar usuario
  * @access Privado - Requiere permiso DELETE_USUARIO
  */
-router.delete('/:id', requirePermission('DELETE_USUARIO'), eliminarUsuario);
+router.delete('/:id', requirePermission('usuarios:eliminar'), eliminarUsuario);
 
 /**
  * @route POST /api/usuarios/:id/roles
@@ -78,7 +78,7 @@ router.delete('/:id', requirePermission('DELETE_USUARIO'), eliminarUsuario);
  */
 router.post(
     '/:id/roles',
-    requirePermission('MANAGE_USUARIO_ROLES'),
+    requirePermission('usuarios:gestionar_roles'),
     asignarRolUsuario
 );
 
@@ -103,7 +103,7 @@ router.get('/:id/sesiones', obtenerSesionesUsuario);
  */
 router.patch(
     '/:id/toggle-activo',
-    requirePermission('UPDATE_USUARIO'),
+    requirePermission('usuarios:editar'),
     toggleActivo
 );
 

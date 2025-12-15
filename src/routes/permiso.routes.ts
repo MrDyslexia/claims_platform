@@ -19,7 +19,7 @@ router.use(authMiddleware);
  * @desc Crear nuevo permiso
  * @access Privado - Requiere permiso CREATE_PERMISO
  */
-router.post('/', requirePermission('CREATE_PERMISO'), crearPermiso);
+router.post('/', requirePermission('permisos:crear'), crearPermiso);
 
 /**
  * @route GET /api/permisos/:id
@@ -40,14 +40,14 @@ router.get('/', listarPermisos);
  * @desc Actualizar permiso
  * @access Privado - Requiere permiso UPDATE_PERMISO
  */
-router.put('/:id', requirePermission('UPDATE_PERMISO'), actualizarPermiso);
+router.put('/:id', requirePermission('permisos:editar'), actualizarPermiso);
 
 /**
  * @route DELETE /api/permisos/:id
  * @desc Eliminar permiso
  * @access Privado - Requiere permiso DELETE_PERMISO
  */
-router.delete('/:id', requirePermission('DELETE_PERMISO'), eliminarPermiso);
+router.delete('/:id', requirePermission('permisos:eliminar'), eliminarPermiso);
 
 /**
  * @route GET /api/permisos/usuario/:usuario_id

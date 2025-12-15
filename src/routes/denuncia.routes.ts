@@ -6,15 +6,13 @@ import {
     lookupDenuncia,
     obtenerTodosLosReclamos,
     obtenerReclamosAsignados,
-    revealEmail,
-    autorizarContacto,
     actualizarPrioridad,
 } from '../controllers/denuncia.controller';
 import {
     crearComentario,
     crearComentarioDenuncia,
 } from '../controllers/comentario.controller';
-import { uploadMiddleware } from '../controllers/adjunto.controller';
+import { uploadMiddlewarePublic } from '../controllers/adjunto.controller';
 import { crearResolucion } from '../controllers/resolucion.controller';
 import {
     authMiddleware,
@@ -27,19 +25,16 @@ const router = Router();
 // Public lookup by numero + clave
 router.post('/lookup', lookupDenuncia);
 
-// Autorizar contacto público (denunciante revela su correo con recovery code)
-router.post('/:numero/autorizar-contacto', autorizarContacto);
-
 // Crear denuncia autenticado (se setea created_by)
 router.post(
     '/',
     authMiddleware,
-    requirePermission('DENUNCIA_CREAR'),
+    requirePermission('denuncias:crear'),
     crearDenuncia
 );
 
 // Crear denuncia pública (created_by = null)
-router.post('/public', uploadMiddleware, crearDenunciaPublica);
+router.post('/public', uploadMiddlewarePublic, crearDenunciaPublica);
 
 // Obtener reclamos asignados al usuario actual
 router.get(
@@ -86,7 +81,5 @@ router.post(
     actualizarPrioridad
 );
 
-// Revelar correo encriptado (requiere auth - permiso verificado dentro del controlador)
-router.post('/:id/reveal-email', authMiddleware, revealEmail);
-
 export default router;
+

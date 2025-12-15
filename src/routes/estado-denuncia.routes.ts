@@ -20,7 +20,7 @@ router.use(authMiddleware);
  */
 router.post(
     '/',
-    requirePermission('CREATE_ESTADO_DENUNCIA'),
+    requirePermission('estados:crear'),
     crearEstadoDenuncia
 );
 
@@ -45,7 +45,7 @@ router.get('/', listarEstadosDenuncia);
  */
 router.put(
     '/:id',
-    requirePermission('UPDATE_ESTADO_DENUNCIA'),
+    requirePermission('estados:editar'),
     actualizarEstadoDenuncia
 );
 
@@ -56,7 +56,7 @@ router.put(
  */
 router.delete(
     '/:id',
-    requirePermission('DELETE_ESTADO_DENUNCIA'),
+    requirePermission('estados:eliminar'),
     eliminarEstadoDenuncia
 );
 

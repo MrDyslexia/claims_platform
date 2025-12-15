@@ -13,10 +13,6 @@ import {
 import {
     sha256Buffer,
     verifyClaveWithSalt,
-    encryptText,
-    decryptText,
-    hashText,
-    generateRecoveryCode,
 } from '../utils/crypto';
 
 import {
@@ -80,7 +76,6 @@ interface CreateDenunciaInput {
 interface CreateDenunciaResult {
     denuncia: any;
     clave: string;
-    recoveryCode?: string; // Solo si hay email
 }
 
 function sanitizeString(value: unknown): string {
@@ -127,28 +122,6 @@ async function createDenunciaRecord(
         const saltHex = saltBuffer.toString('hex').toUpperCase();
         const claveHash = sha256Buffer(`${clave}${saltHex}`);
 
-        // Preparar datos de correo encriptado
-        let correoEncrypted: string | null = null;
-        let correoIv: string | null = null;
-        let correoTag: string | null = null;
-        let correoHash: string | null = null;
-        let recoveryCodeHash: string | null = null;
-        let recoveryCode: string | undefined;
-
-        const email = normalizeNullableString(input.denuncianteEmail);
-        if (email) {
-            // Encriptar el correo
-            const encrypted = encryptText(email);
-            correoEncrypted = encrypted.ciphertext;
-            correoIv = encrypted.iv;
-            correoTag = encrypted.tag;
-            correoHash = hashText(email);
-
-            // Generar recovery code
-            recoveryCode = generateRecoveryCode(10);
-            recoveryCodeHash = hashText(recoveryCode);
-        }
-
         const denuncia = await models.Denuncia.create(
             {
                 numero,
@@ -173,18 +146,12 @@ async function createDenunciaRecord(
                 es_anonima: input.esAnonima ? 1 : 0,
                 is_anonymous: input.esAnonima ? 1 : 0,
                 created_by: input.createdBy ?? null,
-                // Campos de encriptación
-                correo_encrypted: correoEncrypted,
-                correo_iv: correoIv,
-                correo_tag: correoTag,
-                correo_hash: correoHash,
-                recovery_code_hash: recoveryCodeHash,
                 pais: normalizeNullableString(input.pais),
             },
             { transaction }
         );
 
-        return { denuncia, clave, recoveryCode };
+        return { denuncia, clave };
     });
 }
 
@@ -443,8 +410,14 @@ export const crearDenunciaPublica = async (req: Request, res: Response) => {
         const tipo = await models.TipoDenuncia.findOne({
             where: { codigo: subcategoryCode.toUpperCase() },
         });
-        if (!tipo) {
-            return res.status(400).json({ error: 'tipo denuncia not found' });
+        
+        // Si no se encuentra por código, buscar por nombre
+        const tipoFinal = tipo || await models.TipoDenuncia.findOne({
+            where: { nombre: subcategoryCode },
+        });
+        
+        if (!tipoFinal) {
+            return res.status(400).json({ error: 'tipo denuncia not found', subcategory: subcategoryCode });
         }
 
         const estado = await models.EstadoDenuncia.findOne({
@@ -468,7 +441,7 @@ export const crearDenunciaPublica = async (req: Request, res: Response) => {
         const subcategoryName =
             sanitizeString(payload.subcategoryName) ||
             findSubcategoryName(subcategoryCode) ||
-            (tipo?.get('nombre') as string);
+            (tipoFinal?.get('nombre') as string);
 
         let asunto =
             sanitizeString(payload.details).slice(0, 300) ||
@@ -491,31 +464,30 @@ export const crearDenunciaPublica = async (req: Request, res: Response) => {
             ? null
             : sanitizeString(payload.phone);
 
-        // Email SIEMPRE se encripta (tanto para anónimos como identificados)
-        const emailParaEncriptar = sanitizeString(payload.email) || null;
+        // Email para notificaciones
+        const emailDenunciante = sanitizeString(payload.email) || null;
 
-        const { denuncia, clave, recoveryCode } = await createDenunciaRecord({
+        const { denuncia, clave } = await createDenunciaRecord({
             empresaId: Number(empresa!.get('id')),
-            tipoId: Number(tipo!.get('id')),
+            tipoId: Number(tipoFinal!.get('id')),
             estadoId: Number(estado!.get('id')),
             asunto,
             descripcion: descripcionFinal,
             canalOrigen: 'WEB',
             canalId,
             denuncianteNombre,
-            denuncianteEmail: emailParaEncriptar, // Se encripta con AES-256-GCM
+            denuncianteEmail: emailDenunciante,
             denuncianteFono,
             esAnonima: payload.isAnonymous ?? false,
             createdBy: null,
             pais: payload.country,
         });
 
-        // Enviar correos si hay email
-        if (emailParaEncriptar) {
+        // Enviar correo de confirmación si hay email
+        if (emailDenunciante) {
             try {
-                // 1. Enviar confirmación de denuncia con clave de seguimiento
                 await emailService.sendDenunciaConfirmation(
-                    emailParaEncriptar,
+                    emailDenunciante,
                     {
                         numero: denuncia.get('numero') as string,
                         clave,
@@ -523,18 +495,8 @@ export const crearDenunciaPublica = async (req: Request, res: Response) => {
                         nombreDenunciante: denuncianteNombre || undefined,
                     }
                 );
-
-                // 2. Enviar recovery code para revelar identidad
-                if (recoveryCode) {
-                    await emailService.sendRecoveryCode(emailParaEncriptar, {
-                        numero: denuncia.get('numero') as string,
-                        recoveryCode,
-                        asunto,
-                        isAnonymous: payload.isAnonymous ?? false,
-                    });
-                }
             } catch (emailError) {
-                console.error('Error sending emails:', emailError);
+                console.error('Error sending confirmation email:', emailError);
                 // No fallar la creación de la denuncia si falla el email
             }
         }
@@ -726,102 +688,9 @@ export const lookupDenuncia = async (req: Request, res: Response) => {
  * Permite al denunciante autorizar el revelado de su correo cuando la denuncia
  * está en estado "Requiere Contacto"
  */
-export const autorizarContacto = async (req: Request, res: Response) => {
-    try {
-        const { numero } = req.params;
-        const { clave, recovery_code } = req.body as {
-            clave?: string;
-            recovery_code?: string;
-        };
 
-        // Validar campos requeridos
-        if (!numero || !clave || !recovery_code) {
-            return res.status(400).json({
-                error: 'Se requieren número, clave de seguimiento y código de recuperación',
-            });
-        }
+// autorizarContacto fue eliminado - funcionalidad de revelación de identidad no es necesaria
 
-        // Buscar la denuncia
-        const denuncia = await models.Denuncia.findOne({ where: { numero } });
-        if (!denuncia) {
-            return res.status(404).json({ error: 'Denuncia no encontrada' });
-        }
-
-        // Verificar clave de seguimiento
-        const claveValida = verifyClaveWithSalt(
-            String(clave),
-            denuncia.get('clave_salt') as Buffer,
-            denuncia.get('clave_hash') as Buffer
-        );
-
-        if (!claveValida) {
-            return res.status(401).json({
-                error: 'Clave de seguimiento inválida',
-            });
-        }
-
-        // Verificar que tenga correo encriptado
-        const correoEncrypted = denuncia.get('correo_encrypted') as
-            | string
-            | null;
-        const correoIv = denuncia.get('correo_iv') as string | null;
-        const correoTag = denuncia.get('correo_tag') as string | null;
-        const recoveryCodeHash = denuncia.get('recovery_code_hash') as
-            | string
-            | null;
-
-        if (!correoEncrypted || !correoIv || !correoTag || !recoveryCodeHash) {
-            return res.status(400).json({
-                error: 'Esta denuncia no tiene correo encriptado o ya fue revelado',
-            });
-        }
-
-        // Verificar recovery code
-        const providedHash = hashText(recovery_code.trim());
-        if (providedHash !== recoveryCodeHash) {
-            return res.status(403).json({
-                error: 'Código de recuperación inválido',
-            });
-        }
-
-        // Desencriptar el correo
-        const correoRevelado = decryptText(
-            correoEncrypted,
-            correoIv,
-            correoTag
-        );
-
-        // Registrar en auditoría
-        const clientIp =
-            req.headers['x-forwarded-for'] ||
-            req.socket.remoteAddress ||
-            'unknown';
-
-        await models.DenunciaRevealAudit.create({
-            denuncia_id: denuncia.get('id') as number,
-            requested_by: null, // Denunciante autorizó (no es un usuario del sistema)
-            method: 'recovery_code',
-            reason: 'Denunciante autorizó contacto desde tracking público',
-            remote_ip: String(clientIp).split(',')[0].trim(),
-        });
-
-        // Invalidar recovery code para que no se pueda reusar
-        await denuncia.update({
-            recovery_code_hash: hashText(`USED_${Date.now()}_${Math.random()}`),
-        });
-
-        return res.json({
-            ok: true,
-            message:
-                'Correo revelado exitosamente. El equipo podrá contactarte.',
-            correo: correoRevelado,
-            revealed_at: new Date().toISOString(),
-        });
-    } catch (e: any) {
-        console.error('Error en autorizarContacto:', e);
-        return res.status(500).json({ error: e.message });
-    }
-};
 
 export const asignarDenuncia = async (
     req: Request & { user?: any },
@@ -1508,159 +1377,4 @@ export const obtenerReclamosAsignados = async (
  * 1. Con recovery_code proporcionado por el denunciante (consentimiento)
  * 2. Override forzado por usuario con permiso FORCE_REVEAL_EMAIL
  */
-export const revealEmail = async (
-    req: Request & { user?: any },
-    res: Response
-) => {
-    try {
-        const denunciaId = req.params.id;
-        const { recovery_code, reason } = req.body as {
-            recovery_code?: string;
-            reason?: string;
-        };
-
-        // Buscar la denuncia
-        const denuncia = await models.Denuncia.findByPk(denunciaId);
-        if (!denuncia) {
-            return res.status(404).json({ error: 'Denuncia no encontrada' });
-        }
-
-        // Verificar que tenga correo encriptado
-        const correoEncrypted = denuncia.get('correo_encrypted') as
-            | string
-            | null;
-        const correoIv = denuncia.get('correo_iv') as string | null;
-        const correoTag = denuncia.get('correo_tag') as string | null;
-        const recoveryCodeHash = denuncia.get('recovery_code_hash') as
-            | string
-            | null;
-
-        if (!correoEncrypted || !correoIv || !correoTag) {
-            return res.status(400).json({
-                error: 'Esta denuncia no tiene correo encriptado',
-            });
-        }
-
-        let revealMethod: 'recovery_code' | 'forced_override';
-        let userId: number | null = null;
-
-        // VÍA 1: Revelado con recovery code (consentimiento del denunciante)
-        if (recovery_code) {
-            if (!recoveryCodeHash) {
-                return res.status(400).json({
-                    error: 'Esta denuncia no tiene recovery code configurado',
-                });
-            }
-
-            const providedHash = hashText(recovery_code.trim());
-            if (providedHash !== recoveryCodeHash) {
-                return res.status(403).json({
-                    error: 'Código de recuperación inválido',
-                });
-            }
-
-            revealMethod = 'recovery_code';
-        }
-        // VÍA 2: Override forzado (requiere permiso)
-        else {
-            if (!req.user) {
-                return res.status(401).json({ error: 'No autenticado' });
-            }
-
-            // Verificar permiso FORCE_REVEAL_EMAIL
-            const hasPermission = await models.Permiso.findOne({
-                where: { codigo: 'FORCE_REVEAL_EMAIL' },
-                include: [
-                    {
-                        association: 'roles',
-                        through: { attributes: [] },
-                        include: [
-                            {
-                                association: 'usuarios',
-                                where: { id: req.user.get('id') },
-                                through: { attributes: [] },
-                            },
-                        ],
-                    },
-                ],
-            });
-
-            if (!hasPermission) {
-                return res.status(403).json({
-                    error: 'No tiene permisos para forzar revelado de correos',
-                });
-            }
-
-            if (!reason || reason.trim().length < 10) {
-                return res.status(400).json({
-                    error: 'Se requiere una justificación de al menos 10 caracteres para override',
-                });
-            }
-
-            revealMethod = 'forced_override';
-            userId = Number(req.user.get('id'));
-        }
-
-        // Desencriptar el correo
-        const correoRevelado = decryptText(
-            correoEncrypted,
-            correoIv,
-            correoTag
-        );
-
-        // Registrar en auditoría
-        const clientIp =
-            req.headers['x-forwarded-for'] ||
-            req.socket.remoteAddress ||
-            'unknown';
-        const userAgent = req.headers['user-agent'] || null;
-
-        await models.DenunciaRevealAudit.create({
-            denuncia_id: denunciaId,
-            requested_by: userId,
-            method: revealMethod,
-            reason: reason || null,
-            remote_ip: String(clientIp).split(',')[0].trim(),
-        });
-
-        // Si fue forzado, notificar al denunciante
-        if (revealMethod === 'forced_override' && correoRevelado && userId) {
-            try {
-                const usuario = await models.Usuario.findByPk(userId);
-                await emailService.sendEmailRevealedNotification(
-                    correoRevelado,
-                    {
-                        numero: denuncia.get('numero') as string,
-                        revealedBy: usuario
-                            ? (usuario.get('nombre_completo') as string)
-                            : 'Administrador',
-                        reason,
-                        revealedAt: new Date(),
-                    }
-                );
-            } catch (emailError) {
-                console.error('Error sending reveal notification:', emailError);
-                // No fallar el reveal si falla la notificación
-            }
-        }
-
-        // Si fue con recovery code, invalidarlo (cambiar hash para que no se pueda reusar)
-        if (revealMethod === 'recovery_code') {
-            await denuncia.update({
-                recovery_code_hash: hashText(
-                    `USED_${Date.now()}_${Math.random()}`
-                ),
-            });
-        }
-
-        return res.json({
-            ok: true,
-            correo: correoRevelado,
-            reveal_method: revealMethod,
-            revealed_at: new Date().toISOString(),
-        });
-    } catch (e: any) {
-        console.error('Error revealing email:', e);
-        return res.status(500).json({ error: e.message });
-    }
-};
+// revealEmail fue eliminado - funcionalidad de revelación de identidad no es necesaria

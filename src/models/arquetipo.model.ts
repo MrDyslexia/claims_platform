@@ -1,8 +1,13 @@
 import { DataTypes, Sequelize } from 'sequelize';
 
-export const defineRol = (sequelize: Sequelize) => {
+/**
+ * Modelo Arquetipo - Define los 5 tipos base de roles
+ * ADMIN, SUPERVISOR, AUDITOR, ANALISTA, SUPERSU
+ * Cada arquetipo tiene permisos base que sirven como plantilla
+ */
+export const defineArquetipo = (sequelize: Sequelize) => {
     return sequelize.define(
-        'rol',
+        'arquetipo',
         {
             id: {
                 type: DataTypes.BIGINT,
@@ -18,6 +23,7 @@ export const defineRol = (sequelize: Sequelize) => {
                     len: [2, 50],
                     isUppercase: true,
                 },
+                comment: 'Código único del arquetipo: ADMIN, ANALISTA, SUPERVISOR, AUDITOR',
             },
             nombre: {
                 type: DataTypes.STRING(150),
@@ -26,28 +32,18 @@ export const defineRol = (sequelize: Sequelize) => {
                     notEmpty: true,
                     len: [3, 150],
                 },
+                comment: 'Nombre descriptivo del arquetipo',
             },
             descripcion: {
                 type: DataTypes.TEXT,
                 allowNull: true,
-            },
-            arquetipo_id: {
-                type: DataTypes.BIGINT,
-                allowNull: false,
-                references: {
-                    model: 'arquetipo',
-                    key: 'id',
-                },
-                comment: 'Arquetipo base del cual hereda permisos',
+                comment: 'Descripción detallada de las responsabilidades del arquetipo',
             },
         },
         {
-            tableName: 'rol',
+            tableName: 'arquetipo',
             timestamps: false,
-            indexes: [
-                { fields: ['codigo'], unique: true },
-                { fields: ['arquetipo_id'] },
-            ],
+            indexes: [{ fields: ['codigo'], unique: true }],
         }
     );
 };

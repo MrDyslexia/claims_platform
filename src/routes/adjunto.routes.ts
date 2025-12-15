@@ -47,7 +47,7 @@ router.get('/denuncia/:denunciaId', obtenerAdjuntosDenuncia);
  * @desc Crear nuevo adjunto (legacy)
  * @access Privado - Requiere permiso CREATE_ADJUNTO
  */
-router.post('/', requirePermission('CREATE_ADJUNTO'), crearAdjunto);
+router.post('/', requirePermission('adjuntos:crear'), crearAdjunto);
 
 /**
  * @route GET /api/adjuntos/:id
@@ -68,13 +68,13 @@ router.get('/', listarAdjuntos);
  * @desc Actualizar adjunto
  * @access Privado - Requiere permiso UPDATE_ADJUNTO
  */
-router.put('/:id', requirePermission('UPDATE_ADJUNTO'), actualizarAdjunto);
+router.put('/:id', requirePermission('adjuntos:editar'), actualizarAdjunto);
 
 /**
  * @route DELETE /api/adjuntos/:id
  * @desc Eliminar adjunto
  * @access Privado - Requiere permiso DELETE_ADJUNTO
  */
-router.delete('/:id', requirePermission('DELETE_ADJUNTO'), eliminarAdjunto);
+router.delete('/:id', requirePermission('adjuntos:eliminar'), eliminarAdjunto);
 
 export default router;

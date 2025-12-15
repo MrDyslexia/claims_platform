@@ -5,12 +5,12 @@
     "type": "module",
     "main": "dist/app.js",
     "scripts": {
-        "dev": "tsx watch src/app.ts",
+        "dev": "bun --watch src/app.ts",
         "start": "node --enable-source-maps dist/app.js",
         "build": "tsc -p tsconfig.json",
-        "db:init": "tsx scripts/init-db.ts",
-        "db:migrate": "tsx scripts/run-migrations.ts",
-        "db:seed": "tsx scripts/seed-users.ts",
+        "db:init": "bun scripts/init-db.ts",
+        "db:migrate": "bun scripts/run-migrations.ts",
+        "db:seed": "bun scripts/seed-users.ts",
         "lint": "eslint --fix"
     },
     "dependencies": {

@@ -70,6 +70,6 @@ router.get('/:id', obtenerAuditoria);
  * @desc Eliminar registro de auditoría (solo admin)
  * @access Privado - Requiere permiso DELETE_AUDITORIA
  */
-router.delete('/:id', requirePermission('DELETE_AUDITORIA'), eliminarAuditoria);
+router.delete('/:id', requirePermission('auditoria:eliminar'), eliminarAuditoria);
 
 export default router;

@@ -22,6 +22,10 @@ export const defineCategoriaDenuncia = (sequelize: Sequelize) => {
                 type: DataTypes.TEXT,
                 allowNull: true,
             },
+            icono: {
+                type: DataTypes.STRING(50),
+                allowNull: true,
+            },
             activo: {
                 type: DataTypes.TINYINT,
                 allowNull: false,

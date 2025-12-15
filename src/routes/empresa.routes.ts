@@ -19,7 +19,7 @@ router.use(authMiddleware);
  * @desc Crear nueva empresa
  * @access Privado - Requiere permiso CREATE_EMPRESA
  */
-router.post('/', requirePermission('CREATE_EMPRESA'), crearEmpresa);
+router.post('/', requirePermission('empresas:crear'), crearEmpresa);
 
 /**
  * @route GET /api/empresas/admin/lista-completa
@@ -47,13 +47,13 @@ router.get('/', listarEmpresas);
  * @desc Actualizar empresa
  * @access Privado - Requiere permiso UPDATE_EMPRESA
  */
-router.put('/:id', requirePermission('UPDATE_EMPRESA'), actualizarEmpresa);
+router.put('/:id', requirePermission('empresas:editar'), actualizarEmpresa);
 
 /**
  * @route DELETE /api/empresas/:id
  * @desc Eliminar empresa
  * @access Privado - Requiere permiso DELETE_EMPRESA
  */
-router.delete('/:id', requirePermission('DELETE_EMPRESA'), eliminarEmpresa);
+router.delete('/:id', requirePermission('empresas:eliminar'), eliminarEmpresa);
 
 export default router;
