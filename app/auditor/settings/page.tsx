@@ -164,6 +164,7 @@ export default function SettingsPage() {
     try {
       setLoading(true);
       const [cats, typs] = await Promise.all([getCategorias(), getTipos()]);
+
       setCategories(cats);
       setTypes(typs);
     } catch (error) {
@@ -342,8 +343,8 @@ export default function SettingsPage() {
             >
               <Edit className="h-4 w-4" />
             </Button>
-            <Button 
-              isIconOnly 
+            <Button
+              isIconOnly
               color="danger"
               size="sm"
               variant="light"
@@ -481,33 +482,33 @@ export default function SettingsPage() {
                         <div className="flex justify-between items-center mb-4 border-b pb-2">
                           <div className="flex gap-2">
                             <Button
-                              onPress={() => handleOpenCategoryModal(category)}
                               size="sm"
                               startContent={<Edit className="h-4 w-4" />}
                               variant="flat"
+                              onPress={() => handleOpenCategoryModal(category)}
                             >
                               Editar Categoría
                             </Button>
                             <Button
                               color="danger"
-                              onPress={() => handleDeleteCategory(category.id)}
                               size="sm"
                               startContent={<Trash2 className="h-4 w-4" />}
                               variant="flat"
+                              onPress={() => handleDeleteCategory(category.id)}
                             >
                               Eliminar Categoría
                             </Button>
                           </div>
                           <Button
                             color="primary"
-                            onPress={() => handleOpenTypeModal(category.id)}
                             size="sm"
                             startContent={<Plus className="h-4 w-4" />}
+                            onPress={() => handleOpenTypeModal(category.id)}
                           >
                             Agregar Tipo
                           </Button>
                         </div>
-                        
+
                         <h4 className="text-sm font-semibold mb-2">
                           Tipos asociados
                         </h4>
@@ -522,7 +523,7 @@ export default function SettingsPage() {
                     </AccordionItem>
                   ))}
                 </Accordion>
-                
+
                 {categories.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     No hay categorías definidas. Crea una para comenzar.

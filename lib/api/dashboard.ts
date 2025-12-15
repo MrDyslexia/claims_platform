@@ -90,14 +90,17 @@ export async function generateReport(
     throw new Error("No hay token de autenticación");
   }
 
-  const response = await fetch(`${API_URL}/dashboard/analyst/reports/generate`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
+  const response = await fetch(
+    `${API_URL}/dashboard/analyst/reports/generate`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ startDate, endDate }),
     },
-    body: JSON.stringify({ startDate, endDate }),
-  });
+  );
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));

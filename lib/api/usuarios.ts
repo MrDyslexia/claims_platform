@@ -14,12 +14,23 @@ export interface Permiso {
   categoria?: string;
 }
 
+export interface Arquetipo {
+  id: number;
+  codigo: string;
+  nombre: string;
+  descripcion?: string;
+  permisos?: Permiso[];
+}
+
 export interface Rol {
   id_rol: number;
+  codigo?: string;
   nombre: string;
   descripcion: string;
   activo: boolean;
-  fecha_creacion: string;
+  fecha_creacion?: string;
+  arquetipo_id?: number;
+  arquetipo?: Arquetipo;
   permisos?: Permiso[];
 }
 
@@ -47,6 +58,7 @@ export interface UsuariosResponse {
   usuarios: Usuario[];
   roles_disponibles: Rol[];
   permisos_disponibles: Permiso[];
+  arquetipos_disponibles?: Arquetipo[];
   metadata: {
     pagina_actual: number;
     total_paginas: number;
@@ -356,12 +368,13 @@ export async function asignarPermisosARol(
 }
 
 /**
- * Crear un nuevo rol
+ * Crear un nuevo rol basado en un arquetipo
  */
 export async function crearRol(
   token: string,
   nombre: string,
   descripcion: string,
+  arquetipo_id: number,
   permisos: number[],
 ): Promise<{ id: number; codigo: string; nombre: string }> {
   if (!token) {
@@ -380,6 +393,9 @@ export async function crearRol(
     body: JSON.stringify({
       codigo,
       nombre,
+      descripcion,
+      arquetipo_id,
+      permiso_ids: permisos, // Permisos personalizados (subconjunto del arquetipo)
     }),
   });
 
@@ -389,18 +405,39 @@ export async function crearRol(
     throw new Error(errorData.error || "Error al crear el rol");
   }
 
-  const nuevoRol = await response.json();
-
-  // Si hay permisos, asignarlos
-  if (permisos.length > 0) {
-    await asignarPermisosARol(token, nuevoRol.id, permisos);
-  }
-
-  return nuevoRol;
+  return response.json();
 }
 
 /**
- * Actualizar un rol existente
+ * Listar todos los arquetipos disponibles
+ */
+export async function listarArquetipos(
+  token: string,
+): Promise<{ data: Arquetipo[] }> {
+  if (!token) {
+    throw new Error("Token de autenticación requerido");
+  }
+
+  const response = await fetch(`${API_BASE_URL}/arquetipos`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+
+    throw new Error(errorData.error || "Error al obtener arquetipos");
+  }
+
+  return response.json();
+}
+
+/**
+ * Actualizar un rol existente (nombre y permisos)
+ * NOTA: Los permisos deben ser subconjunto del arquetipo
  */
 export async function actualizarRol(
   token: string,
@@ -414,7 +451,7 @@ export async function actualizarRol(
   }
 
   // Generar código a partir del nombre
-  const codigo = nombre.toUpperCase().replace(/\s+/g, "_");
+  const codigo = nombre.toUpperCase().replace(/\\s+/g, "_");
 
   const response = await fetch(`${API_BASE_URL}/roles/${id_rol}`, {
     method: "PUT",
@@ -425,6 +462,7 @@ export async function actualizarRol(
     body: JSON.stringify({
       codigo,
       nombre,
+      descripcion,
     }),
   });
 
@@ -434,7 +472,7 @@ export async function actualizarRol(
     throw new Error(errorData.error || "Error al actualizar el rol");
   }
 
-  // Actualizar permisos
+  // Actualizar permisos (valida contra arquetipo en backend)
   await asignarPermisosARol(token, id_rol, permisos);
 
   return { mensaje: "Rol actualizado exitosamente" };

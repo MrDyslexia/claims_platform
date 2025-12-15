@@ -27,7 +27,7 @@ import {
 
 export default function AnalystAnalytics() {
   const { user } = useAuth();
-  
+
   const [dateRange, setDateRange] = useState(() => {
     const now = new Date();
     const chileTime = new Date(
@@ -50,7 +50,7 @@ export default function AnalystAnalytics() {
 
   const handleSearch = async () => {
     if (!dateRange.start || !dateRange.end) return;
-    
+
     setLoading(true);
     setError(null);
     try {
@@ -58,6 +58,7 @@ export default function AnalystAnalytics() {
         dateRange.start,
         dateRange.end,
       );
+
       setStats(result);
     } catch (err: any) {
       // console.error("Error fetching analytics:", err);
@@ -74,9 +75,9 @@ export default function AnalystAnalytics() {
       setError(null);
 
       const result = await generateReport(dateRange.start, dateRange.end);
-      
+
       setSuccessMessage(`Reporte generado: ${result.filename}`);
-      
+
       // Limpiar mensaje de éxito después de 3 segundos
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: any) {
@@ -128,7 +129,7 @@ export default function AnalystAnalytics() {
             Análisis profundo de métricas de {user?.empresa?.nombre}
           </p>
         </div>
-        
+
         <div className="flex items-end gap-4">
           <Input
             className="w-48"
@@ -154,8 +155,8 @@ export default function AnalystAnalytics() {
           <Button
             color="secondary"
             isLoading={generatingReport}
-            onPress={handleGenerateReport}
             startContent={!generatingReport && <Download className="w-4 h-4" />}
+            onPress={handleGenerateReport}
           >
             Generar Reporte
           </Button>

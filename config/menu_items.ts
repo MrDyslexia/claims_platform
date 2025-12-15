@@ -6,55 +6,55 @@ import {
   BarChart3,
   Shield,
   Settings,
- } from "lucide-react";
+} from "lucide-react";
+
 const menuItems = [
   {
     label: "Dashboard",
     href: "/auditor",
     icon: LayoutDashboard,
-    permission: "view_dashboard",
+    permission: "denuncias:ver", // Cualquier usuario con acceso a denuncias puede ver el dashboard
   },
   {
     label: "Reclamos",
     href: "/auditor/claims",
     icon: FileText,
-    permission: "view_claims",
+    permission: "denuncias:ver",
   },
   {
     label: "Usuarios",
     href: "/auditor/users",
     icon: Users,
-    permission: "manage_users",
+    permission: "usuarios:ver",
     submenu: [
-      { label: "Lista de Usuarios", href: "/auditor/users" },
-      { label: "Roles y Permisos", href: "/auditor/users/roles" },
+      { label: "Lista de Usuarios", href: "/auditor/users", permission: "usuarios:ver" },
+      { label: "Roles y Permisos", href: "/auditor/users/roles", permission: "roles:ver" },
     ],
   },
   {
     label: "Empresas",
     href: "/auditor/companies",
     icon: Building2,
-    permission: "manage_companies",
+    permission: "empresas:ver",
   },
   {
     label: "Reportes",
     href: "/auditor/reports",
     icon: BarChart3,
-    permission: "view_reports",
+    permission: "reportes:ver",
   },
   {
-    label: "Auditororía",
+    label: "Auditoría",
     href: "/auditor/audit",
     icon: Shield,
-    permission: "view_audit",
+    permission: "auditoria:ver",
   },
   {
     label: "Configuración",
     href: "/auditor/settings",
     icon: Settings,
-    permission: "manage_settings",
+    permission: "configuracion:ver",
   },
-
 ];
 
 export default menuItems;

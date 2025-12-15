@@ -37,7 +37,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Jerarquía de roles (mayor prioridad = índice menor)
-const ROLE_HIERARCHY = ["administrador", "supervisor", "analista", "auditor"];
+const ROLE_HIERARCHY = ["admin", "administrador", "supervisor", "analista", "auditor"];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);

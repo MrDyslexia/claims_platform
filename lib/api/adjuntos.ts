@@ -23,6 +23,7 @@ export async function uploadEvidence(
   tipoVinculo: string = "DENUNCIA",
 ): Promise<UploadResult> {
   const formData = new FormData();
+
   formData.append("archivos", file);
   formData.append("denuncia_id", denunciaId.toString());
   formData.append("tipo_vinculo", tipoVinculo);
@@ -34,7 +35,11 @@ export async function uploadEvidence(
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`Upload failed: ${response.status} ${response.statusText}`, errorText);
+
+    console.error(
+      `Upload failed: ${response.status} ${response.statusText}`,
+      errorText,
+    );
     throw new Error(errorText || `Error uploading file: ${response.status}`);
   }
 

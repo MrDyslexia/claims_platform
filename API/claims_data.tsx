@@ -156,6 +156,7 @@ export default async function ClaimsData(): Promise<TransformedData> {
 
     if (!response.ok) {
       throw new Error("Network response was not ok");
+      console.log("Error fetching data from backend");
     }
     const backendData: BackendResponse = await response.json();
 

@@ -34,7 +34,8 @@ import { InvolvedStep } from "./steps/involved-step";
 import { DescriptionStep } from "./steps/description-step";
 import { EvidenceStep } from "./steps/evidence-step";
 import { IdentificationStep } from "./steps/identification-step";
-import { ConfirmationStep } from "./steps/confirmation-step"; // Added confirmation step
+import { SummaryStep } from "./steps/summary-step";
+import { ConfirmationStep } from "./steps/confirmation-step";
 
 import STEPS from "@/config/steps";
 import ClaimsData from "@/API/claims_data";
@@ -323,10 +324,15 @@ export function ClaimsWizard() {
       submitData.append("description", formData.description || "");
       submitData.append("isAnonymous", String(formData.isAnonymous || false));
 
+      // Email siempre se envía si existe (para notificaciones, incluso anónimos)
+      if (formData.email) {
+        submitData.append("email", formData.email);
+      }
+
+      // Datos personales solo si no es anónimo
       if (!formData.isAnonymous) {
         submitData.append("fullName", formData.fullName || "");
         submitData.append("rut", formData.rut || "");
-        submitData.append("email", formData.email || "");
         submitData.append("phone", formData.phone || "");
       }
       submitData.append(
@@ -361,7 +367,7 @@ export function ClaimsWizard() {
         numero: result.numero,
         clave: result.clave,
       });
-      setCurrentStep(10);
+      setCurrentStep(11);
     } catch {
       alert(
         "Ocurrió un error al enviar el reclamo. Por favor, intenta nuevamente más tarde.",
@@ -453,6 +459,16 @@ export function ClaimsWizard() {
       case 9:
         return <EvidenceStep formData={formData} onUpdate={handleFormUpdate} />;
       case 10:
+        return (
+          <SummaryStep
+            formData={formData}
+            categories={categories}
+            isSubmitting={isSubmitting}
+            onEdit={(step) => setCurrentStep(step)}
+            onSubmit={handleSubmit}
+          />
+        );
+      case 11:
         return submissionResult ? (
           <ConfirmationStep
             claimNumber={submissionResult.numero}
@@ -569,7 +585,7 @@ export function ClaimsWizard() {
         </ModalContent>
       </Modal>
 
-      {currentStep !== 10 && (
+      {currentStep !== 10 && currentStep !== 11 && (
         <>
           <Card>
             <CardBody className="p-6">
@@ -683,7 +699,7 @@ export function ClaimsWizard() {
         </>
       )}
 
-      {currentStep === 10 && (
+      {(currentStep === 10 || currentStep === 11) && (
         <Card>
           <CardBody className="p-8">{renderStepContent()}</CardBody>
         </Card>
@@ -700,7 +716,7 @@ export function ClaimsWizard() {
         </Card>
       )}
 
-      {currentStep !== 10 && (
+      {currentStep !== 10 && currentStep !== 11 && (
         <Card>
           <CardBody className="p-6">
             <div className="flex justify-between">

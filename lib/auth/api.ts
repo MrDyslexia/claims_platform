@@ -89,7 +89,7 @@ class AuthAPI {
   }
 
   async getCurrentUser(token: string): Promise<UserResponse> {
-    const response = await fetch(`${this.baseURL}/me`, {
+    const response = await fetch(`${this.baseURL}/auth/me`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,

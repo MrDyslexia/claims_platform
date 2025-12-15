@@ -60,8 +60,6 @@ const priorityColors = {
   critica: "danger",
 } as const;
 
-
-
 const statusColors: Record<string, any> = {
   Pendiente: "primary",
   "En Proceso": "warning",
@@ -999,14 +997,14 @@ export default function ClaimsPage() {
                             aria-label="Asignar supervisor"
                             className="max-w-xs"
                             isDisabled={isAssigningSupervisor}
-                            onChange={(e) =>
-                              handleAssignSupervisor(e.target.value)
-                            }
                             placeholder="Seleccionar supervisor"
                             selectedKeys={
                               selectedClaim?.supervisor?.id
                                 ? [String(selectedClaim.supervisor.id)]
                                 : []
+                            }
+                            onChange={(e) =>
+                              handleAssignSupervisor(e.target.value)
                             }
                           >
                             {supervisors.map((supervisor) => (

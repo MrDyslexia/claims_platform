@@ -67,7 +67,7 @@ export default function AnalystReports() {
             generar uno.
           </p>
         )}
-        
+
         {reports.map((report) => (
           <Card key={report.name} className="border-none shadow-sm">
             <CardBody className="p-6">
@@ -93,10 +93,10 @@ export default function AnalystReports() {
                   </div>
                   <Button
                     color="primary"
-                    onPress={() => handleDownload(report.name)}
                     size="sm"
                     startContent={<Download className="w-4 h-4" />}
                     variant="flat"
+                    onPress={() => handleDownload(report.name)}
                   >
                     Descargar
                   </Button>
