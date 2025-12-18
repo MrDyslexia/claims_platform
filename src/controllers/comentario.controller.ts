@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { models } from '../db/sequelize';
 import { Op } from 'sequelize';
+import { emailService } from '../utils/email.service';
 
 /**
  * Helper: Obtener rol del usuario
@@ -98,6 +99,27 @@ export const crearComentarioDenuncia = async (req: Request, res: Response) => {
         });
 
         const comentarioJSON = comentario.toJSON() as any;
+
+        // Enviar notificación por email si:
+        // 1. El comentario es público (no interno)
+        // 2. La denuncia tiene email del denunciante
+        const denuncianteEmail = denuncia.get('denunciante_email') as string | null;
+        if (visibilityValue === 'publico' && denuncianteEmail) {
+            try {
+                await emailService.sendCommentNotification(denuncianteEmail, {
+                    numero: denuncia.get('numero') as string,
+                    asunto: denuncia.get('asunto') as string,
+                    nombreDenunciante: (denuncia.get('denunciante_nombre') as string) || undefined,
+                    comentarioContenido: contenido.trim(),
+                    autorNombre: comentarioJSON.autor?.nombre_completo || 'Equipo de Soporte',
+                    fechaComentario: new Date(),
+                });
+                console.log(`[Email] Notificación de comentario enviada a ${denuncianteEmail}`);
+            } catch (emailError) {
+                console.error('[Email] Error enviando notificación de comentario:', emailError);
+                // No fallar la creación del comentario si falla el email
+            }
+        }
 
         return res.status(201).json({
             mensaje: 'Comentario creado exitosamente',
@@ -283,6 +305,86 @@ export const eliminarComentario = async (req: Request, res: Response) => {
 
         return res.json({ ok: true, message: 'comentario deleted' });
     } catch (e: any) {
+        return res.status(400).json({ error: e.message });
+    }
+};
+
+/**
+ * Crear comentario público del denunciante
+ * POST /api/denuncias/public/comentario
+ * Solo permitido cuando la denuncia está en estado INFO (5)
+ */
+export const crearComentarioPublico = async (req: Request, res: Response) => {
+    try {
+        const { numero, clave, contenido, autor_nombre } = req.body;
+
+        // Validaciones básicas
+        if (!numero || !clave) {
+            return res.status(400).json({
+                error: 'numero y clave son requeridos',
+            });
+        }
+
+        if (!contenido || contenido.trim().length === 0) {
+            return res.status(400).json({
+                error: 'El contenido del comentario es requerido',
+            });
+        }
+
+        if (contenido.length > 5000) {
+            return res.status(400).json({
+                error: 'El comentario no puede exceder 5000 caracteres',
+            });
+        }
+
+        // Buscar la denuncia
+        const denuncia = await models.Denuncia.findOne({ where: { numero } });
+        if (!denuncia) {
+            return res.status(404).json({ error: 'Denuncia no encontrada' });
+        }
+
+        // Verificar la clave
+        const { verifyClaveWithSalt } = await import('../utils/crypto');
+        const ok = verifyClaveWithSalt(
+            String(clave),
+            denuncia.get('clave_salt') as Buffer,
+            denuncia.get('clave_hash') as Buffer
+        );
+        if (!ok) {
+            return res.status(401).json({ error: 'Clave de acceso inválida' });
+        }
+
+        // Verificar que el estado sea INFO (5)
+        const estadoId = denuncia.get('estado_id');
+        if (Number(estadoId) !== 5) {
+            return res.status(400).json({
+                error: 'Solo puede agregar comentarios cuando la denuncia está en estado "Requiere información"',
+            });
+        }
+
+        // Crear el comentario
+        const comentario = await models.Comentario.create({
+            denuncia_id: denuncia.get('id'),
+            usuario_id: null,
+            contenido: contenido.trim(),
+            es_interno: false,
+            visibility: 'publico',
+            autor_nombre: autor_nombre || denuncia.get('denunciante_nombre') || 'Denunciante',
+            autor_email: denuncia.get('denunciante_email') || null,
+            autor_rol: 'Denunciante',
+        });
+
+        return res.status(201).json({
+            mensaje: 'Comentario agregado exitosamente',
+            comentario: {
+                id: comentario.get('id'),
+                contenido: comentario.get('contenido'),
+                autor_nombre: comentario.get('autor_nombre'),
+                created_at: comentario.get('created_at'),
+            },
+        });
+    } catch (e: any) {
+        console.error('Error al crear comentario público:', e);
         return res.status(400).json({ error: e.message });
     }
 };

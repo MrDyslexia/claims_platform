@@ -141,6 +141,14 @@ export const defineDenuncia = (sequelize: Sequelize) => {
                     isIn: [['BAJA', 'MEDIA', 'ALTA', 'CRITICA']],
                 },
             },
+            nota_satisfaccion: {
+                type: DataTypes.TINYINT,
+                allowNull: true,
+                validate: {
+                    min: 1,
+                    max: 5,
+                },
+            },
         },
         {
             tableName: 'denuncia',

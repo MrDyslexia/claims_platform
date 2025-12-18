@@ -7,12 +7,15 @@ import {
     obtenerTodosLosReclamos,
     obtenerReclamosAsignados,
     actualizarPrioridad,
+    actualizarEstado,
+    guardarNotaSatisfaccion,
 } from '../controllers/denuncia.controller';
 import {
     crearComentario,
     crearComentarioDenuncia,
+    crearComentarioPublico,
 } from '../controllers/comentario.controller';
-import { uploadMiddlewarePublic } from '../controllers/adjunto.controller';
+import { uploadMiddlewarePublic, subirAdjuntoPublico } from '../controllers/adjunto.controller';
 import { crearResolucion } from '../controllers/resolucion.controller';
 import {
     authMiddleware,
@@ -35,6 +38,15 @@ router.post(
 
 // Crear denuncia pública (created_by = null)
 router.post('/public', uploadMiddlewarePublic, crearDenunciaPublica);
+
+// Comentario público del denunciante (solo en estado INFO/5)
+router.post('/public/comentario', crearComentarioPublico);
+
+// Adjuntos públicos del denunciante (solo en estado INFO/5)
+router.post('/public/adjuntos', uploadMiddlewarePublic, subirAdjuntoPublico);
+
+// Nota de satisfacción del denunciante (solo en estado RESUELTO o CERRADO)
+router.post('/public/satisfaccion', guardarNotaSatisfaccion);
 
 // Obtener reclamos asignados al usuario actual
 router.get(
@@ -79,6 +91,14 @@ router.post(
     authMiddleware,
     requireRoles('ADMIN', 'SUPERVISOR', 'ANALISTA'),
     actualizarPrioridad
+);
+
+// Actualizar estado (requires auth + permission)
+router.put(
+    '/:id/estado',
+    authMiddleware,
+    requireRoles('ADMIN', 'SUPERVISOR', 'ANALISTA'),
+    actualizarEstado
 );
 
 export default router;

@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import type { Request, Response } from 'express';
 import type { Transaction } from 'sequelize';
 import { sequelize, models } from '../db/sequelize';
+import { emailService } from '../utils/email.service';
 import {
     DEFAULT_EMPRESA,
     DEFAULT_ESTADO,
@@ -19,7 +20,6 @@ import {
     uploadFile,
 } from '../services/upload.service';
 import { getUploadErrorMessage } from '../config/upload';
-import { emailService } from '../utils/email.service';
 
 const CLAVE_CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const CLAVE_LENGTH = 8;
@@ -676,6 +676,7 @@ export const lookupDenuncia = async (req: Request, res: Response) => {
         denunciante_email: denuncia.get('denunciante_email') || null,
         denunciante_fono: denuncia.get('denunciante_fono') || null,
         es_anonima: denuncia.get('es_anonima'),
+        nota_satisfaccion: denuncia.get('nota_satisfaccion') || null,
         statusHistory: statusHistoryWithNames,
         comments: commentsWithAuthor,
     });
@@ -690,6 +691,85 @@ export const lookupDenuncia = async (req: Request, res: Response) => {
  */
 
 // autorizarContacto fue eliminado - funcionalidad de revelación de identidad no es necesaria
+
+// Estados permitidos para calificar: RESUELTO y CERRADO
+const ESTADOS_CALIFICABLES = ['RESUELTO', 'CERRADO'];
+
+/**
+ * Guardar nota de satisfacción (1-5) de denunciante
+ * POST /api/denuncias/public/satisfaccion
+ * 
+ * Solo permitido cuando el estado es RESUELTO o CERRADO
+ * Solo se puede calificar una vez
+ */
+export const guardarNotaSatisfaccion = async (req: Request, res: Response) => {
+    const { numero, clave, nota } = req.body as { 
+        numero?: string; 
+        clave?: string; 
+        nota?: number 
+    };
+
+    // Validar campos requeridos
+    if (!numero || !clave) {
+        return res.status(400).json({ error: 'numero and clave required' });
+    }
+
+    // Validar nota (1-5)
+    const notaNum = Number(nota);
+    if (!nota || isNaN(notaNum) || notaNum < 1 || notaNum > 5) {
+        return res.status(400).json({ error: 'nota must be between 1 and 5' });
+    }
+
+    // Buscar denuncia
+    const denuncia = await models.Denuncia.findOne({ where: { numero } });
+    if (!denuncia) {
+        return res.status(404).json({ error: 'not found' });
+    }
+
+    // Verificar clave
+    const ok = verifyClaveWithSalt(
+        String(clave),
+        denuncia.get('clave_salt') as Buffer,
+        denuncia.get('clave_hash') as Buffer
+    );
+    if (!ok) {
+        return res.status(401).json({ error: 'clave invalida' });
+    }
+
+    // Verificar que no haya sido calificada ya
+    const notaExistente = denuncia.get('nota_satisfaccion');
+    if (notaExistente !== null && notaExistente !== undefined) {
+        return res.status(400).json({ 
+            error: 'already rated',
+            nota_satisfaccion: notaExistente 
+        });
+    }
+
+    // Verificar estado (debe ser RESUELTO o CERRADO)
+    const estado = await models.EstadoDenuncia.findByPk(
+        Number(denuncia.get('estado_id'))
+    );
+    const estadoCodigo = estado?.get('codigo') as string | undefined;
+
+    if (!estadoCodigo || !ESTADOS_CALIFICABLES.includes(estadoCodigo.toUpperCase())) {
+        return res.status(400).json({ 
+            error: 'cannot rate - claim must be resolved or closed',
+            estado: estado?.get('nombre') || 'Desconocido'
+        });
+    }
+
+    // Guardar la nota
+    try {
+        await denuncia.update({ nota_satisfaccion: notaNum });
+        return res.json({ 
+            ok: true, 
+            nota_satisfaccion: notaNum,
+            message: 'Gracias por tu calificación' 
+        });
+    } catch (e: any) {
+        return res.status(500).json({ error: e.message });
+    }
+};
 
 
 export const asignarDenuncia = async (
@@ -715,6 +795,22 @@ export const asignarDenuncia = async (
             a_usuario_id: usuario_id,
             reasignado_por: asignado_por,
         });
+
+        // Enviar correo de notificación al denunciante si tiene email registrado
+        const denuncia = await models.Denuncia.findByPk(denuncia_id);
+        if (denuncia) {
+            const denuncianteEmail = denuncia.get('denunciante_email') as string | null;
+            if (denuncianteEmail) {
+                // Enviar notificación de asignación
+                emailService.sendAssignmentNotification(denuncianteEmail, {
+                    numero: denuncia.get('numero') as string,
+                    asunto: denuncia.get('asunto') as string,
+                }).catch(err => {
+                    console.error('Error sending assignment notification email:', err);
+                });
+            }
+        }
+
         return res.status(201).json({ ok: true });
     } catch (e: any) {
         return res.status(400).json({ error: e.message });
@@ -746,6 +842,131 @@ export const actualizarPrioridad = async (
         await denuncia.update({ prioridad_id: prioridad.toUpperCase() });
 
         return res.json({ ok: true, message: 'priority updated' });
+    } catch (e: any) {
+        return res.status(400).json({ error: e.message });
+    }
+};
+
+export const actualizarEstado = async (
+    req: Request & { user?: any },
+    res: Response
+) => {
+    const { id } = req.params;
+    const { estado_id, motivo } = req.body;
+
+    if (!id || !estado_id) {
+        return res.status(400).json({ error: 'missing fields: id and estado_id are required' });
+    }
+
+    try {
+        const denuncia = await models.Denuncia.findByPk(id);
+        if (!denuncia) {
+            return res.status(404).json({ error: 'denuncia not found' });
+        }
+
+        // Verificar que el nuevo estado existe
+        const nuevoEstado = await models.EstadoDenuncia.findByPk(estado_id);
+        if (!nuevoEstado) {
+            return res.status(400).json({ error: 'estado not found' });
+        }
+
+        const estadoAnteriorId = denuncia.get('estado_id');
+        const userId = req.user?.get?.('id');
+
+        // Obtener el estado anterior para el email
+        const estadoAnterior = estadoAnteriorId 
+            ? await models.EstadoDenuncia.findByPk(Number(estadoAnteriorId))
+            : null;
+
+        // Crear registro en historial de estados
+        await models.DenunciaHistorialEstado.create({
+            denuncia_id: id,
+            de_estado_id: estadoAnteriorId,
+            a_estado_id: estado_id,
+            motivo: motivo || null,
+            cambiado_por: userId,
+        });
+
+        // Actualizar el estado de la denuncia
+        await denuncia.update({ estado_id });
+
+        // Obtener el reclamo actualizado con toda la información
+        const denunciaActualizada = await models.Denuncia.findByPk(id);
+        const estado = await models.EstadoDenuncia.findByPk(estado_id);
+        const empresa = await models.Empresa.findByPk(Number(denunciaActualizada?.get('empresa_id')));
+        const tipo = await models.TipoDenuncia.findByPk(Number(denunciaActualizada?.get('tipo_id')));
+
+        // Obtener asignación activa
+        const asignacion = await models.DenunciaAsignacion.findOne({
+            where: {
+                denuncia_id: id,
+                activo: 1,
+            },
+            include: [
+                {
+                    model: models.Usuario,
+                    as: 'asignado',
+                },
+            ],
+        });
+
+        // Enviar notificación por correo al denunciante si tiene email
+        const denuncianteEmail = denunciaActualizada?.get('denunciante_email') as string | null;
+        if (denuncianteEmail) {
+            try {
+                await emailService.sendStatusChangeNotification(
+                    denuncianteEmail,
+                    {
+                        numero: denunciaActualizada?.get('numero') as string,
+                        asunto: denunciaActualizada?.get('asunto') as string,
+                        nombreDenunciante: denunciaActualizada?.get('denunciante_nombre') as string || undefined,
+                        estadoAnterior: estadoAnterior?.get('nombre') as string || 'Sin estado',
+                        estadoNuevo: nuevoEstado.get('nombre') as string,
+                        motivo: motivo || undefined,
+                        fechaCambio: new Date(),
+                    }
+                );
+            } catch (emailError) {
+                console.error('Error sending status change notification email:', emailError);
+                // No fallar el cambio de estado si falla el email
+            }
+        }
+
+        return res.json({
+            id: denunciaActualizada?.get('id'),
+            numero: denunciaActualizada?.get('numero'),
+            asunto: denunciaActualizada?.get('asunto'),
+            descripcion: denunciaActualizada?.get('descripcion'),
+            pais: denunciaActualizada?.get('pais'),
+            fecha_creacion: denunciaActualizada?.get('created_at'),
+            estado: {
+                id: estado?.get('id'),
+                nombre: estado?.get('nombre'),
+                codigo: estado?.get('codigo'),
+            },
+            prioridad: (denunciaActualizada?.get('prioridad_id') as string)?.toLowerCase(),
+            empresa: {
+                id: empresa?.get('id'),
+                nombre: empresa?.get('nombre'),
+            },
+            tipo: {
+                id: tipo?.get('id'),
+                nombre: tipo?.get('nombre'),
+            },
+            denunciante: {
+                nombre: denunciaActualizada?.get('denunciante_nombre'),
+                email: denunciaActualizada?.get('denunciante_email'),
+                telefono: denunciaActualizada?.get('denunciante_fono'),
+                anonimo: denunciaActualizada?.get('es_anonima') === 1,
+            },
+            supervisor: asignacion?.get('asignado')
+                ? {
+                      id: (asignacion.get('asignado') as any).id,
+                      nombre: (asignacion.get('asignado') as any).nombre_completo,
+                      email: (asignacion.get('asignado') as any).email,
+                  }
+                : null,
+        });
     } catch (e: any) {
         return res.status(400).json({ error: e.message });
     }
@@ -1092,12 +1313,6 @@ export const obtenerReclamosAsignados = async (
         const denuncias = await models.Denuncia.findAll({
             where: { id: denunciaIds },
             order: [['created_at', 'DESC']],
-            include: [
-                {
-                    model: models.EstadoDenuncia,
-                    as: 'estado_denuncia',
-                },
-            ],
         });
 
         // Enriquecer cada reclamo con información relacionada
@@ -1105,8 +1320,11 @@ export const obtenerReclamosAsignados = async (
             denuncias.map(async (denuncia) => {
                 const denunciaId = denuncia.get('id') as number;
 
-                // Obtener estado desde la inclusión
-                const estado = denuncia.get('estado_denuncia') as any;
+                // Obtener estado directamente por ID
+                const estadoId = denuncia.get('estado_id');
+                const estado = estadoId 
+                    ? await models.EstadoDenuncia.findByPk(Number(estadoId))
+                    : null;
 
                 // Obtener empresa
                 const empresa = await models.Empresa.findByPk(

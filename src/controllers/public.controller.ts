@@ -39,6 +39,12 @@ export const obtenerMetadataFormulario = async (
         return res.json({
             countries:FORM_METADATA.countries,
             categories,
+            enterprise: (await models.Empresa.findAll({
+                attributes: ['nombre', 'rut'],
+                where: {
+                    estado: 1
+                }
+            })).map((e: any) => ({ nombre: e.nombre, rut: e.rut })),
         });
     } catch (e: any) {
         return res.status(500).json({ error: e.message });

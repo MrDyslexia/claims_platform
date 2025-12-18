@@ -52,6 +52,8 @@ class EmailService {
         .credential-value { font-size: 18px; color: #e53e3e; font-family: monospace; letter-spacing: 2px; }
         .footer { text-align: center; margin-top: 30px; color: #718096; font-size: 12px; }
         .warning { background-color: #fef5e7; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #f59e0b; }
+        .button-container { text-align: center; margin: 25px 0; }
+        .track-button { display: inline-block; background-color: #3b82f6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; }
     </style>
 </head>
 <body>
@@ -96,8 +98,15 @@ class EmailService {
 
             <p>Su denuncia será revisada por nuestro equipo y recibirá actualizaciones sobre su estado.</p>
             
-            <p>Para consultar el estado de su denuncia, ingrese a nuestro portal de seguimiento utilizando 
-            el número de denuncia y la clave de acceso proporcionados.</p>
+            <div class="button-container">
+                <a href="${env.frontendUrl}/track?numero=${encodeURIComponent(data.numero)}&clave=${encodeURIComponent(data.clave)}" class="track-button">
+                    📋 Ir al Portal de Seguimiento
+                </a>
+            </div>
+            
+            <p style="text-align: center; color: #6b7280; font-size: 14px;">
+                Este enlace incluye sus credenciales para acceso directo.
+            </p>
         </div>
         
         <div class="footer">
@@ -134,8 +143,11 @@ Guárdela en un lugar seguro. Sin ella no podrá acceder al seguimiento de su de
 
 Su denuncia será revisada por nuestro equipo y recibirá actualizaciones sobre su estado.
 
-Para consultar el estado de su denuncia, ingrese a nuestro portal de seguimiento 
-utilizando el número de denuncia y la clave de acceso proporcionados.
+PORTAL DE SEGUIMIENTO
+Ingrese al siguiente enlace para consultar el estado de su denuncia:
+${env.frontendUrl}/track?numero=${encodeURIComponent(data.numero)}&clave=${encodeURIComponent(data.clave)}
+
+Este enlace incluye sus credenciales para acceso directo.
 
 ---
 Este es un correo automático, por favor no responda a este mensaje.
@@ -416,6 +428,401 @@ Este es un correo automático, por favor no responda a este mensaje.
             return true;
         } catch (error) {
             console.error('Error sending reveal notification email:', error);
+            return false;
+        }
+    }
+
+    async sendCommentNotification(
+        to: string,
+        data: {
+            numero: string;
+            asunto: string;
+            nombreDenunciante?: string;
+            comentarioContenido: string;
+            autorNombre: string;
+            fechaComentario: Date;
+        }
+    ): Promise<boolean> {
+        try {
+            const transporter = await this.getTransporter();
+
+            // Truncate comment content if too long
+            const maxLength = 500;
+            const contenidoTruncado = data.comentarioContenido.length > maxLength
+                ? data.comentarioContenido.substring(0, maxLength) + '...'
+                : data.comentarioContenido;
+
+            const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #4a5568; color: white; padding: 20px; text-align: center; }
+        .content { background-color: #f7fafc; padding: 30px; border-radius: 5px; margin-top: 20px; }
+        .info-box { background-color: white; padding: 20px; border-left: 4px solid #4299e1; margin: 20px 0; }
+        .comment-box { background-color: #edf2f7; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #48bb78; }
+        .comment-author { font-weight: bold; color: #2d3748; margin-bottom: 10px; }
+        .comment-date { font-size: 12px; color: #718096; margin-bottom: 10px; }
+        .comment-content { color: #4a5568; white-space: pre-wrap; }
+        .footer { text-align: center; margin-top: 30px; color: #718096; font-size: 12px; }
+        .button-container { text-align: center; margin: 25px 0; }
+        .track-button { display: inline-block; background-color: #10b981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💬 Nuevo Comentario en su Denuncia</h1>
+        </div>
+        
+        <div class="content">
+            ${
+                data.nombreDenunciante
+                    ? `<p>Estimado/a ${data.nombreDenunciante},</p>`
+                    : '<p>Estimado/a denunciante,</p>'
+            }
+            
+            <p>Se ha agregado un nuevo comentario a su denuncia.</p>
+            
+            <div class="info-box">
+                <h3 style="margin-top: 0;">Información de la denuncia</h3>
+                <p><strong>Número:</strong> ${data.numero}</p>
+                <p><strong>Asunto:</strong> ${data.asunto}</p>
+            </div>
+
+            <div class="comment-box">
+                <div class="comment-author">De: ${data.autorNombre}</div>
+                <div class="comment-date">${data.fechaComentario.toLocaleString('es-CL')}</div>
+                <div class="comment-content">${contenidoTruncado}</div>
+            </div>
+
+            <div class="button-container">
+                <a href="${env.frontendUrl}/track?numero=${encodeURIComponent(data.numero)}" class="track-button">
+                    💬 Ver Todos los Comentarios
+                </a>
+            </div>
+            
+            <p style="text-align: center; color: #6b7280; font-size: 14px;">
+                Ingrese con su número de denuncia y clave de acceso.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>Este es un correo automático, por favor no responda a este mensaje.</p>
+            <p>&copy; ${new Date().getFullYear()} Sistema de Denuncias. Todos los derechos reservados.</p>
+        </div>
+    </div>
+</body>
+</html>
+            `;
+
+            const textContent = `
+💬 NUEVO COMENTARIO EN SU DENUNCIA
+
+${
+    data.nombreDenunciante
+        ? `Estimado/a ${data.nombreDenunciante},`
+        : 'Estimado/a denunciante,'
+}
+
+Se ha agregado un nuevo comentario a su denuncia.
+
+INFORMACIÓN DE LA DENUNCIA
+Número: ${data.numero}
+Asunto: ${data.asunto}
+
+COMENTARIO
+De: ${data.autorNombre}
+Fecha: ${data.fechaComentario.toLocaleString('es-CL')}
+
+${contenidoTruncado}
+
+VER TODOS LOS COMENTARIOS
+Ingrese al siguiente enlace:
+${env.frontendUrl}/track?numero=${encodeURIComponent(data.numero)}
+
+Use su número de denuncia y clave de acceso para ingresar.
+
+---
+Este es un correo automático, por favor no responda a este mensaje.
+© ${new Date().getFullYear()} Sistema de Denuncias. Todos los derechos reservados.
+            `;
+
+            await transporter.sendMail({
+                from: env.email.from,
+                to,
+                subject: `💬 Nuevo Comentario - Denuncia ${data.numero}`,
+                text: textContent,
+                html: htmlContent,
+            });
+
+            return true;
+        } catch (error) {
+            console.error('Error sending comment notification email:', error);
+            return false;
+        }
+    }
+
+    async sendStatusChangeNotification(
+        to: string,
+        data: {
+            numero: string;
+            asunto: string;
+            nombreDenunciante?: string;
+            estadoAnterior: string;
+            estadoNuevo: string;
+            motivo?: string;
+            fechaCambio: Date;
+            cambiadoPor?: string;
+        }
+    ): Promise<boolean> {
+        try {
+            const transporter = await this.getTransporter();
+
+            const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #3b82f6; color: white; padding: 20px; text-align: center; }
+        .content { background-color: #f7fafc; padding: 30px; border-radius: 5px; margin-top: 20px; }
+        .info-box { background-color: white; padding: 20px; border-left: 4px solid #4299e1; margin: 20px 0; }
+        .status-change { background-color: #dbeafe; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center; }
+        .status-arrow { font-size: 24px; margin: 0 15px; color: #6b7280; }
+        .status-badge { display: inline-block; padding: 8px 16px; border-radius: 20px; font-weight: bold; }
+        .status-old { background-color: #e5e7eb; color: #4b5563; }
+        .status-new { background-color: #10b981; color: white; }
+        .motivo-box { background-color: #fef3c7; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #f59e0b; }
+        .footer { text-align: center; margin-top: 30px; color: #718096; font-size: 12px; }
+        .button-container { text-align: center; margin: 25px 0; }
+        .track-button { display: inline-block; background-color: #3b82f6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Actualización de Estado</h1>
+        </div>
+        
+        <div class="content">
+            ${
+                data.nombreDenunciante
+                    ? `<p>Estimado/a ${data.nombreDenunciante},</p>`
+                    : '<p>Estimado/a denunciante,</p>'
+            }
+            
+            <p>Le informamos que el estado de su denuncia ha sido actualizado.</p>
+            
+            <div class="info-box">
+                <h3 style="margin-top: 0;">Información de la denuncia</h3>
+                <p><strong>Número:</strong> ${data.numero}</p>
+                <p><strong>Asunto:</strong> ${data.asunto}</p>
+            </div>
+
+            <div class="status-change">
+                <h3 style="margin-top: 0; color: #1e40af;">Cambio de Estado</h3>
+                <div style="margin: 20px 0;">
+                    <span class="status-badge status-old">${data.estadoAnterior}</span>
+                    <span class="status-arrow">→</span>
+                    <span class="status-badge status-new">${data.estadoNuevo}</span>
+                </div>
+                <p style="margin-bottom: 0; color: #6b7280; font-size: 12px;">
+                    ${data.fechaCambio.toLocaleString('es-CL')}
+                </p>
+            </div>
+
+            ${
+                data.motivo
+                    ? `
+            <div class="motivo-box">
+                <h4 style="margin-top: 0; color: #92400e;">📝 Motivo del cambio:</h4>
+                <p style="margin-bottom: 0;">${data.motivo}</p>
+            </div>
+            `
+                    : ''
+            }
+
+            <div class="button-container">
+                <a href="${env.frontendUrl}/track?numero=${encodeURIComponent(data.numero)}" class="track-button">
+                    📋 Ver Estado de mi Denuncia
+                </a>
+            </div>
+            
+            <p style="text-align: center; color: #6b7280; font-size: 14px;">
+                Ingrese con su número de denuncia y clave de acceso.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>Este es un correo automático, por favor no responda a este mensaje.</p>
+            <p>&copy; ${new Date().getFullYear()} Sistema de Denuncias. Todos los derechos reservados.</p>
+        </div>
+    </div>
+</body>
+</html>
+            `;
+
+            const textContent = `
+📋 ACTUALIZACIÓN DE ESTADO DE SU DENUNCIA
+
+${
+    data.nombreDenunciante
+        ? `Estimado/a ${data.nombreDenunciante},`
+        : 'Estimado/a denunciante,'
+}
+
+Le informamos que el estado de su denuncia ha sido actualizado.
+
+INFORMACIÓN DE LA DENUNCIA
+Número: ${data.numero}
+Asunto: ${data.asunto}
+
+CAMBIO DE ESTADO
+${data.estadoAnterior} → ${data.estadoNuevo}
+Fecha: ${data.fechaCambio.toLocaleString('es-CL')}
+
+${data.motivo ? `MOTIVO DEL CAMBIO:\n${data.motivo}\n` : ''}
+
+VER ESTADO DE SU DENUNCIA
+Ingrese al siguiente enlace:
+${env.frontendUrl}/track?numero=${encodeURIComponent(data.numero)}
+
+Use su número de denuncia y clave de acceso para ingresar.
+
+---
+Este es un correo automático, por favor no responda a este mensaje.
+© ${new Date().getFullYear()} Sistema de Denuncias. Todos los derechos reservados.
+            `;
+
+            await transporter.sendMail({
+                from: env.email.from,
+                to,
+                subject: `📋 Actualización de Estado - Denuncia ${data.numero}`,
+                text: textContent,
+                html: htmlContent,
+            });
+
+            return true;
+        } catch (error) {
+            console.error('Error sending status change notification email:', error);
+            return false;
+        }
+    }
+
+    async sendAssignmentNotification(
+        to: string,
+        data: {
+            numero: string;
+            asunto: string;
+        }
+    ): Promise<boolean> {
+        try {
+            const transporter = await this.getTransporter();
+
+            const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #10b981; color: white; padding: 20px; text-align: center; }
+        .content { background-color: #f7fafc; padding: 30px; border-radius: 5px; margin-top: 20px; }
+        .info-box { background-color: white; padding: 20px; border-left: 4px solid #10b981; margin: 20px 0; }
+        .success-box { background-color: #d1fae5; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center; }
+        .footer { text-align: center; margin-top: 30px; color: #718096; font-size: 12px; }
+        .button-container { text-align: center; margin: 25px 0; }
+        .track-button { display: inline-block; background-color: #10b981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Denuncia Asignada</h1>
+        </div>
+        
+        <div class="content">
+            <p>Estimado/a denunciante,</p>
+            
+            <div class="success-box">
+                <h3 style="margin-top: 0; color: #047857;">¡Buenas noticias!</h3>
+                <p style="margin-bottom: 0;">Su denuncia ha sido asignada a un miembro de nuestro equipo para su gestión.</p>
+            </div>
+            
+            <div class="info-box">
+                <h3 style="margin-top: 0;">Información de la denuncia</h3>
+                <p><strong>Número:</strong> ${data.numero}</p>
+                <p><strong>Asunto:</strong> ${data.asunto}</p>
+            </div>
+
+            <p>Nuestro equipo revisará su caso y le hará llegar detalles sobre los avances de la denuncia a la brevedad.</p>
+            
+            <p>Puede consultar el estado de su denuncia en cualquier momento a través de nuestro portal de seguimiento.</p>
+
+            <div class="button-container">
+                <a href="${env.frontendUrl}/track?numero=${encodeURIComponent(data.numero)}" class="track-button">
+                    📋 Seguimiento de mi Denuncia
+                </a>
+            </div>
+            
+            <p style="text-align: center; color: #6b7280; font-size: 14px;">
+                Ingrese con su número de denuncia y clave de acceso.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>Este es un correo automático, por favor no responda a este mensaje.</p>
+            <p>&copy; ${new Date().getFullYear()} Sistema de Denuncias. Todos los derechos reservados.</p>
+        </div>
+    </div>
+</body>
+</html>
+            `;
+
+            const textContent = `
+✅ DENUNCIA ASIGNADA
+
+Estimado/a denunciante,
+
+¡Buenas noticias! Su denuncia ha sido asignada a un miembro de nuestro equipo para su gestión.
+
+INFORMACIÓN DE LA DENUNCIA
+Número: ${data.numero}
+Asunto: ${data.asunto}
+
+Nuestro equipo revisará su caso y le hará llegar detalles sobre los avances de la denuncia a la brevedad.
+
+Puede consultar el estado de su denuncia en cualquier momento a través de nuestro portal de seguimiento.
+
+SEGUIMIENTO DE SU DENUNCIA
+Ingrese al siguiente enlace:
+${env.frontendUrl}/track?numero=${encodeURIComponent(data.numero)}
+
+Use su número de denuncia y clave de acceso para ingresar.
+
+---
+Este es un correo automático, por favor no responda a este mensaje.
+© ${new Date().getFullYear()} Sistema de Denuncias. Todos los derechos reservados.
+            `;
+
+            await transporter.sendMail({
+                from: env.email.from,
+                to,
+                subject: `✅ Denuncia Asignada - ${data.numero}`,
+                text: textContent,
+                html: htmlContent,
+            });
+
+            return true;
+        } catch (error) {
+            console.error('Error sending assignment notification email:', error);
             return false;
         }
     }

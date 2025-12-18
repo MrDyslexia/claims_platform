@@ -8,7 +8,7 @@ import { Op } from 'sequelize';
  */
 export const crearCategoriaDenuncia = async (req: Request, res: Response) => {
     try {
-        const { nombre, descripcion, activo } = req.body;
+        const { nombre, descripcion, activo, icono } = req.body;
 
         if (!nombre) {
             return res.status(400).json({ error: 'missing field: nombre' });
@@ -18,6 +18,7 @@ export const crearCategoriaDenuncia = async (req: Request, res: Response) => {
             nombre,
             descripcion: descripcion ?? null,
             activo: activo !== undefined ? activo : 1,
+            icono: icono !== undefined ? icono : 'Settings',
         });
 
         return res.status(201).json(categoria.toJSON());

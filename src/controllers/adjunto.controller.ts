@@ -303,3 +303,92 @@ export const eliminarAdjunto = async (req: Request, res: Response) => {
         return res.status(500).json({ error: e.message });
     }
 };
+
+/**
+ * Subir adjuntos públicos del denunciante
+ * POST /api/denuncias/public/adjuntos
+ * Solo permitido cuando la denuncia está en estado INFO (5)
+ */
+export const subirAdjuntoPublico = async (req: Request, res: Response) => {
+    try {
+        const files = req.files as Express.Multer.File[];
+        const { numero, clave } = req.body;
+
+        // Validaciones básicas
+        if (!numero || !clave) {
+            return res.status(400).json({
+                error: 'numero y clave son requeridos',
+            });
+        }
+
+        if (!files || files.length === 0) {
+            return res.status(400).json({
+                error: 'No se proporcionaron archivos',
+            });
+        }
+
+        // Buscar la denuncia
+        const denuncia = await models.Denuncia.findOne({ where: { numero } });
+        if (!denuncia) {
+            return res.status(404).json({ error: 'Denuncia no encontrada' });
+        }
+
+        // Verificar la clave
+        const { verifyClaveWithSalt } = await import('../utils/crypto');
+        const ok = verifyClaveWithSalt(
+            String(clave),
+            denuncia.get('clave_salt') as Buffer,
+            denuncia.get('clave_hash') as Buffer
+        );
+        if (!ok) {
+            return res.status(401).json({ error: 'Clave de acceso inválida' });
+        }
+
+        // Verificar que el estado sea INFO (5)
+        const estadoId = denuncia.get('estado_id');
+        if (Number(estadoId) !== 5) {
+            return res.status(400).json({
+                error: 'Solo puede agregar archivos cuando la denuncia está en estado "Requiere información"',
+            });
+        }
+
+        const denunciaId = denuncia.get('id') as number;
+
+        // Subir cada archivo
+        const results = await Promise.all(
+            files.map((file) =>
+                uploadFile(
+                    file,
+                    denunciaId,
+                    null, // No hay userId para públicos
+                    'DENUNCIA'
+                )
+            )
+        );
+
+        // Separar éxitos y errores
+        const successful = results.filter((r) => r.success);
+        const failed = results.filter((r) => !r.success);
+
+        return res.status(successful.length > 0 ? 201 : 400).json({
+            mensaje:
+                successful.length > 0
+                    ? 'Archivos subidos exitosamente'
+                    : 'No se pudo subir ningún archivo',
+            uploaded: successful.length,
+            failed: failed.length,
+            files: successful.map((r) => ({
+                id: r.fileId,
+                filename: r.filename,
+                size: r.size,
+            })),
+            errors: failed.map((r) => ({
+                filename: r.filename,
+                error: getUploadErrorMessage(r.errorCode || 'UPLOAD_ERROR'),
+            })),
+        });
+    } catch (e: any) {
+        console.error('[Upload Público Error]:', e);
+        return res.status(500).json({ error: e.message });
+    }
+};
