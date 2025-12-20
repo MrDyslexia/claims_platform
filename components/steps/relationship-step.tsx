@@ -24,25 +24,33 @@ const RELATIONSHIP_STYLES: Record<string, { icon: LucideIcon; color: string }> =
       icon: Users,
       color: "bg-blue-500/10 text-blue-700 border-blue-200",
     },
-    empleado: {
-      icon: Briefcase,
+    colaborador_security: {
+      icon: Shield,
       color: "bg-green-500/10 text-green-700 border-green-200",
     },
-    proveedor: {
+    colaborador_belator: {
+      icon: Briefcase,
+      color: "bg-emerald-500/10 text-emerald-700 border-emerald-200",
+    },
+    proveedor_visita: {
       icon: Building,
       color: "bg-orange-500/10 text-orange-700 border-orange-200",
     },
-    administrador: {
-      icon: UserCheck,
+    vecino: {
+      icon: Users,
       color: "bg-purple-500/10 text-purple-700 border-purple-200",
     },
-    gerente: {
+    tercero_transeunte: {
+      icon: UserCheck,
+      color: "bg-gray-500/10 text-gray-700 border-gray-200",
+    },
+    autoridades: {
       icon: Crown,
       color: "bg-red-500/10 text-red-700 border-red-200",
     },
-    tercero: {
-      icon: Shield,
-      color: "bg-gray-500/10 text-gray-700 border-gray-200",
+    organizaciones_afines: {
+      icon: Building,
+      color: "bg-indigo-500/10 text-indigo-700 border-indigo-200",
     },
   };
 

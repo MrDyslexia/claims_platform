@@ -123,7 +123,7 @@ export default function SupervisorDashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="border-none shadow-sm">
+        <Card>
           <CardBody className="p-6">
             <div className="flex items-start justify-between mb-4">
               <div className="p-3 rounded-lg bg-orange-500/10">
@@ -139,7 +139,7 @@ export default function SupervisorDashboard() {
           </CardBody>
         </Card>
 
-        <Card className="border-none shadow-sm">
+        <Card>
           <CardBody className="p-6">
             <div className="flex items-start justify-between mb-4">
               <div className="p-3 rounded-lg bg-blue-500/10">
@@ -155,7 +155,7 @@ export default function SupervisorDashboard() {
           </CardBody>
         </Card>
 
-        <Card className="border-none shadow-sm">
+        <Card>
           <CardBody className="p-6">
             <div className="flex items-start justify-between mb-4">
               <div className="p-3 rounded-lg bg-green-500/10">
@@ -171,7 +171,7 @@ export default function SupervisorDashboard() {
           </CardBody>
         </Card>
 
-        <Card className="border-none shadow-sm">
+        <Card>
           <CardBody className="p-6">
             <div className="flex items-start justify-between mb-4">
               <div className="p-3 rounded-lg bg-red-500/10">
@@ -189,7 +189,7 @@ export default function SupervisorDashboard() {
       </div>
 
       {/* Recent Claims */}
-      <Card className="border-none shadow-sm">
+      <Card>
         <CardBody className="p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -272,72 +272,6 @@ export default function SupervisorDashboard() {
           </div>
         </CardBody>
       </Card>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="border-none shadow-sm bg-gradient-to-br from-orange-500/10 to-orange-500/5">
-          <CardBody className="p-6">
-            <Clock className="w-8 h-8 text-orange-500 mb-4" />
-            <h3 className="font-semibold text-foreground mb-2">
-              Reclamos Pendientes
-            </h3>
-            <p className="text-sm text-default-500 mb-4">
-              Revisa y comienza a trabajar en reclamos pendientes
-            </p>
-            <Button
-              fullWidth
-              as={Link}
-              color="warning"
-              href="/supervisor/pending" // Redirige a claims, el filtro se haría allí si se implementa
-              variant="flat"
-            >
-              Ver Pendientes
-            </Button>
-          </CardBody>
-        </Card>
-
-        <Card className="border-none shadow-sm bg-gradient-to-br from-blue-500/10 to-blue-500/5">
-          <CardBody className="p-6">
-            <FileText className="w-8 h-8 text-blue-500 mb-4" />
-            <h3 className="font-semibold text-foreground mb-2">
-              Todos los Reclamos
-            </h3>
-            <p className="text-sm text-default-500 mb-4">
-              Accede a todos tus reclamos asignados
-            </p>
-            <Button
-              fullWidth
-              as={Link}
-              color="primary"
-              href="/supervisor/claims"
-              variant="flat"
-            >
-              Ver Todos
-            </Button>
-          </CardBody>
-        </Card>
-
-        <Card className="border-none shadow-sm bg-gradient-to-br from-green-500/10 to-green-500/5">
-          <CardBody className="p-6">
-            <CheckCircle2 className="w-8 h-8 text-green-500 mb-4" />
-            <h3 className="font-semibold text-foreground mb-2">
-              Reclamos Resueltos
-            </h3>
-            <p className="text-sm text-default-500 mb-4">
-              Revisa el historial de reclamos resueltos
-            </p>
-            <Button
-              fullWidth
-              as={Link}
-              color="success"
-              href="/supervisor/resolved" // Redirige a claims
-              variant="flat"
-            >
-              Ver Resueltos
-            </Button>
-          </CardBody>
-        </Card>
-      </div>
     </div>
   );
 }

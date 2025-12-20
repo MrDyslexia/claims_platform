@@ -5,12 +5,15 @@ import { Button, Divider, Avatar, Chip, Image } from "@heroui/react";
 import { LogOut, ChevronRight } from "lucide-react";
 
 import { useAuth } from "@/lib/auth/auth-context";
-import menuItems from "@/config/menu_items";
+import { getMenuItemsForRole } from "@/config/menu_items";
 
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout, hasPermission } = useAuth();
+  const { user, logout, hasPermission, getPrimaryRole } = useAuth();
+
+  // Get menu items dynamically based on user's primary role
+  const menuItems = getMenuItemsForRole(getPrimaryRole());
 
   const handleLogout = async () => {
     await logout();

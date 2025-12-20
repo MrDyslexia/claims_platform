@@ -1,5 +1,4 @@
-// claims_data.tsx
-import { Headset, Package, Settings, Scale } from "lucide-react";
+import * as LucideIcons from "lucide-react";
 
 interface BackendSubcategory {
   code: string;
@@ -33,14 +32,6 @@ interface TransformedData {
   countries: string[];
   enterprise?: { rut: string; nombre: string }[];
 }
-
-// Mapeo de iconos
-const ICON_MAP: Record<string, any> = {
-  Headset: Headset,
-  Package: Package,
-  Settings: Settings,
-  Scale: Scale,
-};
 
 // Datos por defecto
 const DEFAULT_DATA: TransformedData = {
@@ -94,9 +85,9 @@ const DEFAULT_DATA: TransformedData = {
     },
   },
   categoryIcons: {
-    "Respeto y seguridad en el trabajo": Headset,
-    "Integridad en los negocios": Headset,
-    "Sostenibilidad y medio ambiente": Headset,
+    "Respeto y seguridad en el trabajo": (LucideIcons as any).Headset,
+    "Integridad en los negocios": (LucideIcons as any).Headset,
+    "Sostenibilidad y medio ambiente": (LucideIcons as any).Headset,
   },
   countries: ["Argentina", "Chile", "Perú", "Francia", "Mexico"],
 };
@@ -129,7 +120,11 @@ function transformBackendData(backendData: BackendResponse): TransformedData {
     };
 
     // Mapear iconos
-    const IconComponent = ICON_MAP[category.icon] || Headset;
+    // Buscar el icono en el objeto de Lucide
+    // Si no existe, usar Headset como fallback
+    const iconName = category.icon;
+    const IconComponent =
+      (LucideIcons as any)[iconName] || (LucideIcons as any).Headset;
 
     transformedIcons[category.name] = IconComponent;
   });
@@ -156,7 +151,6 @@ export default async function ClaimsData(): Promise<TransformedData> {
 
     if (!response.ok) {
       throw new Error("Network response was not ok");
-      console.log("Error fetching data from backend");
     }
     const backendData: BackendResponse = await response.json();
 

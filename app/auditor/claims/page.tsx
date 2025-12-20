@@ -76,13 +76,6 @@ export default function ClaimsPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [page, setPage] = useState(1);
-  const [newComment, setNewComment] = useState("");
-  const [isCommentInternal, setIsCommentInternal] = useState(true); // Changed default to true
-  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-  const [commentError, setCommentError] = useState<string | null>(null);
-  const [supervisors, setSupervisors] = useState<any[]>([]);
-  const [isUpdatingPriority, setIsUpdatingPriority] = useState(false);
-  const [isAssigningSupervisor, setIsAssigningSupervisor] = useState(false);
   const rowsPerPage = 10;
 
   // Helper para formatear fechas de forma segura
@@ -100,6 +93,7 @@ export default function ClaimsPage() {
           day: "2-digit",
           hour: "2-digit",
           minute: "2-digit",
+          hour12: false,
         });
       }
 
@@ -109,6 +103,7 @@ export default function ClaimsPage() {
         day: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
+        hour12: false,
       });
     } catch {
       // En caso de error, retornar la fecha actual
@@ -118,6 +113,7 @@ export default function ClaimsPage() {
         day: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
+        hour12: false,
       });
     }
   };
@@ -187,177 +183,11 @@ export default function ClaimsPage() {
     }
   }, [token]);
 
-  const fetchSupervisors = useCallback(async () => {
-    if (!token) return;
-    try {
-      // Usamos el endpoint de lista completa y filtramos en el frontend por ahora
-      // Idealmente deberíamos tener un endpoint específico o filtrar en el backend
-      const response = await fetch(
-        `${API_BASE_URL}/usuarios/admin/lista-completa?limit=100`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const supervisorUsers = data.usuarios.filter((u: any) =>
-          u.roles.some((r: any) => r.nombre.toUpperCase() === "SUPERVISOR"),
-        );
-
-        setSupervisors(supervisorUsers);
-      }
-    } catch {
-      // console.error("Error fetching supervisors:", error);
-    }
-  }, [token]);
-
   useEffect(() => {
     if (token) {
       fetchClaims();
-      fetchSupervisors();
     }
-  }, [token, fetchClaims, fetchSupervisors]);
-
-  const handleSendComment = async () => {
-    if (!selectedClaim || !newComment.trim()) {
-      setCommentError("El comentario no puede estar vacío");
-
-      return;
-    }
-
-    setIsSubmittingComment(true);
-    setCommentError(null);
-
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/denuncias/${selectedClaim.id}/comentarios`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            contenido: newComment,
-            es_interno: isCommentInternal,
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error("Error al enviar comentario");
-      }
-
-      setNewComment("");
-      // Recargar reclamos para ver el nuevo comentario
-      await fetchClaims();
-      // Actualizar el reclamo seleccionado también
-      const claimsResponse = await fetch(`${API_BASE_URL}/denuncias/all`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (claimsResponse.ok) {
-        const data = await claimsResponse.json();
-        const allClaims = data.reclamos || [];
-        const refreshedClaim = allClaims.find(
-          (c: any) => c.id === selectedClaim.id,
-        );
-
-        if (refreshedClaim) {
-          setSelectedClaim(refreshedClaim);
-        }
-        setClaims(allClaims); // Update the main claims list
-      }
-    } catch (err) {
-      setCommentError(
-        err instanceof Error ? err.message : "Error al enviar comentario",
-      );
-    } finally {
-      setIsSubmittingComment(false);
-    }
-  };
-
-  const handlePriorityChange = async (newPriority: string) => {
-    if (!selectedClaim) return;
-    setIsUpdatingPriority(true);
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/denuncias/${selectedClaim.id}/prioridad`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ prioridad: newPriority }),
-        },
-      );
-
-      if (response.ok) {
-        // Refresh claims
-        await fetchClaims();
-        // Update local state
-        setSelectedClaim({ ...selectedClaim, prioridad: newPriority as any });
-      } else {
-        const errorData = await response.json();
-
-        throw new Error(errorData.error || "Failed to update priority");
-      }
-    } catch {
-      // console.error("Error updating priority:", error);
-    } finally {
-      setIsUpdatingPriority(false);
-    }
-  };
-
-  const handleAssignSupervisor = async (supervisorId: string) => {
-    if (!selectedClaim) return;
-    setIsAssigningSupervisor(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/denuncias/asignar`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          denuncia_id: selectedClaim.id,
-          usuario_id: Number(supervisorId),
-        }),
-      });
-
-      if (response.ok) {
-        await fetchClaims();
-        // Update local state logic if needed (e.g. show assigned supervisor)
-        // For now, refetching claims will update the selectedClaim if it's still open
-        const claimsResponse = await fetch(`${API_BASE_URL}/denuncias/all`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (claimsResponse.ok) {
-          const data = await claimsResponse.json();
-          const allClaims = data.reclamos || [];
-          const refreshedClaim = allClaims.find(
-            (c: any) => c.id === selectedClaim.id,
-          );
-
-          if (refreshedClaim) {
-            setSelectedClaim(refreshedClaim);
-          }
-          setClaims(allClaims);
-        }
-      } else {
-        throw new Error("Failed to assign supervisor");
-      }
-    } catch {
-      // console.error("Error assigning supervisor:", error);
-    } finally {
-      setIsAssigningSupervisor(false);
-    }
-  };
+  }, [token, fetchClaims]);
 
   const filteredClaims = (claims || []).filter((claim) => {
     // Use local claims state
@@ -582,9 +412,7 @@ export default function ClaimsPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {formatDateOnly(claim.fecha_creacion)}
-                    </TableCell>
+                    <TableCell>{formatDate(claim.fecha_creacion)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -600,7 +428,7 @@ export default function ClaimsPage() {
         onClose={onClose}
       >
         <ModalContent>
-          {(onClose) => (
+          {(_onClose) => (
             <>
               <ModalHeader className="flex flex-col gap-1">
                 <div className="flex items-center gap-3">

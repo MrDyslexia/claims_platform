@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import type { Reclamo } from "@/lib/api/claims";
+
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Avatar,
   Button,
@@ -48,8 +50,6 @@ import {
   User,
 } from "lucide-react";
 
-import { type Reclamo } from "@/lib/api/claims";
-
 const priorityColors = {
   baja: "default",
   media: "warning",
@@ -67,6 +67,15 @@ const statusColors: Record<string, any> = {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003";
 
+const availableStates = [
+  { id: 1, nombre: "Pendiente de revisión", codigo: "PENDIENTE" },
+  { id: 2, nombre: "En Proceso", codigo: "PROCESO" },
+  { id: 3, nombre: "Requiere informacion", codigo: "INFO" },
+  { id: 4, nombre: "Reclamo resuelto", codigo: "RESUELTO" },
+  { id: 5, nombre: "Reclamo cerrado", codigo: "CERRADO" }
+  
+];
+
 export default function SupervisorClaims() {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [token, setToken] = useState<string | null>(null);
@@ -83,6 +92,12 @@ export default function SupervisorClaims() {
   const [isCommentInternal, setIsCommentInternal] = useState(true);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<number | null>(null);
+  const [statusChangeReason, setStatusChangeReason] = useState("");
+  const [isChangingStatus, setIsChangingStatus] = useState(false);
+  const [statusChangeError, setStatusChangeError] = useState<string | null>(
+    null,
+  );
   const rowsPerPage = 10;
 
   // Helper para formatear fechas de forma segura
@@ -97,6 +112,7 @@ export default function SupervisorClaims() {
           day: "2-digit",
           hour: "2-digit",
           minute: "2-digit",
+          hour12: false,
         });
       }
 
@@ -106,6 +122,7 @@ export default function SupervisorClaims() {
         day: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
+        hour12: false,
       });
     } catch {
       return new Date().toLocaleString("es-CL", {
@@ -114,6 +131,7 @@ export default function SupervisorClaims() {
         day: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
+        hour12: false,
       });
     }
   };
@@ -244,6 +262,103 @@ export default function SupervisorClaims() {
     }
   };
 
+  const handleDownloadAttachment = async (
+    adjuntoId: number,
+    nombre: string,
+  ) => {
+    if (!token) return;
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/denuncias/adjuntos/${adjuntoId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Error al descargar el archivo");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+
+      a.href = url;
+      a.download = nombre;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch {
+      // Error downloading attachment
+    }
+  };
+
+  const handleStatusChange = async () => {
+    if (!token || !selectedClaim || !selectedStatus) return;
+
+    setIsChangingStatus(true);
+    setStatusChangeError(null);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/denuncias/${selectedClaim.id}/estado`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            estado_id: selectedStatus,
+            motivo: statusChangeReason.trim() || undefined,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+
+        throw new Error(errorData.error || "Error al cambiar el estado");
+      }
+
+      // Recargar todos los reclamos para obtener los datos completos
+      const claimsResponse = await fetch(`${API_BASE_URL}/denuncias/assigned`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (claimsResponse.ok) {
+        const data = await claimsResponse.json();
+        const allClaims = data.reclamos || [];
+
+        // Actualizar la lista de reclamos
+        setClaims(allClaims);
+
+        // Buscar y actualizar el reclamo seleccionado con datos completos
+        const refreshedClaim = allClaims.find(
+          (c: any) => c.id === selectedClaim.id,
+        );
+
+        if (refreshedClaim) {
+          setSelectedClaim(refreshedClaim);
+          setSelectedStatus(refreshedClaim.estado?.id || null);
+        }
+      }
+
+      // Limpiar el formulario
+      setStatusChangeReason("");
+    } catch (error) {
+      setStatusChangeError(
+        error instanceof Error ? error.message : "Error desconocido",
+      );
+    } finally {
+      setIsChangingStatus(false);
+    }
+  };
+
   const filteredClaims = useMemo(() => {
     return (claims || []).filter((claim) => {
       const matchesSearch =
@@ -252,7 +367,7 @@ export default function SupervisorClaims() {
         claim.empresa.nombre.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesStatus =
-        filterStatus === "all" || claim.estado.nombre === filterStatus;
+        filterStatus === "all" || claim.estado.codigo === filterStatus;
       const matchesPriority =
         filterPriority === "all" || claim.prioridad === filterPriority;
 
@@ -268,6 +383,9 @@ export default function SupervisorClaims() {
 
   const handleViewClaim = (claim: Reclamo) => {
     setSelectedClaim(claim);
+    setSelectedStatus(claim.estado?.id || null);
+    setStatusChangeReason("");
+    setStatusChangeError(null);
     onOpen();
   };
 
@@ -336,11 +454,11 @@ export default function SupervisorClaims() {
                 onAction={(key) => setFilterStatus(key as string)}
               >
                 <DropdownItem key="all">Todos</DropdownItem>
-                <DropdownItem key="Pendiente">Pendiente</DropdownItem>
-                <DropdownItem key="En Proceso">En Proceso</DropdownItem>
-                <DropdownItem key="En Revisión">En Revisión</DropdownItem>
-                <DropdownItem key="Resuelto">Resuelto</DropdownItem>
-                <DropdownItem key="Cerrado">Cerrado</DropdownItem>
+                <DropdownItem key="PENDIENTE">Pendiente</DropdownItem>
+                <DropdownItem key="PROCESO">En Proceso</DropdownItem>
+                <DropdownItem key="INFO">Requiere informacion</DropdownItem>
+                <DropdownItem key="RESUELTO">Resuelto</DropdownItem>
+                <DropdownItem key="CERRADO">Cerrado</DropdownItem>
               </DropdownMenu>
             </Dropdown>
             <Dropdown>
@@ -453,9 +571,7 @@ export default function SupervisorClaims() {
                         {claim.prioridad}
                       </Chip>
                     </TableCell>
-                    <TableCell>
-                      {formatDateOnly(claim.fecha_creacion)}
-                    </TableCell>
+                    <TableCell>{formatDate(claim.fecha_creacion)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -471,7 +587,7 @@ export default function SupervisorClaims() {
         onClose={onClose}
       >
         <ModalContent>
-          {(onClose) => (
+          {(_onClose) => (
             <>
               <ModalHeader className="flex flex-col gap-1">
                 <div className="flex items-center gap-3">
@@ -540,14 +656,14 @@ export default function SupervisorClaims() {
                                 <MessageSquare className="h-4 w-4" />
                                 <span>
                                   Comentarios (
-                                  {selectedClaim?.comentarios.length || 0})
+                                  {selectedClaim?.comentarios?.length || 0})
                                 </span>
                               </div>
                             }
                           >
                             <div className="p-4 space-y-4">
                               <div className="space-y-3">
-                                {selectedClaim?.comentarios.map((comment) => (
+                                {selectedClaim?.comentarios?.map((comment) => (
                                   <div
                                     key={comment.id}
                                     className="flex gap-3 p-3 bg-default-50 dark:bg-default-100/50 rounded-lg"
@@ -636,14 +752,14 @@ export default function SupervisorClaims() {
                                 <Paperclip className="h-4 w-4" />
                                 <span>
                                   Adjuntos (
-                                  {selectedClaim?.adjuntos.length || 0})
+                                  {selectedClaim?.adjuntos?.length || 0})
                                 </span>
                               </div>
                             }
                           >
                             <div className="p-4 space-y-3">
-                              {(selectedClaim?.adjuntos.length || 0) > 0 ? (
-                                selectedClaim?.adjuntos.map((adjunto) => (
+                              {(selectedClaim?.adjuntos?.length || 0) > 0 ? (
+                                selectedClaim?.adjuntos?.map((adjunto) => (
                                   <Card
                                     key={adjunto.id}
                                     className="bg-default-50"
@@ -665,6 +781,13 @@ export default function SupervisorClaims() {
                                         isIconOnly
                                         size="sm"
                                         variant="light"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDownloadAttachment(
+                                            adjunto.id,
+                                            adjunto.nombre,
+                                          );
+                                        }}
                                       >
                                         <Download className="h-4 w-4" />
                                       </Button>
@@ -685,38 +808,41 @@ export default function SupervisorClaims() {
                                 <Clock className="h-4 w-4" />
                                 <span>
                                   Historial (
-                                  {selectedClaim?.historial_estado.length || 0})
+                                  {selectedClaim?.historial_estado?.length || 0}
+                                  )
                                 </span>
                               </div>
                             }
                           >
                             <div className="p-4">
                               <div className="space-y-4">
-                                {selectedClaim?.historial_estado.map((item) => (
-                                  <div key={item.id} className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                      <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-full">
-                                        <CheckCircle2 className="h-4 w-4 text-purple-600" />
+                                {selectedClaim?.historial_estado?.map(
+                                  (item) => (
+                                    <div key={item.id} className="flex gap-3">
+                                      <div className="flex flex-col items-center">
+                                        <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-full">
+                                          <CheckCircle2 className="h-4 w-4 text-purple-600" />
+                                        </div>
+                                      </div>
+                                      <div className="flex-1">
+                                        <p className="font-medium text-sm">
+                                          {item.estado_anterior?.nombre} →{" "}
+                                          {item.estado_nuevo.nombre}
+                                        </p>
+                                        {item.motivo && (
+                                          <p className="text-xs text-muted-foreground">
+                                            Motivo: {item.motivo}
+                                          </p>
+                                        )}
+                                        <p className="text-xs text-muted-foreground">
+                                          {formatDate(item.fecha_cambio)}{" "}
+                                          {item.usuario &&
+                                            `- ${item.usuario.nombre}`}
+                                        </p>
                                       </div>
                                     </div>
-                                    <div className="flex-1">
-                                      <p className="font-medium text-sm">
-                                        {item.estado_anterior?.nombre} →{" "}
-                                        {item.estado_nuevo.nombre}
-                                      </p>
-                                      {item.motivo && (
-                                        <p className="text-xs text-muted-foreground">
-                                          Motivo: {item.motivo}
-                                        </p>
-                                      )}
-                                      <p className="text-xs text-muted-foreground">
-                                        {formatDate(item.fecha_cambio)}{" "}
-                                        {item.usuario &&
-                                          `- ${item.usuario.nombre}`}
-                                      </p>
-                                    </div>
-                                  </div>
-                                ))}
+                                  ),
+                                )}
                               </div>
                             </div>
                           </Tab>
@@ -822,10 +948,98 @@ export default function SupervisorClaims() {
                       </Card>
                     )}
 
-                    {/* Actions Card (Read Only) */}
+                    {/* Actions Card */}
                     <Card>
                       <CardBody className="space-y-4">
                         <h3 className="font-semibold">Gestión</h3>
+
+                        <div className="space-y-2">
+                          <p className="text-xs text-muted-foreground mb-1.5">
+                            Cambiar Estado
+                          </p>
+                          <Dropdown>
+                            <DropdownTrigger>
+                              <Button
+                                className="w-full justify-start"
+                                size="sm"
+                                variant="bordered"
+                              >
+                                {selectedStatus
+                                  ? availableStates.find(
+                                      (s) => s.id === selectedStatus,
+                                    )?.nombre
+                                  : "Seleccionar estado..."}
+                              </Button>
+                            </DropdownTrigger>
+                            <DropdownMenu
+                              aria-label="Estado del reclamo"
+                              onAction={(key) => setSelectedStatus(Number(key))}
+                            >
+                              {availableStates.map((estado) => (
+                                <DropdownItem
+                                  key={estado.id}
+                                  className={
+                                    selectedClaim?.estado.id === estado.id
+                                      ? "bg-default-100"
+                                      : ""
+                                  }
+                                >
+                                  {estado.nombre}
+                                  {selectedClaim?.estado.id === estado.id &&
+                                    " (actual)"}
+                                </DropdownItem>
+                              ))}
+                            </DropdownMenu>
+                          </Dropdown>
+
+                          {selectedStatus &&
+                            selectedStatus !== selectedClaim?.estado.id && (
+                              <>
+                                <Textarea
+                                  label="Motivo del cambio (opcional)"
+                                  minRows={2}
+                                  placeholder="Ingrese el motivo del cambio de estado..."
+                                  size="sm"
+                                  value={statusChangeReason}
+                                  onChange={(e) =>
+                                    setStatusChangeReason(e.target.value)
+                                  }
+                                />
+                                {statusChangeError && (
+                                  <div className="bg-red-50 border border-red-200 rounded-lg p-2 mt-2">
+                                    <p className="text-sm text-red-700">
+                                      {statusChangeError}
+                                    </p>
+                                  </div>
+                                )}
+                                <div className="flex gap-2">
+                                  <Button
+                                    className="flex-1"
+                                    color="primary"
+                                    isLoading={isChangingStatus}
+                                    size="sm"
+                                    onClick={handleStatusChange}
+                                  >
+                                    Confirmar
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="flat"
+                                    onClick={() => {
+                                      setSelectedStatus(null);
+                                      setStatusChangeReason("");
+                                      setStatusChangeError(null);
+                                    }}
+                                  >
+                                    Cancelar
+                                  </Button>
+                                </div>
+                              </>
+                            )}
+                        </div>
+
+                        <Divider />
+
                         {/* Priority (Read Only) */}
                         <div>
                           <p className="text-xs text-muted-foreground mb-1.5">
@@ -873,11 +1087,7 @@ export default function SupervisorClaims() {
                   </div>
                 </div>
               </ModalBody>
-              <ModalFooter>
-                <Button variant="light" onPress={onClose}>
-                  Cerrar
-                </Button>
-              </ModalFooter>
+              <ModalFooter>{/* Footer content here */}</ModalFooter>
             </>
           )}
         </ModalContent>

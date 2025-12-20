@@ -96,7 +96,17 @@ const validateStep = (step: number, formData: FormData): ValidationResult => {
 
       return { isValid: true, message: "" };
 
-    case 3: // RelationshipStep (moved from 2)
+    case 3: // DescriptionStep
+      if (!formData.description || formData.description.length < 100) {
+        return {
+          isValid: false,
+          message: "La descripción debe tener al menos 100 caracteres",
+        };
+      }
+
+      return { isValid: true, message: "" };
+
+    case 4: // RelationshipStep
       if (!formData.relationship) {
         return {
           isValid: false,
@@ -106,14 +116,14 @@ const validateStep = (step: number, formData: FormData): ValidationResult => {
 
       return { isValid: true, message: "" };
 
-    case 4: // LocationStep (moved from 3)
+    case 5: // LocationStep
       if (!formData.country) {
         return { isValid: false, message: "Selecciona un país" };
       }
 
       return { isValid: true, message: "" };
 
-    case 5:
+    case 6: // DetailsStep
       if (formData.details && formData.details.trim().length > 0) {
         return { isValid: true, message: "" };
       }
@@ -123,28 +133,18 @@ const validateStep = (step: number, formData: FormData): ValidationResult => {
 
       return { isValid: false, message: "" };
 
-    case 6: // TimeStep (moved from 5)
+    case 7: // TimeStep
       if (!formData.timeframe) {
         return { isValid: false, message: "Selecciona el tiempo del problema" };
       }
 
       return { isValid: true, message: "" };
 
-    case 7: // InvolvedStep (moved from 6)
+    case 8: // InvolvedStep
       if (!formData.involvedParties || formData.involvedParties.length === 0) {
         return {
           isValid: false,
           message: "Agrega al menos una parte involucrada",
-        };
-      }
-
-      return { isValid: true, message: "" };
-
-    case 8: // DescriptionStep (moved from 7)
-      if (!formData.description || formData.description.length < 100) {
-        return {
-          isValid: false,
-          message: "La descripción debe tener al menos 100 caracteres",
         };
       }
 
@@ -240,7 +240,7 @@ export function ClaimsWizard() {
   const currentValidation = validateStep(currentStep, formData);
 
   const handleNext = () => {
-    if (currentStep === 5) {
+    if (currentStep === 6) {
       if (
         (!formData.details || formData.details.trim().length === 0) &&
         !formData.skipDetailsWarning
@@ -430,9 +430,13 @@ export function ClaimsWizard() {
         );
       case 3:
         return (
-          <RelationshipStep formData={formData} onUpdate={handleFormUpdate} />
+          <DescriptionStep formData={formData} onUpdate={handleFormUpdate} />
         );
       case 4:
+        return (
+          <RelationshipStep formData={formData} onUpdate={handleFormUpdate} />
+        );
+      case 5:
         return (
           <LocationStep
             countries={countries}
@@ -440,11 +444,11 @@ export function ClaimsWizard() {
             onUpdate={handleFormUpdate}
           />
         );
-      case 5:
-        return <DetailsStep formData={formData} onUpdate={handleFormUpdate} />;
       case 6:
-        return <TimeStep formData={formData} onUpdate={handleFormUpdate} />;
+        return <DetailsStep formData={formData} onUpdate={handleFormUpdate} />;
       case 7:
+        return <TimeStep formData={formData} onUpdate={handleFormUpdate} />;
+      case 8:
         return (
           <InvolvedStep
             enterprises={enterprise}
@@ -452,17 +456,13 @@ export function ClaimsWizard() {
             onUpdate={handleFormUpdate}
           />
         );
-      case 8:
-        return (
-          <DescriptionStep formData={formData} onUpdate={handleFormUpdate} />
-        );
       case 9:
         return <EvidenceStep formData={formData} onUpdate={handleFormUpdate} />;
       case 10:
         return (
           <SummaryStep
-            formData={formData}
             categories={categories}
+            formData={formData}
             isSubmitting={isSubmitting}
             onEdit={(step) => setCurrentStep(step)}
             onSubmit={handleSubmit}
@@ -738,7 +738,7 @@ export function ClaimsWizard() {
               <Button
                 className="bg-[#202e5e] hover:bg-[#1a2550] text-white font-medium"
                 disabled={
-                  currentStep === 5 || currentStep === 9
+                  currentStep === 6 || currentStep === 9
                     ? false
                     : !currentValidation.isValid
                 }

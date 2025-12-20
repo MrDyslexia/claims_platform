@@ -1,8 +1,6 @@
 /* eslint-disable no-console */
 "use client";
 
-import type { Rol } from "@/lib/api/usuarios";
-
 import React from "react";
 import {
   Card,
@@ -20,6 +18,8 @@ import {
   Checkbox,
   Tabs,
   Tab,
+  Select,
+  SelectItem,
 } from "@heroui/react";
 import { Plus, Edit, Trash2, Shield, CheckCircle2 } from "lucide-react";
 
@@ -28,7 +28,10 @@ import {
   eliminarRol,
   crearRol,
   actualizarRol,
+  listarArquetipos,
+  obtenerCategoriasDisponibles,
 } from "@/lib/api/usuarios";
+import type { Rol, Arquetipo, Categoria } from "@/lib/api/usuarios";
 
 interface Permiso {
   id_permiso: number;
@@ -59,12 +62,29 @@ export default function RolesPage() {
     onOpen: onDeleteOpen,
     onClose: onDeleteClose,
   } = useDisclosure();
+  const [arquetipos, setArquetipos] = React.useState<Arquetipo[]>([]);
+  const [categoriasDisponibles, setCategoriasDisponibles] = React.useState<Categoria[]>([]);
+  const [selectedArquetipo, setSelectedArquetipo] = React.useState<string>("");
+  const [selectedCategoria, setSelectedCategoria] = React.useState<string>("");
 
   React.useEffect(() => {
     const storedToken = localStorage.getItem("auth_token");
 
     setToken(storedToken);
   }, []);
+
+  // Cargar arquetipos y categorías
+  React.useEffect(() => {
+    if (token) {
+      listarArquetipos(token)
+        .then((res) => setArquetipos(res.data || []))
+        .catch((err) => console.error("Error al cargar arquetipos:", err));
+
+      obtenerCategoriasDisponibles(token)
+        .then((res) => setCategoriasDisponibles(res.categorias || []))
+        .catch((err) => console.error("Error al cargar categorías:", err));
+    }
+  }, [token]);
 
   // Obtener datos del backend
   const rolesDisponibles = data?.roles_disponibles || [];
@@ -79,6 +99,8 @@ export default function RolesPage() {
         descripcion: role.descripcion || "",
         permisos: role.permisos?.map((p) => p.id_permiso) || [],
       });
+      setSelectedArquetipo(role.arquetipo_id?.toString() || "");
+      setSelectedCategoria("");
     } else {
       setEditingRole(null);
       setFormData({
@@ -86,8 +108,27 @@ export default function RolesPage() {
         descripcion: "",
         permisos: [],
       });
+      setSelectedArquetipo("");
+      setSelectedCategoria("");
     }
     onOpen();
+  };
+
+  // Manejar cambio de arquetipo - pre-cargar permisos del arquetipo
+  const handleArquetipoChange = (arquetipoId: string) => {
+    setSelectedArquetipo(arquetipoId);
+    if (arquetipoId) {
+      const arquetipo = arquetipos.find((a) => a.id.toString() === arquetipoId);
+      if (arquetipo && arquetipo.permisos) {
+        // Los permisos del arquetipo vienen con 'id', pero el formulario usa 'id_permiso'
+        // Necesitamos mapear correctamente
+        const permisoIds = arquetipo.permisos.map((p: any) => p.id_permiso || p.id);
+        setFormData((prev) => ({
+          ...prev,
+          permisos: permisoIds,
+        }));
+      }
+    }
   };
 
   const handleSave = async () => {
@@ -99,6 +140,13 @@ export default function RolesPage() {
 
     if (!formData.nombre.trim()) {
       setSaveError("El nombre del rol es requerido");
+
+      return;
+    }
+
+    // Validar arquetipo al crear nuevo rol
+    if (!editingRole && !selectedArquetipo) {
+      setSaveError("Debes seleccionar un arquetipo para crear el rol");
 
       return;
     }
@@ -122,6 +170,7 @@ export default function RolesPage() {
           token,
           formData.nombre,
           formData.descripcion,
+          selectedArquetipo ? parseInt(selectedArquetipo) : 0,
           formData.permisos,
         );
       }
@@ -338,6 +387,43 @@ export default function RolesPage() {
                   })
                 }
               />
+
+              {!editingRole && (
+                <Select
+                  isRequired
+                  description="Primero selecciona un arquetipo para cargar los permisos"
+                  label="Arquetipo de Rol"
+                  placeholder="Seleccione un arquetipo"
+                  selectedKeys={selectedArquetipo ? [selectedArquetipo] : []}
+                  onSelectionChange={(keys) => {
+                    const selected = Array.from(keys)[0] as string;
+                    handleArquetipoChange(selected || "");
+                  }}
+                >
+                  {arquetipos.map((arq) => (
+                    <SelectItem key={arq.id.toString()}>
+                      {arq.nombre}
+                    </SelectItem>
+                  ))}
+                </Select>
+              )}
+
+              <Select
+                description="Deja vacío para que el rol acceda a todas las categorías"
+                label="Categoría de Denuncia (Opcional)"
+                placeholder="Sin restricción de categoría"
+                selectedKeys={selectedCategoria ? [selectedCategoria] : []}
+                onSelectionChange={(keys) => {
+                  const selected = Array.from(keys)[0] as string;
+                  setSelectedCategoria(selected || "");
+                }}
+              >
+                {categoriasDisponibles.map((cat) => (
+                  <SelectItem key={cat.id.toString()}>
+                    {cat.nombre}
+                  </SelectItem>
+                ))}
+              </Select>
 
               <div>
                 <h3 className="font-semibold mb-3">Permisos</h3>

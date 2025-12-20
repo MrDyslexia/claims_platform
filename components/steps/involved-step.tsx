@@ -74,7 +74,7 @@ export function InvolvedStep({
   }, [showSuggestions, searchQuery]);
 
   const filteredEnterprises = useMemo(() => {
-    if (!searchQuery.trim()) return enterprises.slice(0, 10);
+    if (!searchQuery?.trim()) return enterprises.slice(0, 10);
     const query = searchQuery.toLowerCase();
 
     return enterprises
@@ -280,7 +280,7 @@ export function InvolvedStep({
             variant={partyType === "entity" ? "solid" : "flat"}
             onPress={() => handlePartyTypeChange("entity")}
           >
-            Entidad
+            Otras Entidades
           </Button>
         </ButtonGroup>
       </div>
@@ -293,6 +293,7 @@ export function InvolvedStep({
               <div className="flex-1 relative">
                 <Input
                   ref={inputRef}
+                  maxLength={220}
                   className="w-full"
                   placeholder="Buscar empresa por nombre o RUT..."
                   size="lg"
@@ -320,6 +321,7 @@ export function InvolvedStep({
                 className="flex-1"
                 placeholder={`Ingresa el nombre de la ${getTypeLabel(partyType).toLowerCase()}...`}
                 size="lg"
+                maxLength={100}
                 startContent={
                   partyType === "person" ? (
                     <User className="h-5 w-5 text-gray-400" />

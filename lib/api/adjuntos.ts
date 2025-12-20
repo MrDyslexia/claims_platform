@@ -36,10 +36,6 @@ export async function uploadEvidence(
   if (!response.ok) {
     const errorText = await response.text();
 
-    console.error(
-      `Upload failed: ${response.status} ${response.statusText}`,
-      errorText,
-    );
     throw new Error(errorText || `Error uploading file: ${response.status}`);
   }
 

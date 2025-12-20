@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { ProtectedRoute } from "@/components/protected-route"
-import { AnalystSidebar } from "@/components/analyst-sidebar"
+import { ProtectedRoute } from "@/components/protected-route";
+import { AnalystSidebar } from "@/components/analyst-sidebar";
 
 export default function AnalystLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <ProtectedRoute allowedRoles={["analista"]}>
@@ -24,5 +24,5 @@ export default function AnalystLayout({
         </main>
       </div>
     </ProtectedRoute>
-  )
+  );
 }

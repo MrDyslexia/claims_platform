@@ -125,19 +125,37 @@ const FALLBACK_CATEGORIES: CategoryMetadata[] = [
 
 export const FALLBACK_RELATIONSHIPS: RelationshipMetadata[] = [
   { id: "cliente", title: "Cliente", description: "Soy cliente de la empresa" },
-  { id: "empleado", title: "Empleado", description: "Trabajo en la empresa" },
   {
-    id: "proveedor",
-    title: "Proveedor",
-    description: "Soy proveedor de la empresa",
+    id: "colaborador_security",
+    title: "Colaborador SECURITY",
+    description: "Trabajo en SECURITY",
   },
   {
-    id: "administrador",
-    title: "Administrador",
-    description: "Tengo rol administrativo",
+    id: "colaborador_belator",
+    title: "Colaborador GRUPO BELATOR",
+    description: "Trabajo en GRUPO BELATOR",
   },
-  { id: "gerente", title: "Gerente", description: "Soy gerente o supervisor" },
-  { id: "tercero", title: "Tercero", description: "No tengo relación directa" },
+  {
+    id: "proveedor_visita",
+    title: "Proveedor - Visita",
+    description: "Soy proveedor o visitante",
+  },
+  { id: "vecino", title: "Vecino", description: "Soy vecino del lugar" },
+  {
+    id: "tercero_transeunte",
+    title: "Tercero - Transeúnte",
+    description: "Soy un tercero o transeúnte",
+  },
+  {
+    id: "autoridades",
+    title: "Autoridades",
+    description: "Represento a una autoridad",
+  },
+  {
+    id: "organizaciones_afines",
+    title: "Organizaciones afines",
+    description: "Represento una organización afín",
+  },
 ];
 
 const FALLBACK_COUNTRIES: string[] = [

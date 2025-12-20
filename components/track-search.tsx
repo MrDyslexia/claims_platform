@@ -1,25 +1,47 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { Card, CardBody, Input, Button } from "@heroui/react"
-import { Search, Lock } from "lucide-react"
-import { useState } from "react"
+import { Card, CardBody, Input, Button } from "@heroui/react";
+import { Search, Lock } from "lucide-react";
+import { useState, useEffect } from "react";
 
 interface TrackSearchProps {
-  onSearch: (code: string, key: string) => void
-  isLoading?: boolean
-  error?: string
+  onSearch: (code: string, key: string) => void;
+  isLoading?: boolean;
+  error?: string;
+  initialClaimCode?: string;
+  initialAccessKey?: string;
 }
 
-export function TrackSearch({ onSearch, isLoading = false, error }: TrackSearchProps) {
-  const [claimCode, setClaimCode] = useState("")
-  const [accessKey, setAccessKey] = useState("")
+export function TrackSearch({
+  onSearch,
+  isLoading = false,
+  error,
+  initialClaimCode,
+  initialAccessKey,
+}: TrackSearchProps) {
+  const [claimCode, setClaimCode] = useState(initialClaimCode || "");
+  const [accessKey, setAccessKey] = useState(initialAccessKey || "");
+
+  // Update claimCode when initialClaimCode changes (e.g., from URL params)
+  useEffect(() => {
+    if (initialClaimCode) {
+      setClaimCode(initialClaimCode);
+    }
+  }, [initialClaimCode]);
+
+  // Update accessKey when initialAccessKey changes (e.g., from URL params)
+  useEffect(() => {
+    if (initialAccessKey) {
+      setAccessKey(initialAccessKey);
+    }
+  }, [initialAccessKey]);
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSearch(claimCode, accessKey)
-  }
+    e.preventDefault();
+    onSearch(claimCode, accessKey);
+  };
 
   return (
     <Card className="bg-white/95 backdrop-blur-sm border-2 border-slate-200 shadow-2xl shadow-slate-300/30">
@@ -28,6 +50,10 @@ export function TrackSearch({ onSearch, isLoading = false, error }: TrackSearchP
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <Input
+                classNames={{
+                  input: "text-slate-800",
+                  label: "text-slate-700 font-semibold",
+                }}
                 description="Ejemplo: 2025-1234"
                 errorMessage={error}
                 isInvalid={!!error}
@@ -38,15 +64,15 @@ export function TrackSearch({ onSearch, isLoading = false, error }: TrackSearchP
                 value={claimCode}
                 variant="bordered"
                 onChange={(e) => setClaimCode(e.target.value)}
-                classNames={{
-                  input: "text-slate-800",
-                  label: "text-slate-700 font-semibold",
-                }}
               />
             </div>
 
             <div>
               <Input
+                classNames={{
+                  input: "text-slate-800",
+                  label: "text-slate-700 font-semibold",
+                }}
                 description="Enviada a tu correo"
                 label="Clave de Acceso"
                 placeholder="Ingresa tu clave"
@@ -56,10 +82,6 @@ export function TrackSearch({ onSearch, isLoading = false, error }: TrackSearchP
                 value={accessKey}
                 variant="bordered"
                 onChange={(e) => setAccessKey(e.target.value)}
-                classNames={{
-                  input: "text-slate-800",
-                  label: "text-slate-700 font-semibold",
-                }}
               />
             </div>
           </div>
@@ -77,5 +99,5 @@ export function TrackSearch({ onSearch, isLoading = false, error }: TrackSearchP
         </form>
       </CardBody>
     </Card>
-  )
+  );
 }

@@ -158,11 +158,15 @@ export function EvidenceStep({ formData, onUpdate }: EvidenceStepProps) {
 
       {/* Files List */}
       {files.length > 0 && (
-        <Card>
+        <Card className="bg-emerald-50/50 border-emerald-200">
           <CardHeader>
             <div>
-              <h1 className="text-base">Archivos subidos ({files.length})</h1>
-              <h2>Lista de documentos y evidencias agregadas</h2>
+              <h1 className="text-base text-emerald-800">
+                Archivos subidos ({files.length})
+              </h1>
+              <h2 className="text-emerald-600">
+                Lista de documentos y evidencias agregadas
+              </h2>
             </div>
           </CardHeader>
           <CardBody>
@@ -173,7 +177,7 @@ export function EvidenceStep({ formData, onUpdate }: EvidenceStepProps) {
                 return (
                   <div
                     key={file.id}
-                    className="flex items-center justify-between p-3 border rounded-lg bg-card"
+                    className="flex items-center justify-between p-3 border border-emerald-200 rounded-lg bg-white"
                   >
                     <div className="flex items-center space-x-3">
                       <FileIcon className="h-5 w-5 text-muted-foreground" />

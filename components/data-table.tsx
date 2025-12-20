@@ -25,7 +25,8 @@ export function DataTable<T>({
     item.id_usuario ||
     item.id_empresa ||
     item.id_denuncia ||
-    item.id_auditoria,
+    item.id_auditoria ||
+    item.id_estado,
   renderCell,
   "aria-label": ariaLabel,
   bottomContent,

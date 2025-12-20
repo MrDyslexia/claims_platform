@@ -34,6 +34,12 @@ export interface Rol {
   permisos?: Permiso[];
 }
 
+export interface Categoria {
+  id: number;
+  nombre: string;
+  descripcion?: string;
+}
+
 export interface Usuario {
   id_usuario: number;
   nombre: string;
@@ -45,6 +51,7 @@ export interface Usuario {
   fecha_actualizacion: string;
   roles: Rol[];
   permisos: Permiso[];
+  categorias?: Categoria[];
   estadisticas: {
     denuncias_creadas: number;
     denuncias_resueltas: number;
@@ -559,4 +566,71 @@ export async function toggleUsuarioActivo(
   }
 
   return response.json();
+}
+
+/**
+ * Asignar categorías a un usuario (para filtrado de denuncias)
+ * Requiere autenticación y permisos de administrador
+ */
+export async function asignarCategoriasUsuario(
+  token: string,
+  id: number,
+  categoria_ids: number[],
+): Promise<{ ok: boolean; message: string; categoria_ids: number[] }> {
+  if (!token) {
+    throw new Error("Token de autenticación requerido");
+  }
+
+  const response = await fetch(`${API_BASE_URL}/usuarios/${id}/categorias`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ categoria_ids }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+
+    if (response.status === 401) {
+      throw new Error("No autenticado. Por favor inicie sesión.");
+    }
+    if (response.status === 403) {
+      throw new Error("No tiene permisos para asignar categorías.");
+    }
+    if (response.status === 404) {
+      throw new Error("Usuario no encontrado.");
+    }
+    throw new Error(errorData.error || "Error al asignar categorías");
+  }
+
+  return response.json();
+}
+
+/**
+ * Obtener lista de categorías disponibles
+ */
+export async function obtenerCategoriasDisponibles(
+  token: string,
+): Promise<{ categorias: Categoria[] }> {
+  if (!token) {
+    throw new Error("Token de autenticación requerido");
+  }
+
+  const response = await fetch(`${API_BASE_URL}/categorias-denuncia`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || "Error al obtener categorías");
+  }
+
+  const data = await response.json();
+  return { categorias: data.data || data };
 }

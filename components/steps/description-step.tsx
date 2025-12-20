@@ -71,6 +71,7 @@ export function DescriptionStep({ formData, onUpdate }: DescriptionStepProps) {
               size="lg"
               value={description}
               onChange={(e) => handleDescriptionChange(e.target.value)}
+              maxLength={4800}
             />
           </div>
 

@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import type { Reclamo } from "@/lib/api/claims";
+
+import { useState, useEffect, useCallback } from "react";
 import {
   Avatar,
   Button,
@@ -51,8 +53,6 @@ import {
   User,
 } from "lucide-react";
 
-import { type Reclamo } from "@/lib/api/claims";
-
 const priorityColors = {
   baja: "default",
   media: "warning",
@@ -61,14 +61,22 @@ const priorityColors = {
 } as const;
 
 const statusColors: Record<string, any> = {
-  Pendiente: "primary",
+  "Pendiente de revisión": "primary",
   "En Proceso": "warning",
-  "En Revisión": "secondary",
-  Resuelto: "success",
-  Cerrado: "default",
+  "Reclamo resuelto": "success",
+  "Reclamo desestimado": "default",
+  "Requiere informacion": "secondary",
 };
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003";
+
+const ESTADOS_DISPONIBLES = [
+  { id: 1, nombre: "Pendiente de revisión", codigo: "PENDIENTE" },
+  { id: 2, nombre: "En Proceso", codigo: "PROCESO" },
+  { id: 3, nombre: "Reclamo resuelto", codigo: "RESUELTO" },
+  { id: 4, nombre: "Reclamo desestimado", codigo: "CERRADO" },
+  { id: 5, nombre: "Requiere informacion", codigo: "INFO" },
+];
 
 export default function ClaimsPage() {
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -90,6 +98,11 @@ export default function ClaimsPage() {
   const [supervisors, setSupervisors] = useState<any[]>([]);
   const [isUpdatingPriority, setIsUpdatingPriority] = useState(false);
   const [isAssigningSupervisor, setIsAssigningSupervisor] = useState(false);
+
+  const [selectedNewStatus, setSelectedNewStatus] = useState<string>("");
+  const [statusChangeReason, setStatusChangeReason] = useState("");
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
   const rowsPerPage = 10;
 
   // Helper para formatear fechas de forma segura
@@ -107,6 +120,7 @@ export default function ClaimsPage() {
           day: "2-digit",
           hour: "2-digit",
           minute: "2-digit",
+          hour12: false,
         });
       }
 
@@ -116,6 +130,7 @@ export default function ClaimsPage() {
         day: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
+        hour12: false,
       });
     } catch {
       // En caso de error, retornar la fecha actual
@@ -125,6 +140,7 @@ export default function ClaimsPage() {
         day: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
+        hour12: false,
       });
     }
   };
@@ -211,7 +227,7 @@ export default function ClaimsPage() {
       if (response.ok) {
         const data = await response.json();
         const supervisorUsers = data.usuarios.filter((u: any) =>
-          u.roles.some((r: any) => r.nombre.toUpperCase() === "SUPERVISOR"),
+          u.roles.some((r: any) => r.arquetipo?.codigo?.toUpperCase() === "SUPERVISOR"),
         );
 
         setSupervisors(supervisorUsers);
@@ -366,6 +382,92 @@ export default function ClaimsPage() {
     }
   };
 
+  const handleStatusChange = async () => {
+    if (!selectedClaim || !selectedNewStatus || !token) return;
+
+    setIsUpdatingStatus(true);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/denuncias/${selectedClaim.id}/estado`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            estado_id: Number.parseInt(selectedNewStatus),
+            motivo: statusChangeReason || undefined,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Error al actualizar el estado");
+      }
+
+      // Actualizar el reclamo en la lista
+      await fetchClaims();
+
+      // Actualizar el reclamo seleccionado
+      const updatedClaim = claims.find((c) => c.id === selectedClaim.id);
+
+      if (updatedClaim) {
+        setSelectedClaim(updatedClaim);
+      }
+
+      // Resetear formulario
+      setSelectedNewStatus("");
+      setStatusChangeReason("");
+    } catch {
+      alert("Error al actualizar el estado del reclamo");
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleDownloadAttachment = async (
+    adjuntoId: number,
+    fileName: string,
+  ) => {
+    if (!token) return;
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/adjuntos/${adjuntoId}/download`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Error al descargar el archivo");
+      }
+
+      // Crear un blob desde la respuesta
+      const blob = await response.blob();
+
+      // Crear una URL para el blob
+      const url = window.URL.createObjectURL(blob);
+
+      // Crear un elemento <a> temporal para forzar la descarga
+      const a = document.createElement("a");
+
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+
+      // Limpiar
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch {
+      alert("Error al descargar el archivo adjunto");
+    }
+  };
+
   const filteredClaims = (claims || []).filter((claim) => {
     // Use local claims state
     const matchesSearch =
@@ -460,11 +562,19 @@ export default function ClaimsPage() {
                 onAction={(key) => setFilterStatus(key as string)}
               >
                 <DropdownItem key="all">Todos</DropdownItem>
-                <DropdownItem key="Pendiente">Pendiente</DropdownItem>
+                <DropdownItem key="Pendiente de revisión">
+                  Pendiente de revisión
+                </DropdownItem>
                 <DropdownItem key="En Proceso">En Proceso</DropdownItem>
-                <DropdownItem key="En Revisión">En Revisión</DropdownItem>
-                <DropdownItem key="Resuelto">Resuelto</DropdownItem>
-                <DropdownItem key="Cerrado">Cerrado</DropdownItem>
+                <DropdownItem key="Reclamo resuelto">
+                  Reclamo resuelto
+                </DropdownItem>
+                <DropdownItem key="Reclamo desestimado">
+                  Reclamo desestimado
+                </DropdownItem>
+                <DropdownItem key="Requiere informacion">
+                  Requiere informacion
+                </DropdownItem>
               </DropdownMenu>
             </Dropdown>
             <Dropdown>
@@ -592,9 +702,7 @@ export default function ClaimsPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {formatDateOnly(claim.fecha_creacion)}
-                    </TableCell>
+                    <TableCell>{formatDate(claim.fecha_creacion)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -804,6 +912,12 @@ export default function ClaimsPage() {
                                         isIconOnly
                                         size="sm"
                                         variant="light"
+                                        onPress={() =>
+                                          handleDownloadAttachment(
+                                            adjunto.id,
+                                            adjunto.nombre,
+                                          )
+                                        }
                                       >
                                         <Download className="h-4 w-4" />
                                       </Button>
@@ -965,6 +1079,66 @@ export default function ClaimsPage() {
                     <Card>
                       <CardBody className="space-y-4">
                         <h3 className="font-semibold">Gestión</h3>
+
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1.5">
+                            Estado
+                          </p>
+                          <Select
+                            aria-label="Seleccionar estado"
+                            className="max-w-xs"
+                            placeholder="Cambiar estado"
+                            selectedKeys={
+                              selectedNewStatus ? [selectedNewStatus] : []
+                            }
+                            onChange={(e) =>
+                              setSelectedNewStatus(e.target.value)
+                            }
+                          >
+                            {ESTADOS_DISPONIBLES.map((estado) => (
+                              <SelectItem key={String(estado.id)}>
+                                {estado.nombre}
+                              </SelectItem>
+                            ))}
+                          </Select>
+
+                          {selectedNewStatus &&
+                            selectedNewStatus !==
+                              String(selectedClaim?.estado.id) && (
+                              <div className="mt-3 space-y-3">
+                                <Textarea
+                                  label="Motivo del cambio (opcional)"
+                                  minRows={2}
+                                  placeholder="Describe el motivo del cambio de estado..."
+                                  value={statusChangeReason}
+                                  onChange={(e) =>
+                                    setStatusChangeReason(e.target.value)
+                                  }
+                                />
+                                <div className="flex gap-2">
+                                  <Button
+                                    color="primary"
+                                    isLoading={isUpdatingStatus}
+                                    size="sm"
+                                    onPress={handleStatusChange}
+                                  >
+                                    Confirmar Cambio
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="flat"
+                                    onPress={() => {
+                                      setSelectedNewStatus("");
+                                      setStatusChangeReason("");
+                                    }}
+                                  >
+                                    Cancelar
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                        </div>
+
                         {/* Priority Selector */}
                         <div>
                           <p className="text-xs text-muted-foreground mb-1.5">

@@ -38,6 +38,7 @@ import {
   Palette,
   Folder,
 } from "lucide-react";
+import * as LucideIcons from "lucide-react";
 
 import { DataTable } from "@/components/data-table";
 import {
@@ -106,6 +107,18 @@ const statusColumns = [
   { key: "acciones", label: "ACCIONES" },
 ];
 
+const CategoryIcon = ({
+  iconName,
+  className,
+}: {
+  iconName: string;
+  className?: string;
+}) => {
+  const Icon = (LucideIcons as any)[iconName] || Folder;
+
+  return <Icon className={className} />;
+};
+
 export default function SettingsPage() {
   // Category Modal
   const {
@@ -138,6 +151,7 @@ export default function SettingsPage() {
     nombre: "",
     descripcion: "",
     activo: true,
+    icono: "Settings",
   });
 
   const [editingType, setEditingType] = useState<TipoDenuncia | null>(null);
@@ -187,6 +201,7 @@ export default function SettingsPage() {
         nombre: category.nombre,
         descripcion: category.descripcion || "",
         activo: category.activo,
+        icono: category.icono || "Settings",
       });
     } else {
       setEditingCategory(null);
@@ -194,6 +209,7 @@ export default function SettingsPage() {
         nombre: "",
         descripcion: "",
         activo: true,
+        icono: "Settings",
       });
     }
     onCategoryOpen();
@@ -459,7 +475,12 @@ export default function SettingsPage() {
                     <AccordionItem
                       key={category.id}
                       aria-label={category.nombre}
-                      startContent={<Folder className="text-primary" />}
+                      startContent={
+                        <CategoryIcon
+                          className="text-primary"
+                          iconName={category.icono || "Folder"}
+                        />
+                      }
                       subtitle={category.descripcion}
                       title={
                         <div className="flex items-center justify-between w-full pr-4">
@@ -585,6 +606,18 @@ export default function SettingsPage() {
                   setCategoryFormData({
                     ...categoryFormData,
                     nombre: e.target.value,
+                  })
+                }
+              />
+              <Input
+                description="Nombre del icono de Lucide React (ej: Settings, Users, Shield)"
+                label="Icono"
+                placeholder="Ej: Settings"
+                value={categoryFormData.icono}
+                onChange={(e) =>
+                  setCategoryFormData({
+                    ...categoryFormData,
+                    icono: e.target.value,
                   })
                 }
               />

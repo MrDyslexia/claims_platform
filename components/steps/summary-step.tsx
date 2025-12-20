@@ -19,7 +19,10 @@ interface SummaryStepProps {
   readonly onEdit: (step: number) => void;
   readonly onSubmit: () => void;
   readonly isSubmitting: boolean;
-  readonly categories: Record<string, { description: string; categories: string[] }>;
+  readonly categories: Record<
+    string,
+    { description: string; categories: string[] }
+  >;
 }
 
 export function SummaryStep({
@@ -53,10 +56,10 @@ export function SummaryStep({
             </div>
           </div>
           <Button
-            size="sm"
-            variant="light"
             color="primary"
+            size="sm"
             startContent={<Edit2 className="h-4 w-4" />}
+            variant="light"
             onPress={() => onEdit(step)}
           >
             Editar
@@ -70,6 +73,7 @@ export function SummaryStep({
     if (!formData.category || !categories[formData.category]) {
       return formData.category || "No especificada";
     }
+
     return formData.category;
   };
 
@@ -85,15 +89,19 @@ export function SummaryStep({
       </div>
 
       {/* Categoría */}
-      <SummarySection icon={FileText} title="Categoría y Tipo" step={1}>
+      <SummarySection icon={FileText} step={1} title="Categoría y Tipo">
         <div className="space-y-1">
-          <p><strong>Categoría:</strong> {getCategoryName()}</p>
-          <p><strong>Tipo:</strong> {formData.subcategory || "No especificado"}</p>
+          <p>
+            <strong>Categoría:</strong> {getCategoryName()}
+          </p>
+          <p>
+            <strong>Tipo:</strong> {formData.subcategory || "No especificado"}
+          </p>
         </div>
       </SummarySection>
 
       {/* Identificación */}
-      <SummarySection icon={User} title="Identificación" step={2}>
+      <SummarySection icon={User} step={2} title="Identificación">
         {formData.isAnonymous ? (
           <div className="flex items-center gap-2 text-amber-600">
             <AlertCircle className="h-4 w-4" />
@@ -101,38 +109,60 @@ export function SummaryStep({
           </div>
         ) : (
           <div className="space-y-1">
-            <p><strong>Nombre:</strong> {formData.fullName || "No especificado"}</p>
-            <p><strong>RUT:</strong> {formData.rut || "No especificado"}</p>
-            <p><strong>Email:</strong> {formData.email || "No especificado"}</p>
-            <p><strong>Teléfono:</strong> {formData.phone || "No especificado"}</p>
+            <p>
+              <strong>Nombre:</strong> {formData.fullName || "No especificado"}
+            </p>
+            <p>
+              <strong>RUT:</strong> {formData.rut || "No especificado"}
+            </p>
+            <p>
+              <strong>Email:</strong> {formData.email || "No especificado"}
+            </p>
+            <p>
+              <strong>Teléfono:</strong> {formData.phone || "No especificado"}
+            </p>
           </div>
         )}
       </SummarySection>
 
       {/* Relación */}
-      <SummarySection icon={Users} title="Relación con la Empresa" step={3}>
-        <p>{formData.relationshipLabel || formData.relationship || "No especificada"}</p>
+      <SummarySection icon={Users} step={3} title="Relación con la Empresa">
+        <p>
+          {formData.relationshipLabel ||
+            formData.relationship ||
+            "No especificada"}
+        </p>
       </SummarySection>
 
       {/* Ubicación */}
-      <SummarySection icon={MapPin} title="Ubicación" step={4}>
+      <SummarySection icon={MapPin} step={4} title="Ubicación">
         <p>{formData.country || "No especificado"}</p>
       </SummarySection>
 
       {/* Detalles adicionales */}
       {formData.details && (
-        <SummarySection icon={MessageSquare} title="Detalles Adicionales" step={5}>
+        <SummarySection
+          icon={MessageSquare}
+          step={5}
+          title="Detalles Adicionales"
+        >
           <p className="whitespace-pre-wrap">{formData.details}</p>
         </SummarySection>
       )}
 
       {/* Tiempo */}
-      <SummarySection icon={Clock} title="Tiempo del Problema" step={6}>
-        <p>{formData.timeframeLabel || formData.timeframe || "No especificado"}</p>
+      <SummarySection icon={Clock} step={6} title="Tiempo del Problema">
+        <p>
+          {formData.timeframeLabel || formData.timeframe || "No especificado"}
+        </p>
       </SummarySection>
 
       {/* Involucrados */}
-      <SummarySection icon={Users} title="Personas/Entidades Involucradas" step={7}>
+      <SummarySection
+        icon={Users}
+        step={7}
+        title="Personas/Entidades Involucradas"
+      >
         {formData.involvedParties && formData.involvedParties.length > 0 ? (
           <ul className="list-disc list-inside space-y-1">
             {formData.involvedParties.map((party: any, index: number) => (
@@ -149,7 +179,11 @@ export function SummaryStep({
       </SummarySection>
 
       {/* Descripción */}
-      <SummarySection icon={MessageSquare} title="Descripción del Hecho" step={8}>
+      <SummarySection
+        icon={MessageSquare}
+        step={8}
+        title="Descripción del Hecho"
+      >
         <p className="whitespace-pre-wrap line-clamp-6">
           {formData.description || "No especificada"}
         </p>
@@ -161,7 +195,7 @@ export function SummaryStep({
       </SummarySection>
 
       {/* Evidencias */}
-      <SummarySection icon={Paperclip} title="Evidencias Adjuntas" step={9}>
+      <SummarySection icon={Paperclip} step={9} title="Evidencias Adjuntas">
         {formData.evidence && formData.evidence.length > 0 ? (
           <div className="space-y-2">
             <p className="flex items-center gap-2 text-green-600">
@@ -170,7 +204,9 @@ export function SummaryStep({
             </p>
             <ul className="list-disc list-inside text-sm">
               {formData.evidence.map((file: any, index: number) => (
-                <li key={index}>{file.name || file.file?.name || `Archivo ${index + 1}`}</li>
+                <li key={index}>
+                  {file.name || file.file?.name || `Archivo ${index + 1}`}
+                </li>
               ))}
             </ul>
           </div>
@@ -191,10 +227,10 @@ export function SummaryStep({
             para consultar el estado de tu denuncia.
           </p>
           <Button
-            color="primary"
-            size="lg"
             className="bg-[#202e5e] hover:bg-[#1a2550] text-white font-medium"
+            color="primary"
             isLoading={isSubmitting}
+            size="lg"
             onPress={onSubmit}
           >
             {isSubmitting ? "Enviando..." : "Enviar Reclamo"}

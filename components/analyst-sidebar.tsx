@@ -1,15 +1,21 @@
-"use client"
+"use client";
 
-import { usePathname, useRouter } from "next/navigation"
-import { Button, Divider, Avatar, Chip, Image } from "@heroui/react"
-import { LogOut, ChevronRight, BarChart3, FileText, TrendingUp } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation";
+import { Button, Divider, Avatar, Chip, Image } from "@heroui/react";
+import {
+  LogOut,
+  ChevronRight,
+  BarChart3,
+  FileText,
+  TrendingUp,
+} from "lucide-react";
 
-import { useAuth } from "@/lib/auth/auth-context"
+import { useAuth } from "@/lib/auth/auth-context";
 
 export function AnalystSidebar() {
-  const pathname = usePathname()
-  const router = useRouter()
-  const { user, logout } = useAuth()
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuth();
 
   const menuItems = [
     {
@@ -27,12 +33,12 @@ export function AnalystSidebar() {
       href: "/analyst/analytics",
       icon: TrendingUp,
     },
-  ]
+  ];
 
   const handleLogout = async () => {
-    await logout()
-    router.push("/")
-  }
+    await logout();
+    router.push("/");
+  };
 
   return (
     <div className="flex flex-col h-full bg-[#202E5E] text-white border-r border-[#2a3a6e]">
@@ -47,7 +53,9 @@ export function AnalystSidebar() {
             />
           </div>
           <div>
-            <h2 className="font-bold text-lg text-white">{user?.roles?.[0]?.nombre || "Analista"}</h2>
+            <h2 className="font-bold text-lg text-white">
+              {user?.roles?.[0]?.nombre || "Analista"}
+            </h2>
             <p className="text-xs text-white/60">Sistema de Reclamos</p>
           </div>
         </div>
@@ -56,7 +64,11 @@ export function AnalystSidebar() {
       {/* User Info */}
       <div className="p-4 border-b border-[#2a3a6e]">
         <div className="flex items-center gap-3">
-          <Avatar className="bg-white/20 text-white" name={`${user?.nombre} ${user?.apellido}`} size="sm" />
+          <Avatar
+            className="bg-white/20 text-white"
+            name={`${user?.nombre} ${user?.apellido}`}
+            size="sm"
+          />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate text-white">
               {user?.nombre} {user?.apellido}
@@ -87,8 +99,8 @@ export function AnalystSidebar() {
       <nav className="flex-1 overflow-y-auto p-2">
         <div className="space-y-1">
           {menuItems.map((item) => {
-            const Icon = item.icon
-            const isActive = pathname === item.href
+            const Icon = item.icon;
+            const isActive = pathname === item.href;
 
             return (
               <Button
@@ -98,14 +110,16 @@ export function AnalystSidebar() {
                     ? "bg-white/20 text-white font-semibold"
                     : "bg-transparent text-white/70 hover:bg-white/10 hover:text-white"
                 }`}
-                endContent={isActive ? <ChevronRight className="h-4 w-4" /> : null}
+                endContent={
+                  isActive ? <ChevronRight className="h-4 w-4" /> : null
+                }
                 startContent={<Icon className="h-4 w-4" />}
                 variant="light"
                 onPress={() => router.push(item.href)}
               >
                 {item.label}
               </Button>
-            )
+            );
           })}
         </div>
       </nav>
@@ -124,5 +138,5 @@ export function AnalystSidebar() {
         </Button>
       </div>
     </div>
-  )
+  );
 }

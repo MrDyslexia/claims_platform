@@ -11,7 +11,7 @@ import {
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Alert, Button } from "@heroui/react";
-
+import LoginDrawer from "@/components/login-drawer";
 import { authAPI } from "./api";
 
 interface AuthUser extends Usuario {
@@ -32,20 +32,30 @@ interface AuthContextType {
   hasRole: (roleName: string) => boolean;
   getPrimaryRole: () => string | null;
   getRoleRoute: (roles: any[]) => string;
+  isLoginDrawerOpen: boolean;
+  setIsLoginDrawerOpen: (isOpen: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Jerarquía de roles (mayor prioridad = índice menor)
-const ROLE_HIERARCHY = ["admin", "administrador", "supervisor", "analista", "auditor"];
+const ROLE_HIERARCHY = [
+  "admin",
+  "administrador",
+  "supervisor",
+  "analista",
+  "auditor",
+];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [sessionExists, setSessionExists] = useState(false);
+  const [isLoginDrawerOpen, setIsLoginDrawerOpen] = useState(false);
   const router = useRouter();
   const rutaActual = usePathname();
+
   useEffect(() => {
     checkSession();
   }, []);
@@ -131,6 +141,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id_rol: rol.id || rol.id_rol,
         nombre: rol.nombre,
         activo: rol.activo !== false,
+        arquetipo_id: rol.arquetipo_id,
+        arquetipo: rol.arquetipo ? {
+          id: rol.arquetipo.id,
+          codigo: rol.arquetipo.codigo,
+          nombre: rol.arquetipo.nombre,
+        } : null,
       })),
       permissions: userData.permisos || userData.permissions || [],
     };
@@ -142,6 +158,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return "/";
     }
 
+    // Mapeo de arquetipos a rutas (por código de arquetipo)
+    const arquetipoRoutes: Record<string, string> = {
+      ADMIN: "/admin",
+      SUPERVISOR: "/supervisor",
+      ANALISTA: "/analyst",
+      AUDITOR: "/auditor",
+    };
+
+    // Mapeo por nombre de rol (fallback)
     const roleRoutes: Record<string, string> = {
       administrador: "/admin",
       admin: "/admin",
@@ -150,7 +175,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       auditor: "/auditor",
     };
 
-    // Buscar el rol de mayor prioridad
+    // Primero intentar con arquetipo.codigo
+    for (const role of roles) {
+      if (role.arquetipo?.codigo) {
+        const route = arquetipoRoutes[role.arquetipo.codigo.toUpperCase()];
+        if (route) {
+          return route;
+        }
+      }
+    }
+
+    // Fallback: buscar el rol de mayor prioridad por nombre
     for (const priorityRole of ROLE_HIERARCHY) {
       const foundRole = roles.find(
         (r) => r.nombre.toLowerCase().trim() === priorityRole,
@@ -164,8 +199,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // Si no se encuentra ningún rol en la jerarquía, usar el primero
-    const firstRole = roles[0].nombre.toLowerCase().trim();
-    const route = roleRoutes[firstRole] || "/";
+    const firstRole = roles[0];
+    const arquetipoNombre = firstRole.arquetipo?.nombre?.toLowerCase().trim();
+    const rolNombre = firstRole.nombre?.toLowerCase().trim();
+    const route = roleRoutes[arquetipoNombre] || roleRoutes[rolNombre] || "/";
 
     return route;
   };
@@ -257,9 +294,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const normalizedRoleName = roleName.toLowerCase().trim();
 
-    return user.roles.some(
-      (role) => role.nombre.toLowerCase().trim() === normalizedRoleName,
-    );
+    return user.roles.some((role: any) => {
+      // Verificar por nombre de rol exacto
+      if (role.nombre.toLowerCase().trim() === normalizedRoleName) {
+        return true;
+      }
+      // Verificar por código de arquetipo
+      if (role.arquetipo?.codigo?.toLowerCase().trim() === normalizedRoleName) {
+        return true;
+      }
+      // Verificar por nombre de arquetipo
+      if (role.arquetipo?.nombre?.toLowerCase().trim() === normalizedRoleName) {
+        return true;
+      }
+      return false;
+    });
   };
 
   const getPrimaryRole = (): string | null => {
@@ -303,9 +352,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         hasRole,
         getPrimaryRole,
         getRoleRoute,
+        isLoginDrawerOpen,
+        setIsLoginDrawerOpen,
       }}
     >
-      {(sessionExists && rutaActual == "/") && (
+      <LoginDrawer
+        isOpen={isLoginDrawerOpen}
+        onOpenChange={setIsLoginDrawerOpen}
+      />
+      {sessionExists && rutaActual == "/" && (
         <Alert
           className="absolute top-4 right-4 z-50 w-md"
           color="primary"
