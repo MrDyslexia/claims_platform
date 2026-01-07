@@ -133,7 +133,7 @@ export function ClaimDetailView({ claim, onClose }: ClaimDetailViewProps) {
               <div className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-purple-600" />
                 <h2 className="text-xl font-semibold">
-                  Descripción del Reclamo
+                  Descripción de la denuncia
                 </h2>
               </div>
             </CardHeader>

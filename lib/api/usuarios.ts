@@ -486,6 +486,73 @@ export async function actualizarRol(
 }
 
 /**
+ * Asignar categorías a un rol
+ * Requiere autenticación y permisos de administrador
+ */
+export async function asignarCategoriasRol(
+  token: string,
+  id_rol: number,
+  categoria_ids: number[],
+): Promise<{ ok: boolean; message: string; categoria_ids: number[] }> {
+  if (!token) {
+    throw new Error("Token de autenticación requerido");
+  }
+
+  const response = await fetch(`${API_BASE_URL}/roles/${id_rol}/categorias`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ categoria_ids }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+
+    if (response.status === 401) {
+      throw new Error("No autenticado. Por favor inicie sesión.");
+    }
+    if (response.status === 403) {
+      throw new Error("No tiene permisos para asignar categorías.");
+    }
+    if (response.status === 404) {
+      throw new Error("Rol no encontrado.");
+    }
+    throw new Error(errorData.error || "Error al asignar categorías");
+  }
+
+  return response.json();
+}
+
+/**
+ * Obtener categorías de un rol
+ */
+export async function obtenerCategoriasRol(
+  token: string,
+  id_rol: number,
+): Promise<{ rol_id: number; tiene_restriccion: boolean; categorias: Categoria[] }> {
+  if (!token) {
+    throw new Error("Token de autenticación requerido");
+  }
+
+  const response = await fetch(`${API_BASE_URL}/roles/${id_rol}/categorias`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || "Error al obtener categorías del rol");
+  }
+
+  return response.json();
+}
+
+/**
  * Hook personalizado para obtener la lista de usuarios
  */
 export function useGetListaCompletaUsuarios(token: string | null) {

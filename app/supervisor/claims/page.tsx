@@ -2,6 +2,8 @@
 
 import type { Reclamo } from "@/lib/api/claims";
 
+import { CommentTypeSwitch } from "@/components/comment-type-switch";
+
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Avatar,
@@ -32,6 +34,7 @@ import {
   Tabs,
   Textarea,
   useDisclosure,
+  cn,
 } from "@heroui/react";
 import {
   AlertCircle,
@@ -39,6 +42,7 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  RefreshCw,
   Download,
   FileText,
   Filter,
@@ -72,8 +76,7 @@ const availableStates = [
   { id: 2, nombre: "En Proceso", codigo: "PROCESO" },
   { id: 3, nombre: "Requiere informacion", codigo: "INFO" },
   { id: 4, nombre: "Reclamo resuelto", codigo: "RESUELTO" },
-  { id: 5, nombre: "Reclamo cerrado", codigo: "CERRADO" }
-  
+  { id: 5, nombre: "Reclamo desestimado", codigo: "CERRADO" },
 ];
 
 export default function SupervisorClaims() {
@@ -96,7 +99,7 @@ export default function SupervisorClaims() {
   const [statusChangeReason, setStatusChangeReason] = useState("");
   const [isChangingStatus, setIsChangingStatus] = useState(false);
   const [statusChangeError, setStatusChangeError] = useState<string | null>(
-    null,
+    null
   );
   const rowsPerPage = 10;
 
@@ -138,7 +141,7 @@ export default function SupervisorClaims() {
 
   // Helper para formatear solo fecha (sin hora)
   const formatDateOnly = (
-    dateString: string | Date | null | undefined,
+    dateString: string | Date | null | undefined
   ): string => {
     try {
       const date = dateString ? new Date(dateString) : new Date();
@@ -226,7 +229,7 @@ export default function SupervisorClaims() {
             contenido: newComment,
             es_interno: isCommentInternal,
           }),
-        },
+        }
       );
 
       if (!response.ok) {
@@ -245,7 +248,7 @@ export default function SupervisorClaims() {
         const data = await claimsResponse.json();
         const allClaims = data.reclamos || [];
         const refreshedClaim = allClaims.find(
-          (c: any) => c.id === selectedClaim.id,
+          (c: any) => c.id === selectedClaim.id
         );
 
         if (refreshedClaim) {
@@ -255,7 +258,7 @@ export default function SupervisorClaims() {
       }
     } catch (err) {
       setCommentError(
-        err instanceof Error ? err.message : "Error al enviar comentario",
+        err instanceof Error ? err.message : "Error al enviar comentario"
       );
     } finally {
       setIsSubmittingComment(false);
@@ -264,7 +267,7 @@ export default function SupervisorClaims() {
 
   const handleDownloadAttachment = async (
     adjuntoId: number,
-    nombre: string,
+    nombre: string
   ) => {
     if (!token) return;
 
@@ -275,7 +278,7 @@ export default function SupervisorClaims() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        },
+        }
       );
 
       if (!response.ok) {
@@ -316,7 +319,7 @@ export default function SupervisorClaims() {
             estado_id: selectedStatus,
             motivo: statusChangeReason.trim() || undefined,
           }),
-        },
+        }
       );
 
       if (!response.ok) {
@@ -339,7 +342,7 @@ export default function SupervisorClaims() {
 
         // Buscar y actualizar el reclamo seleccionado con datos completos
         const refreshedClaim = allClaims.find(
-          (c: any) => c.id === selectedClaim.id,
+          (c: any) => c.id === selectedClaim.id
         );
 
         if (refreshedClaim) {
@@ -352,7 +355,7 @@ export default function SupervisorClaims() {
       setStatusChangeReason("");
     } catch (error) {
       setStatusChangeError(
-        error instanceof Error ? error.message : "Error desconocido",
+        error instanceof Error ? error.message : "Error desconocido"
       );
     } finally {
       setIsChangingStatus(false);
@@ -378,7 +381,7 @@ export default function SupervisorClaims() {
   const pages = Math.ceil(filteredClaims.length / rowsPerPage);
   const items = filteredClaims.slice(
     (page - 1) * rowsPerPage,
-    page * rowsPerPage,
+    page * rowsPerPage
   );
 
   const handleViewClaim = (claim: Reclamo) => {
@@ -484,9 +487,9 @@ export default function SupervisorClaims() {
               </DropdownMenu>
             </Dropdown>
             <Button
-              startContent={<Download className="h-4 w-4" />}
+              startContent={<RefreshCw className="h-4 w-4" />}
               variant="bordered"
-              onClick={() => fetchClaims()}
+              onPress={() => fetchClaims()}
             >
               Actualizar
             </Button>
@@ -716,17 +719,12 @@ export default function SupervisorClaims() {
                                     setNewComment(e.target.value)
                                   }
                                 />
-                                <div className="flex items-center justify-end gap-2">
-                                  <Button
-                                    disabled={isSubmittingComment}
-                                    size="sm"
-                                    variant="bordered"
-                                    onClick={() =>
-                                      setIsCommentInternal(!isCommentInternal)
-                                    }
-                                  >
-                                    {isCommentInternal ? "Interno" : "Público"}
-                                  </Button>
+                                <div className="flex items-center justify-between gap-2">
+                                  <CommentTypeSwitch
+                                    isInternal={isCommentInternal}
+                                    onValueChange={setIsCommentInternal}
+                                    isDisabled={isSubmittingComment}
+                                  />
                                   <Button
                                     color="primary"
                                     disabled={
@@ -735,7 +733,7 @@ export default function SupervisorClaims() {
                                     isLoading={isSubmittingComment}
                                     size="sm"
                                     startContent={<Send className="h-4 w-4" />}
-                                    onClick={handleSendComment}
+                                    onPress={handleSendComment}
                                   >
                                     {isSubmittingComment
                                       ? "Enviando..."
@@ -785,7 +783,7 @@ export default function SupervisorClaims() {
                                           e.stopPropagation();
                                           handleDownloadAttachment(
                                             adjunto.id,
-                                            adjunto.nombre,
+                                            adjunto.nombre
                                           );
                                         }}
                                       >
@@ -841,7 +839,7 @@ export default function SupervisorClaims() {
                                         </p>
                                       </div>
                                     </div>
-                                  ),
+                                  )
                                 )}
                               </div>
                             </div>
@@ -966,7 +964,7 @@ export default function SupervisorClaims() {
                               >
                                 {selectedStatus
                                   ? availableStates.find(
-                                      (s) => s.id === selectedStatus,
+                                      (s) => s.id === selectedStatus
                                     )?.nombre
                                   : "Seleccionar estado..."}
                               </Button>
@@ -1018,14 +1016,14 @@ export default function SupervisorClaims() {
                                     color="primary"
                                     isLoading={isChangingStatus}
                                     size="sm"
-                                    onClick={handleStatusChange}
+                                    onPress={handleStatusChange}
                                   >
                                     Confirmar
                                   </Button>
                                   <Button
                                     size="sm"
                                     variant="flat"
-                                    onClick={() => {
+                                    onPress={() => {
                                       setSelectedStatus(null);
                                       setStatusChangeReason("");
                                       setStatusChangeError(null);

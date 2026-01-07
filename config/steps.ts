@@ -22,7 +22,7 @@ const STEPS = [
   },
   {
     id: 3,
-    title: "Descripción",
+    title: "Relato",
     description: "Relato detallado del hecho",
     icon: MessageSquare,
   },
@@ -38,24 +38,24 @@ const STEPS = [
     description: "País donde ocurrió el hecho",
     icon: Globe,
   },
+  { id: 6, title: "Tiempo", description: "Duración del problema", icon: Clock },
   {
-    id: 6,
-    title: "Detalles",
-    description: "Información adicional",
-    icon: MessageSquare,
-  },
-  { id: 7, title: "Tiempo", description: "Duración del problema", icon: Clock },
-  {
-    id: 8,
+    id: 7,
     title: "Involucrados",
     description: "Personas y entidades",
     icon: Building,
   },
   {
-    id: 9,
+    id: 8,
     title: "Evidencias",
     description: "Documentos y fotografías",
     icon: FileText,
+  },
+  {
+    id: 9,
+    title: "Comentarios",
+    description: "Información adicional",
+    icon: MessageSquare,
   },
   {
     id: 10,

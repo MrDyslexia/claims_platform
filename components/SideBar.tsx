@@ -36,7 +36,7 @@ export function Sidebar() {
             <h2 className="font-bold text-lg text-white">
               {user?.roles[0].nombre}
             </h2>
-            <p className="text-xs text-white/60">Sistema de Reclamos</p>
+            <p className="text-xs text-white/60">Canal de denuncias</p>
           </div>
         </div>
       </div>
@@ -76,7 +76,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-2">
+      <nav className="flex-1 overflow-y-auto p-2 scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <div className="space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;

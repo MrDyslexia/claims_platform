@@ -44,7 +44,7 @@ export function DescriptionStep({ formData, onUpdate }: DescriptionStepProps) {
     <div>
       <div className="p-4 overflow-hidden">
         <h3 className="text-lg font-semibold mb-2">
-          Descripción detallada del hecho
+          Relato detallado del hecho
         </h3>
         <p className="text-muted-foreground">
           Relata de manera detallada y completa lo ocurrido. Incluye fechas,

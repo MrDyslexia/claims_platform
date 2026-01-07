@@ -30,6 +30,7 @@ export interface TipoDenuncia {
 
 export interface Denunciante {
   nombre?: string | null;
+  rut?: string | null;
   email?: string | null;
   telefono?: string | null;
   pais?: string | null;
@@ -112,6 +113,8 @@ export interface Reclamo {
   adjuntos: Adjunto[];
   historial_estado: HistorialEstado[];
   resolucion: Resolucion | null;
+  nota_satisfaccion?: number | null;
+  comentario_satisfaccion?: string | null;
 }
 
 export interface ReclamosResponse {

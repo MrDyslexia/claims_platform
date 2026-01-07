@@ -42,10 +42,7 @@ import {
   asignarRolesUsuario,
   eliminarUsuario,
   toggleUsuarioActivo,
-  asignarCategoriasUsuario,
-  obtenerCategoriasDisponibles,
 } from "@/lib/api/usuarios";
-import type { Categoria } from "@/lib/api/usuarios";
 
 const columns = [
   { key: "usuario", label: "USUARIO" },
@@ -85,9 +82,6 @@ export default function UsersPage() {
     onOpen: onDeleteOpen,
     onClose: onDeleteClose,
   } = useDisclosure();
-  const [categoriasDisponibles, setCategoriasDisponibles] = React.useState<Categoria[]>([]);
-  const [selectedCategorias, setSelectedCategorias] = React.useState<string[]>([]);
-  const [originalCategorias, setOriginalCategorias] = React.useState<string[]>([]);
 
   // Validar y formatear número de teléfono
   const validatePhoneNumber = (phone: string): boolean => {
@@ -140,15 +134,6 @@ export default function UsersPage() {
     setToken(storedToken);
   }, []);
 
-  // Cargar categorías disponibles
-  React.useEffect(() => {
-    if (token) {
-      obtenerCategoriasDisponibles(token)
-        .then((res) => setCategoriasDisponibles(res.categorias))
-        .catch((err) => console.error("Error al cargar categorías:", err));
-    }
-  }, [token]);
-
   const usuarios = data?.usuarios || [];
   const rolesDisponibles = data?.roles_disponibles || [];
 
@@ -168,7 +153,6 @@ export default function UsersPage() {
     if (user) {
       setEditingUser(user);
       const rolesMap = user.roles.map((r) => r.id_rol.toString());
-      const categoriasMap = user.categorias?.map((c) => c.id.toString()) || [];
 
       setFormData({
         rut: "", // No se puede editar el RUT
@@ -181,8 +165,6 @@ export default function UsersPage() {
         roles: rolesMap,
       });
       setOriginalRoles(rolesMap);
-      setSelectedCategorias(categoriasMap);
-      setOriginalCategorias(categoriasMap);
     } else {
       setEditingUser(null);
       setFormData({
@@ -196,8 +178,6 @@ export default function UsersPage() {
         roles: [],
       });
       setOriginalRoles([]);
-      setSelectedCategorias([]);
-      setOriginalCategorias([]);
     }
     onOpen();
   };
@@ -269,22 +249,6 @@ export default function UsersPage() {
         // Asignar roles solo si cambiaron
         if (rolesChanged) {
           await asignarRolesUsuario(token, editingUser.id_usuario, rol_ids);
-        }
-
-        // Comparar categorías originales con nuevas
-        const categoriasActuales = new Set(selectedCategorias);
-        const categoriasOriginales = new Set(originalCategorias);
-        const categoriasChanged =
-          categoriasActuales.size !== categoriasOriginales.size ||
-          !Array.from(categoriasActuales).every((c) => categoriasOriginales.has(c));
-
-        // Asignar categorías solo si cambiaron
-        if (categoriasChanged) {
-          await asignarCategoriasUsuario(
-            token,
-            editingUser.id_usuario,
-            selectedCategorias.map((c) => parseInt(c)),
-          );
         }
 
         console.log("✅ Usuario actualizado exitosamente");
@@ -655,22 +619,6 @@ export default function UsersPage() {
                 {rolesDisponibles.map((role) => (
                   <SelectItem key={role.id_rol.toString()}>
                     {role.nombre}
-                  </SelectItem>
-                ))}
-              </Select>
-              <Select
-                description="Deja vacío para ver todas las denuncias"
-                label="Categorías de Denuncias (Opcional)"
-                placeholder="Sin restricción de categorías"
-                selectedKeys={selectedCategorias}
-                selectionMode="multiple"
-                onSelectionChange={(keys) =>
-                  setSelectedCategorias(Array.from(keys) as string[])
-                }
-              >
-                {categoriasDisponibles.map((cat) => (
-                  <SelectItem key={cat.id.toString()}>
-                    {cat.nombre}
                   </SelectItem>
                 ))}
               </Select>

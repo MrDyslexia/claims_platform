@@ -56,7 +56,7 @@ export function AnalystSidebar() {
             <h2 className="font-bold text-lg text-white">
               {user?.roles?.[0]?.nombre || "Analista"}
             </h2>
-            <p className="text-xs text-white/60">Sistema de Reclamos</p>
+            <p className="text-xs text-white/60">Canal de denuncias</p>
           </div>
         </div>
       </div>

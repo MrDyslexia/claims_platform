@@ -88,7 +88,7 @@ export function SummaryStep({
         </p>
       </div>
 
-      {/* Categoría */}
+      {/* Paso 1 - Categoría */}
       <SummarySection icon={FileText} step={1} title="Categoría y Tipo">
         <div className="space-y-1">
           <p>
@@ -100,7 +100,7 @@ export function SummaryStep({
         </div>
       </SummarySection>
 
-      {/* Identificación */}
+      {/* Paso 2 - Identificación */}
       <SummarySection icon={User} step={2} title="Identificación">
         {formData.isAnonymous ? (
           <div className="flex items-center gap-2 text-amber-600">
@@ -125,8 +125,24 @@ export function SummaryStep({
         )}
       </SummarySection>
 
-      {/* Relación */}
-      <SummarySection icon={Users} step={3} title="Relación con la Empresa">
+      {/* Paso 3 - Descripción */}
+      <SummarySection
+        icon={MessageSquare}
+        step={3}
+        title="Relato del Hecho"
+      >
+        <p className="whitespace-pre-wrap line-clamp-6">
+          {formData.description || "No especificada"}
+        </p>
+        {formData.description && formData.description.length > 500 && (
+          <p className="text-sm text-gray-400 mt-2">
+            ({formData.description.length} caracteres)
+          </p>
+        )}
+      </SummarySection>
+
+      {/* Paso 4 - Relación */}
+      <SummarySection icon={Users} step={4} title="Relación con la Empresa">
         <p>
           {formData.relationshipLabel ||
             formData.relationship ||
@@ -134,30 +150,19 @@ export function SummaryStep({
         </p>
       </SummarySection>
 
-      {/* Ubicación */}
-      <SummarySection icon={MapPin} step={4} title="Ubicación">
+      {/* Paso 5 - Ubicación */}
+      <SummarySection icon={MapPin} step={5} title="Ubicación">
         <p>{formData.country || "No especificado"}</p>
       </SummarySection>
 
-      {/* Detalles adicionales */}
-      {formData.details && (
-        <SummarySection
-          icon={MessageSquare}
-          step={5}
-          title="Detalles Adicionales"
-        >
-          <p className="whitespace-pre-wrap">{formData.details}</p>
-        </SummarySection>
-      )}
-
-      {/* Tiempo */}
-      <SummarySection icon={Clock} step={6} title="Tiempo del Problema">
+      {/* Paso 6 - Tiempo */}
+      <SummarySection icon={Clock} step={6} title="Duración del Problema">
         <p>
           {formData.timeframeLabel || formData.timeframe || "No especificado"}
         </p>
       </SummarySection>
 
-      {/* Involucrados */}
+      {/* Paso 7 - Involucrados */}
       <SummarySection
         icon={Users}
         step={7}
@@ -178,24 +183,8 @@ export function SummaryStep({
         )}
       </SummarySection>
 
-      {/* Descripción */}
-      <SummarySection
-        icon={MessageSquare}
-        step={8}
-        title="Descripción del Hecho"
-      >
-        <p className="whitespace-pre-wrap line-clamp-6">
-          {formData.description || "No especificada"}
-        </p>
-        {formData.description && formData.description.length > 500 && (
-          <p className="text-sm text-gray-400 mt-2">
-            ({formData.description.length} caracteres)
-          </p>
-        )}
-      </SummarySection>
-
-      {/* Evidencias */}
-      <SummarySection icon={Paperclip} step={9} title="Evidencias Adjuntas">
+      {/* Paso 8 - Evidencias */}
+      <SummarySection icon={Paperclip} step={8} title="Evidencias Adjuntas">
         {formData.evidence && formData.evidence.length > 0 ? (
           <div className="space-y-2">
             <p className="flex items-center gap-2 text-green-600">
@@ -212,6 +201,19 @@ export function SummaryStep({
           </div>
         ) : (
           <p className="text-gray-400">Sin evidencias adjuntas</p>
+        )}
+      </SummarySection>
+
+      {/* Paso 9 - Comentarios adicionales */}
+      <SummarySection
+        icon={MessageSquare}
+        step={9}
+        title="Comentarios Adicionales"
+      >
+        {formData.details ? (
+          <p className="whitespace-pre-wrap">{formData.details}</p>
+        ) : (
+          <p className="text-gray-400">Sin comentarios adicionales</p>
         )}
       </SummarySection>
 

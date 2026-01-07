@@ -52,7 +52,7 @@ const STATUS_COLORS: Record<string, any> = {
 };
 
 // Estado INFO = 5
-const INFO_STATE_ID = 5;
+const INFO_STATE_ID = 3;
 
 export function ClaimDetail({
   claim,
@@ -121,6 +121,7 @@ export function ClaimDetail({
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
   const [ratingError, setRatingError] = useState<string | null>(null);
   const [ratingSuccess, setRatingSuccess] = useState(false);
+  const [ratingComment, setRatingComment] = useState("");
   const hasExistingRating =
     claim?.nota_satisfaccion !== null && claim?.nota_satisfaccion !== undefined;
 
@@ -130,7 +131,7 @@ export function ClaimDetail({
     claim?.estadoObj?.id === INFO_STATE_ID;
 
   // Verificar si la denuncia está en estado RESUELTO o CERRADO
-  const isResolvedOrClosed = claim?.estado_id === 4 || claim?.estado_id === 3;
+  const isResolvedOrClosed = claim?.estado_id === 4 || claim?.estado_id === 5;
 
   const getStatusIcon = (estado_id: number) => {
     if (estado_id === 4 || estado_id === 5) {
@@ -255,6 +256,7 @@ export function ClaimDetail({
             numero: credentials.numero,
             clave: credentials.clave,
             nota: satisfactionRating,
+            comentario: ratingComment.trim() || undefined,
           }),
         },
       );
@@ -266,6 +268,7 @@ export function ClaimDetail({
       }
 
       setRatingSuccess(true);
+      setRatingComment("");
       onRefresh?.();
 
       setTimeout(() => setRatingSuccess(false), 3000);
@@ -406,17 +409,44 @@ export function ClaimDetail({
                   </div>
                 )}
 
+                {/* Mostrar comentario existente si ya calificó */}
+                {hasExistingRating && claim?.comentario_satisfaccion && (
+                  <div className="w-full mt-4 bg-slate-50 border border-slate-200 rounded-lg p-4">
+                    <p className="text-xs text-slate-500 font-medium mb-2">Tu comentario:</p>
+                    <p className="text-sm text-slate-700 italic">
+                      "{claim.comentario_satisfaccion}"
+                    </p>
+                  </div>
+                )}
+
                 {!hasExistingRating && (
-                  <Button
-                    className="mt-2"
-                    color="success"
-                    isDisabled={satisfactionRating === 0 || isSubmittingRating}
-                    isLoading={isSubmittingRating}
-                    startContent={<Star className="w-4 h-4" />}
-                    onPress={handleSubmitRating}
-                  >
-                    Enviar Calificación
-                  </Button>
+                  <>
+                    {/* Campo de comentario opcional */}
+                    <div className="w-full mt-4">
+                      <Textarea
+                        isDisabled={isSubmittingRating}
+                        maxLength={500}
+                        minRows={3}
+                        placeholder="Cuéntanos más sobre tu experiencia (opcional, máx. 500 caracteres)..."
+                        value={ratingComment}
+                        onChange={(e) => setRatingComment(e.target.value)}
+                      />
+                      <p className="text-xs text-slate-400 text-right mt-1">
+                        {ratingComment.length}/500
+                      </p>
+                    </div>
+
+                    <Button
+                      className="mt-4 px-8 py-6 text-lg font-bold shadow-lg hover:shadow-xl transition-all hover:scale-105 bg-gradient-to-r from-emerald-500 to-green-600"
+                      isDisabled={satisfactionRating === 0 || isSubmittingRating}
+                      isLoading={isSubmittingRating}
+                      size="lg"
+                      startContent={<Star className="w-5 h-5" />}
+                      onPress={handleSubmitRating}
+                    >
+                      Enviar Calificación
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -488,8 +518,9 @@ export function ClaimDetail({
         classNames={{
           tabList:
             "bg-white p-2 rounded-2xl shadow-lg border-2 border-slate-200",
-          tab: "font-semibold data-selected:text-white",
-          cursor: "bg-gradient-to-r from-[#202e5e] to-[#1a2550] shadow-md data-[selected=true]:text-white",
+          tab: "font-semibold",
+          tabContent: "group-data-[selected=true]:text-white",
+          cursor: "bg-gradient-to-r from-[#202e5e] to-[#1a2550] shadow-md",
         }}
         size="lg"
       >

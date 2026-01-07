@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { CommentTypeSwitch } from "@/components/comment-type-switch";
 import {
   Avatar,
   Button,
@@ -26,6 +27,8 @@ import {
   TableHeader,
   TableRow,
   Tabs,
+  Textarea,
+  Divider,
   useDisclosure,
 } from "@heroui/react";
 import {
@@ -40,7 +43,9 @@ import {
   MapPin,
   MessageSquare,
   Paperclip,
+  RefreshCw,
   Search,
+  Send,
   User,
 } from "lucide-react";
 
@@ -77,6 +82,12 @@ export default function ClaimsPage() {
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [page, setPage] = useState(1);
   const rowsPerPage = 10;
+
+  // Comment states
+  const [newComment, setNewComment] = useState("");
+  const [isCommentInternal, setIsCommentInternal] = useState(true);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
 
   // Helper para formatear fechas de forma segura
   const formatDate = (dateString: string | Date | null | undefined): string => {
@@ -188,6 +199,47 @@ export default function ClaimsPage() {
       fetchClaims();
     }
   }, [token, fetchClaims]);
+
+  const handleSendComment = async () => {
+    if (!selectedClaim || !newComment.trim()) return;
+    if (!token) return;
+
+    setIsSubmittingComment(true);
+    setCommentError(null);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/denuncias/${selectedClaim.id}/comentarios`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            contenido: newComment,
+            es_interno: isCommentInternal,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Error al enviar comentario");
+      }
+
+      // Limpiar el comentario
+      setNewComment("");
+      // Recargar reclamos para obtener el nuevo comentario
+      fetchClaims();
+    } catch (error) {
+      setCommentError(
+        error instanceof Error ? error.message : "Error desconocido"
+      );
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
 
   const filteredClaims = (claims || []).filter((claim) => {
     // Use local claims state
@@ -310,9 +362,9 @@ export default function ClaimsPage() {
               </DropdownMenu>
             </Dropdown>
             <Button
-              startContent={<Download className="h-4 w-4" />}
+              startContent={<RefreshCw className="h-4 w-4" />}
               variant="bordered"
-              onClick={() => fetchClaims()}
+              onPress={() => fetchClaims()}
             >
               Actualizar
             </Button>
@@ -540,6 +592,46 @@ export default function ClaimsPage() {
                                     </div>
                                   </div>
                                 ))}
+                              </div>
+                              <Divider />
+                              <div className="space-y-2">
+                                {commentError && (
+                                  <div className="bg-red-50 border border-red-200 rounded-lg p-2">
+                                    <p className="text-sm text-red-700">
+                                      {commentError}
+                                    </p>
+                                  </div>
+                                )}
+                                <Textarea
+                                  disabled={isSubmittingComment}
+                                  minRows={3}
+                                  placeholder="Agregar un comentario..."
+                                  value={newComment}
+                                  onChange={(e) =>
+                                    setNewComment(e.target.value)
+                                  }
+                                />
+                                <div className="flex items-center justify-end gap-2">
+                                  <CommentTypeSwitch
+                                    isInternal={isCommentInternal}
+                                    onValueChange={setIsCommentInternal}
+                                    isDisabled={isSubmittingComment}
+                                  />
+                                  <Button
+                                    color="primary"
+                                    disabled={
+                                      isSubmittingComment || !newComment.trim()
+                                    }
+                                    isLoading={isSubmittingComment}
+                                    size="sm"
+                                    startContent={<Send className="h-4 w-4" />}
+                                    onClick={handleSendComment}
+                                  >
+                                    {isSubmittingComment
+                                      ? "Enviando..."
+                                      : "Enviar"}
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           </Tab>

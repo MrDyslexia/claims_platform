@@ -2,6 +2,8 @@
 
 import type { Reclamo } from "@/lib/api/claims";
 
+import { CommentTypeSwitch } from "@/components/comment-type-switch";
+
 import { useState, useEffect, useCallback } from "react";
 import {
   Avatar,
@@ -34,6 +36,7 @@ import {
   Tabs,
   Textarea,
   useDisclosure,
+  cn,
 } from "@heroui/react";
 import {
   AlertCircle,
@@ -41,17 +44,22 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  CreditCard,
   Download,
   FileText,
   Filter,
+  Mail,
   MapPin,
   MessageSquare,
   Paperclip,
+  Phone,
   Plus,
+  RefreshCw,
   Search,
   Send,
   User,
 } from "lucide-react";
+import { SatisfactionRatingCard } from "@/components/SatisfactionRatingCard";
 
 const priorityColors = {
   baja: "default",
@@ -73,9 +81,9 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003";
 const ESTADOS_DISPONIBLES = [
   { id: 1, nombre: "Pendiente de revisión", codigo: "PENDIENTE" },
   { id: 2, nombre: "En Proceso", codigo: "PROCESO" },
-  { id: 3, nombre: "Reclamo resuelto", codigo: "RESUELTO" },
-  { id: 4, nombre: "Reclamo desestimado", codigo: "CERRADO" },
-  { id: 5, nombre: "Requiere informacion", codigo: "INFO" },
+  { id: 3, nombre: "Requiere informacion", codigo: "INFO" },
+  { id: 4, nombre: "Reclamo resuelto", codigo: "RESUELTO" },
+  { id: 5, nombre: "Reclamo desestimado", codigo: "CERRADO" },
 ];
 
 export default function ClaimsPage() {
@@ -102,6 +110,11 @@ export default function ClaimsPage() {
   const [selectedNewStatus, setSelectedNewStatus] = useState<string>("");
   const [statusChangeReason, setStatusChangeReason] = useState("");
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+  // Pending changes state (only saved when clicking "Guardar Cambios")
+  const [pendingPriority, setPendingPriority] = useState<string | null>(null);
+  const [pendingSupervisor, setPendingSupervisor] = useState<string | null>(null);
+  const [isSavingChanges, setIsSavingChanges] = useState(false);
 
   const rowsPerPage = 10;
 
@@ -426,6 +439,89 @@ export default function ClaimsPage() {
     }
   };
 
+  // Save all pending changes when clicking "Guardar Cambios"
+  const handleSaveAllChanges = async () => {
+    if (!selectedClaim || !token) return;
+
+    setIsSavingChanges(true);
+    const errors: string[] = [];
+
+    try {
+      // 1. Save status change if different
+      const originalStatusId = selectedClaim.estado?.id ? String(selectedClaim.estado.id) : "";
+      if (selectedNewStatus && selectedNewStatus !== originalStatusId) {
+        const response = await fetch(
+          `${API_BASE_URL}/denuncias/${selectedClaim.id}/estado`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              estado_id: Number.parseInt(selectedNewStatus),
+              motivo: statusChangeReason || undefined,
+            }),
+          },
+        );
+        if (!response.ok) {
+          errors.push("Error al actualizar el estado");
+        }
+      }
+
+      // 2. Save priority change if different
+      if (pendingPriority && pendingPriority !== selectedClaim.prioridad) {
+        const response = await fetch(
+          `${API_BASE_URL}/denuncias/${selectedClaim.id}/prioridad`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ prioridad: pendingPriority }),
+          },
+        );
+        if (!response.ok) {
+          errors.push("Error al actualizar la prioridad");
+        }
+      }
+
+      // 3. Save supervisor change if different
+      const originalSupervisorId = selectedClaim.supervisor?.id ? String(selectedClaim.supervisor.id) : null;
+      if (pendingSupervisor !== originalSupervisorId && pendingSupervisor) {
+        const response = await fetch(`${API_BASE_URL}/denuncias/asignar`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            denuncia_id: selectedClaim.id,
+            usuario_id: Number(pendingSupervisor),
+          }),
+        });
+        if (!response.ok) {
+          errors.push("Error al asignar supervisor");
+        }
+      }
+
+      if (errors.length > 0) {
+        alert(errors.join("\n"));
+      }
+
+      // Refresh claims list
+      await fetchClaims();
+      
+      // Close modal after saving
+      onClose();
+    } catch {
+      alert("Error al guardar los cambios");
+    } finally {
+      setIsSavingChanges(false);
+    }
+  };
+
   const handleDownloadAttachment = async (
     adjuntoId: number,
     fileName: string,
@@ -491,6 +587,11 @@ export default function ClaimsPage() {
 
   const handleViewClaim = (claim: Reclamo) => {
     setSelectedClaim(claim);
+    // Initialize pending values to current values
+    setPendingPriority(claim.prioridad);
+    setPendingSupervisor(claim.supervisor?.id ? String(claim.supervisor.id) : null);
+    setSelectedNewStatus(claim.estado?.id ? String(claim.estado.id) : "");
+    setStatusChangeReason("");
     onOpen();
   };
 
@@ -527,7 +628,7 @@ export default function ClaimsPage() {
                 className="bg-red-100 text-red-700 hover:bg-red-200"
                 size="sm"
                 variant="flat"
-                onClick={() => fetchClaims()}
+                onPress={() => fetchClaims()}
               >
                 Reintentar
               </Button>
@@ -600,9 +701,9 @@ export default function ClaimsPage() {
               </DropdownMenu>
             </Dropdown>
             <Button
-              startContent={<Download className="h-4 w-4" />}
+              startContent={<RefreshCw className="h-4 w-4" />}
               variant="bordered"
-              onClick={() => fetchClaims()}
+              onPress={() => fetchClaims()}
             >
               Actualizar
             </Button>
@@ -685,7 +786,7 @@ export default function ClaimsPage() {
                         size="sm"
                         variant="flat"
                       >
-                        {claim.prioridad}
+                        {!claim.prioridad ? "N/A" : claim.prioridad}
                       </Chip>
                     </TableCell>
                     <TableCell>
@@ -744,7 +845,9 @@ export default function ClaimsPage() {
                     size="lg"
                     variant="flat"
                   >
-                    {selectedClaim?.prioridad}
+                    {!selectedClaim?.prioridad
+                      ? "N/A"
+                      : selectedClaim?.prioridad}
                   </Chip>
                 </div>
                 <p className="text-sm text-muted-foreground font-normal">
@@ -848,16 +951,11 @@ export default function ClaimsPage() {
                                   }
                                 />
                                 <div className="flex items-center justify-end gap-2">
-                                  <Button
-                                    disabled={isSubmittingComment}
-                                    size="sm"
-                                    variant="bordered"
-                                    onClick={() =>
-                                      setIsCommentInternal(!isCommentInternal)
-                                    }
-                                  >
-                                    {isCommentInternal ? "Interno" : "Público"}
-                                  </Button>
+                                  <CommentTypeSwitch
+                                    isInternal={isCommentInternal}
+                                    onValueChange={setIsCommentInternal}
+                                    isDisabled={isSubmittingComment}
+                                  />
                                   <Button
                                     color="primary"
                                     disabled={
@@ -1041,7 +1139,18 @@ export default function ClaimsPage() {
                             </div>
                           </div>
                           <div className="flex items-start gap-2">
-                            <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                             <CreditCard className="h-4 w-4 text-muted-foreground mt-0.5" />
+                             <div className="flex-1">
+                               <p className="text-xs text-muted-foreground">
+                                 RUT
+                               </p>
+                               <p className="text-sm font-medium">
+                                 {selectedClaim?.denunciante.rut || "N/A"}
+                               </p>
+                             </div>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
                             <div className="flex-1">
                               <p className="text-xs text-muted-foreground">
                                 Email
@@ -1052,7 +1161,7 @@ export default function ClaimsPage() {
                             </div>
                           </div>
                           <div className="flex items-start gap-2">
-                            <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                            <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
                             <div className="flex-1">
                               <p className="text-xs text-muted-foreground">
                                 Teléfono
@@ -1075,6 +1184,11 @@ export default function ClaimsPage() {
                       </Card>
                     )}
 
+                    {/* Satisfaction Card */}
+                    {selectedClaim?.nota_satisfaccion && (
+                      <SatisfactionRatingCard rating={selectedClaim.nota_satisfaccion} comment={selectedClaim.comentario_satisfaccion ?? undefined} />
+                    )}
+
                     {/* Actions Card */}
                     <Card>
                       <CardBody className="space-y-4">
@@ -1083,13 +1197,20 @@ export default function ClaimsPage() {
                         <div>
                           <p className="text-xs text-muted-foreground mb-1.5">
                             Estado
+                            {selectedNewStatus && selectedNewStatus !== (selectedClaim?.estado?.id ? String(selectedClaim.estado.id) : "") && (
+                              <span className="text-warning ml-1">●</span>
+                            )}
                           </p>
                           <Select
                             aria-label="Seleccionar estado"
                             className="max-w-xs"
                             placeholder="Cambiar estado"
                             selectedKeys={
-                              selectedNewStatus ? [selectedNewStatus] : []
+                              selectedNewStatus
+                                ? [selectedNewStatus]
+                                : selectedClaim?.estado?.id
+                                  ? [String(selectedClaim.estado.id)]
+                                  : []
                             }
                             onChange={(e) =>
                               setSelectedNewStatus(e.target.value)
@@ -1115,26 +1236,6 @@ export default function ClaimsPage() {
                                     setStatusChangeReason(e.target.value)
                                   }
                                 />
-                                <div className="flex gap-2">
-                                  <Button
-                                    color="primary"
-                                    isLoading={isUpdatingStatus}
-                                    size="sm"
-                                    onPress={handleStatusChange}
-                                  >
-                                    Confirmar Cambio
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="flat"
-                                    onPress={() => {
-                                      setSelectedNewStatus("");
-                                      setStatusChangeReason("");
-                                    }}
-                                  >
-                                    Cancelar
-                                  </Button>
-                                </div>
                               </div>
                             )}
                         </div>
@@ -1143,17 +1244,15 @@ export default function ClaimsPage() {
                         <div>
                           <p className="text-xs text-muted-foreground mb-1.5">
                             Prioridad
+                            {pendingPriority !== selectedClaim?.prioridad && (
+                              <span className="text-warning ml-1">●</span>
+                            )}
                           </p>
                           <Select
                             aria-label="Seleccionar prioridad"
                             className="max-w-xs"
-                            defaultSelectedKeys={[
-                              selectedClaim?.prioridad || "MEDIA",
-                            ]}
-                            isDisabled={isUpdatingPriority}
-                            onChange={(e) =>
-                              handlePriorityChange(e.target.value)
-                            }
+                            selectedKeys={pendingPriority ? [pendingPriority] : []}
+                            onChange={(e) => setPendingPriority(e.target.value)}
                           >
                             <SelectItem key="baja">Baja</SelectItem>
                             <SelectItem key="media">Media</SelectItem>
@@ -1166,20 +1265,16 @@ export default function ClaimsPage() {
                         <div>
                           <p className="text-xs text-muted-foreground mb-1.5">
                             Asignar Supervisor
+                            {pendingSupervisor !== (selectedClaim?.supervisor?.id ? String(selectedClaim.supervisor.id) : null) && (
+                              <span className="text-warning ml-1">●</span>
+                            )}
                           </p>
                           <Select
                             aria-label="Asignar supervisor"
                             className="max-w-xs"
-                            isDisabled={isAssigningSupervisor}
                             placeholder="Seleccionar supervisor"
-                            selectedKeys={
-                              selectedClaim?.supervisor?.id
-                                ? [String(selectedClaim.supervisor.id)]
-                                : []
-                            }
-                            onChange={(e) =>
-                              handleAssignSupervisor(e.target.value)
-                            }
+                            selectedKeys={pendingSupervisor ? [pendingSupervisor] : []}
+                            onChange={(e) => setPendingSupervisor(e.target.value)}
                           >
                             {supervisors.map((supervisor) => (
                               <SelectItem key={supervisor.id_usuario}>
@@ -1197,7 +1292,11 @@ export default function ClaimsPage() {
                 <Button variant="light" onPress={onClose}>
                   Cerrar
                 </Button>
-                <Button color="primary" onPress={onClose}>
+                <Button 
+                  color="primary" 
+                  isLoading={isSavingChanges}
+                  onPress={handleSaveAllChanges}
+                >
                   Guardar Cambios
                 </Button>
               </ModalFooter>

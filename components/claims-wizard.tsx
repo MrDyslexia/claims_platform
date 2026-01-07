@@ -67,7 +67,7 @@ const validateStep = (step: number, formData: FormData): ValidationResult => {
         return {
           isValid: false,
           message:
-            "Selecciona si deseas enviar el reclamo de forma anónima o con tus datos",
+            "Selecciona si deseas enviar la denuncia de forma anónima o con tus datos",
         };
       }
       if (formData.isAnonymous === true) {
@@ -123,24 +123,15 @@ const validateStep = (step: number, formData: FormData): ValidationResult => {
 
       return { isValid: true, message: "" };
 
-    case 6: // DetailsStep
-      if (formData.details && formData.details.trim().length > 0) {
-        return { isValid: true, message: "" };
-      }
-      if (formData.skipDetailsWarning === true) {
-        return { isValid: true, message: "" };
-      }
 
-      return { isValid: false, message: "" };
-
-    case 7: // TimeStep
+    case 6: // TimeStep
       if (!formData.timeframe) {
         return { isValid: false, message: "Selecciona el tiempo del problema" };
       }
 
       return { isValid: true, message: "" };
 
-    case 8: // InvolvedStep
+    case 7: // InvolvedStep
       if (!formData.involvedParties || formData.involvedParties.length === 0) {
         return {
           isValid: false,
@@ -150,7 +141,7 @@ const validateStep = (step: number, formData: FormData): ValidationResult => {
 
       return { isValid: true, message: "" };
 
-    case 9: // EvidenceStep (moved from 8) - Optional but requires confirmation
+    case 8: // EvidenceStep (moved from 8) - Optional but requires confirmation
       if (
         (!formData.evidence || formData.evidence.length === 0) &&
         !formData.skipEvidenceWarning
@@ -159,6 +150,15 @@ const validateStep = (step: number, formData: FormData): ValidationResult => {
       }
 
       return { isValid: true, message: "" };
+    case 9: // DetailsStep
+      if (formData.details && formData.details.trim().length > 0) {
+        return { isValid: true, message: "" };
+      }
+      if (formData.skipDetailsWarning === true) {
+        return { isValid: true, message: "" };
+      }
+
+      return { isValid: false, message: "" };
 
     case 10: // ConfirmationStep
       return { isValid: true, message: "" };
@@ -240,22 +240,24 @@ export function ClaimsWizard() {
   const currentValidation = validateStep(currentStep, formData);
 
   const handleNext = () => {
-    if (currentStep === 6) {
-      if (
-        (!formData.details || formData.details.trim().length === 0) &&
-        !formData.skipDetailsWarning
-      ) {
-        setShowDetailsAlert(true);
-
-        return;
-      }
-    }
-    if (currentStep === 9) {
+    // Paso 8 - Validación de evidencia
+    if (currentStep === 8) {
       if (
         (!formData.evidence || formData.evidence.length === 0) &&
         !formData.skipEvidenceWarning
       ) {
         setShowEvidenceAlert(true);
+
+        return;
+      }
+    }
+    // Paso 9 - Validación de comentarios/detalles
+    if (currentStep === 9) {
+      if (
+        (!formData.details || formData.details.trim().length === 0) &&
+        !formData.skipDetailsWarning
+      ) {
+        setShowDetailsAlert(true);
 
         return;
       }
@@ -357,7 +359,7 @@ export function ClaimsWizard() {
 
       if (!response.ok) {
         setValidationError(
-          "Error al enviar el reclamo. Por favor, intenta nuevamente.",
+          "Error al enviar la denuncia. Por favor, intenta nuevamente.",
         );
         throw new Error(`Error: ${response.status} ${response.statusText}`);
       }
@@ -370,7 +372,7 @@ export function ClaimsWizard() {
       setCurrentStep(11);
     } catch {
       alert(
-        "Ocurrió un error al enviar el reclamo. Por favor, intenta nuevamente más tarde.",
+        "Ocurrió un error al enviar la denuncia. Por favor, intenta nuevamente más tarde.",
       );
     } finally {
       setIsSubmitting(false);
@@ -387,9 +389,8 @@ export function ClaimsWizard() {
   };
 
   const handleContinueWithoutEvidence = () => {
-    handleFormUpdate({ skipEvidenceWarning: true });
-    handleSubmit();
     setShowEvidenceAlert(false);
+    handleFormUpdate({ skipEvidenceWarning: true });
     setValidationError("");
     if (currentStep < STEPS.length) {
       setCurrentStep(currentStep + 1);
@@ -445,10 +446,8 @@ export function ClaimsWizard() {
           />
         );
       case 6:
-        return <DetailsStep formData={formData} onUpdate={handleFormUpdate} />;
-      case 7:
         return <TimeStep formData={formData} onUpdate={handleFormUpdate} />;
-      case 8:
+      case 7:
         return (
           <InvolvedStep
             enterprises={enterprise}
@@ -456,8 +455,12 @@ export function ClaimsWizard() {
             onUpdate={handleFormUpdate}
           />
         );
-      case 9:
+      case 8:
         return <EvidenceStep formData={formData} onUpdate={handleFormUpdate} />;
+
+      case 9:
+        return <DetailsStep formData={formData} onUpdate={handleFormUpdate} />;
+
       case 10:
         return (
           <SummaryStep
@@ -738,7 +741,7 @@ export function ClaimsWizard() {
               <Button
                 className="bg-[#202e5e] hover:bg-[#1a2550] text-white font-medium"
                 disabled={
-                  currentStep === 6 || currentStep === 9
+                  currentStep === 8 || currentStep === 9
                     ? false
                     : !currentValidation.isValid
                 }

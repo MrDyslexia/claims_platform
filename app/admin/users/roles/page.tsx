@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
-"use client";
+"use client"
 
-import React from "react";
+import React from "react"
 import {
   Card,
   CardBody,
@@ -20,8 +20,8 @@ import {
   Tab,
   Select,
   SelectItem,
-} from "@heroui/react";
-import { Plus, Edit, Trash2, Shield, CheckCircle2 } from "lucide-react";
+} from "@heroui/react"
+import { Plus, Edit, Trash2, Shield, CheckCircle2 } from "lucide-react"
 
 import {
   useGetListaCompletaUsuarios,
@@ -30,191 +30,210 @@ import {
   actualizarRol,
   listarArquetipos,
   obtenerCategoriasDisponibles,
-} from "@/lib/api/usuarios";
-import type { Rol, Arquetipo, Categoria } from "@/lib/api/usuarios";
+  asignarCategoriasRol,
+  obtenerCategoriasRol,
+} from "@/lib/api/usuarios"
+import type { Rol, Arquetipo, Categoria } from "@/lib/api/usuarios"
 
 interface Permiso {
-  id_permiso: number;
-  codigo: string;
-  nombre: string;
-  descripcion?: string;
-  categoria?: string;
+  id_permiso: number
+  codigo: string
+  nombre: string
+  descripcion?: string
+  categoria?: string
 }
 
 export default function RolesPage() {
-  const [token, setToken] = React.useState<string | null>(null);
-  const { data, loading, error, refetch } = useGetListaCompletaUsuarios(token);
+  const [token, setToken] = React.useState<string | null>(null)
+  const { data, loading, error, refetch } = useGetListaCompletaUsuarios(token)
 
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const [editingRole, setEditingRole] = React.useState<Rol | null>(null);
+  const { isOpen, onOpen, onClose } = useDisclosure()
+  const [editingRole, setEditingRole] = React.useState<Rol | null>(null)
   const [formData, setFormData] = React.useState({
     nombre: "",
     descripcion: "",
     permisos: [] as number[],
-  });
-  const [isSaving, setIsSaving] = React.useState(false);
-  const [saveError, setSaveError] = React.useState<string | null>(null);
-  const [deletingRole, setDeletingRole] = React.useState<Rol | null>(null);
-  const [deleteError, setDeleteError] = React.useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = React.useState(false);
-  const {
-    isOpen: isDeleteOpen,
-    onOpen: onDeleteOpen,
-    onClose: onDeleteClose,
-  } = useDisclosure();
-  const [arquetipos, setArquetipos] = React.useState<Arquetipo[]>([]);
-  const [categoriasDisponibles, setCategoriasDisponibles] = React.useState<Categoria[]>([]);
-  const [selectedArquetipo, setSelectedArquetipo] = React.useState<string>("");
-  const [selectedCategoria, setSelectedCategoria] = React.useState<string>("");
+  })
+  const [isSaving, setIsSaving] = React.useState(false)
+  const [saveError, setSaveError] = React.useState<string | null>(null)
+  const [deletingRole, setDeletingRole] = React.useState<Rol | null>(null)
+  const [deleteError, setDeleteError] = React.useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = React.useState(false)
+  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure()
+  const [arquetipos, setArquetipos] = React.useState<Arquetipo[]>([])
+  const [categoriasDisponibles, setCategoriasDisponibles] = React.useState<Categoria[]>([])
+  const [selectedArquetipos, setSelectedArquetipos] = React.useState<string[]>([])
+  const [selectedCategorias, setSelectedCategorias] = React.useState<string[]>([])
 
   React.useEffect(() => {
-    const storedToken = localStorage.getItem("auth_token");
+    const storedToken = localStorage.getItem("auth_token")
 
-    setToken(storedToken);
-  }, []);
+    setToken(storedToken)
+  }, [])
 
   // Cargar arquetipos y categorías
   React.useEffect(() => {
     if (token) {
       listarArquetipos(token)
         .then((res) => setArquetipos(res.data || []))
-        .catch((err) => console.error("Error al cargar arquetipos:", err));
+        .catch((err) => console.error("Error al cargar arquetipos:", err))
 
       obtenerCategoriasDisponibles(token)
         .then((res) => setCategoriasDisponibles(res.categorias || []))
-        .catch((err) => console.error("Error al cargar categorías:", err));
+        .catch((err) => console.error("Error al cargar categorías:", err))
     }
-  }, [token]);
+  }, [token])
 
   // Obtener datos del backend
-  const rolesDisponibles = data?.roles_disponibles || [];
-  const permisosDisponibles = data?.permisos_disponibles || [];
+  const rolesDisponibles = data?.roles_disponibles || []
+  const permisosDisponibles = data?.permisos_disponibles || []
 
-  const handleOpenModal = (role?: Rol | null) => {
-    setSaveError(null);
+  const handleOpenModal = async (role?: Rol | null) => {
+    setSaveError(null)
     if (role) {
-      setEditingRole(role);
+      setEditingRole(role)
       setFormData({
         nombre: role.nombre,
         descripcion: role.descripcion || "",
         permisos: role.permisos?.map((p) => p.id_permiso) || [],
-      });
-      setSelectedArquetipo(role.arquetipo_id?.toString() || "");
-      setSelectedCategoria(""); // Categoría no se guarda en rol actualmente
+      })
+      setSelectedArquetipos(role.arquetipo_id ? [role.arquetipo_id.toString()] : [])
+      
+      // Cargar categorías del rol desde el backend
+      if (token) {
+        try {
+          const catData = await obtenerCategoriasRol(token, role.id_rol)
+          setSelectedCategorias(catData.categorias?.map((c) => c.id.toString()) || [])
+        } catch (err) {
+          console.error("Error al cargar categorías del rol:", err)
+          setSelectedCategorias([])
+        }
+      } else {
+        setSelectedCategorias([])
+      }
     } else {
-      setEditingRole(null);
+      setEditingRole(null)
       setFormData({
         nombre: "",
         descripcion: "",
         permisos: [],
-      });
-      setSelectedArquetipo("");
-      setSelectedCategoria("");
+      })
+      setSelectedArquetipos([])
+      setSelectedCategorias([])
     }
-    onOpen();
-  };
+    onOpen()
+  }
 
-  // Manejar cambio de arquetipo - pre-cargar permisos del arquetipo
-  const handleArquetipoChange = (arquetipoId: string) => {
-    setSelectedArquetipo(arquetipoId);
-    if (arquetipoId) {
-      const arquetipo = arquetipos.find((a) => a.id.toString() === arquetipoId);
-      if (arquetipo && arquetipo.permisos) {
-        // Los permisos del arquetipo vienen con 'id', pero el formulario usa 'id_permiso'
-        // Necesitamos mapear correctamente
-        const permisoIds = arquetipo.permisos.map((p: any) => p.id_permiso || p.id);
-        setFormData((prev) => ({
-          ...prev,
-          permisos: permisoIds,
-        }));
-      }
+  const handleArquetiposChange = (arquetipoIds: string[]) => {
+    setSelectedArquetipos(arquetipoIds)
+    if (arquetipoIds.length > 0) {
+      // Recolectar permisos de todos los arquetipos seleccionados
+      const permisosUnicos = new Set<number>()
+      arquetipoIds.forEach((arquetipoId) => {
+        const arquetipo = arquetipos.find((a) => a.id.toString() === arquetipoId)
+        if (arquetipo && arquetipo.permisos) {
+          arquetipo.permisos.forEach((p: any) => {
+            permisosUnicos.add(p.id_permiso || p.id)
+          })
+        }
+      })
+      setFormData((prev) => ({
+        ...prev,
+        permisos: Array.from(permisosUnicos),
+      }))
+    } else {
+      // Si no hay arquetipos seleccionados, limpiar permisos
+      setFormData((prev) => ({
+        ...prev,
+        permisos: [],
+      }))
     }
-  };
+  }
 
   const handleSave = async () => {
     if (!token) {
-      setSaveError("No hay token de autenticación");
+      setSaveError("No hay token de autenticación")
 
-      return;
+      return
     }
 
     if (!formData.nombre.trim()) {
-      setSaveError("El nombre del rol es requerido");
+      setSaveError("El nombre del rol es requerido")
 
-      return;
+      return
     }
 
-    // Validar arquetipo al crear nuevo rol
-    if (!editingRole && !selectedArquetipo) {
-      setSaveError("Debes seleccionar un arquetipo para crear el rol");
+    if (!editingRole && selectedArquetipos.length === 0) {
+      setSaveError("Debes seleccionar al menos un arquetipo para crear el rol")
 
-      return;
+      return
     }
 
-    setIsSaving(true);
-    setSaveError(null);
+    setIsSaving(true)
+    setSaveError(null)
 
     try {
+      let rolId: number
+      
       if (editingRole) {
         // Actualizar rol existente
-        await actualizarRol(
-          token,
-          editingRole.id_rol,
-          formData.nombre,
-          formData.descripcion,
-          formData.permisos,
-        );
+        await actualizarRol(token, editingRole.id_rol, formData.nombre, formData.descripcion, formData.permisos)
+        rolId = editingRole.id_rol
       } else {
-        // Crear nuevo rol
-        await crearRol(
+        const nuevoRol = await crearRol(
           token,
           formData.nombre,
           formData.descripcion,
-          selectedArquetipo ? parseInt(selectedArquetipo) : 0,
+          selectedArquetipos.length > 0 ? Number.parseInt(selectedArquetipos[0]) : 0,
           formData.permisos,
-        );
+        )
+        rolId = nuevoRol.id
       }
 
+      // Asignar categorías al rol
+      const categoriaIds = selectedCategorias.map((c) => parseInt(c))
+      await asignarCategoriasRol(token, rolId, categoriaIds)
+
       // Recargar la lista de roles
-      refetch();
+      refetch()
 
       // Cerrar el modal
-      onClose();
+      onClose()
     } catch (err: any) {
-      console.error("❌ Error al guardar rol:", err);
-      setSaveError(err.message || "Error al guardar el rol");
+      console.error("❌ Error al guardar rol:", err)
+      setSaveError(err.message || "Error al guardar el rol")
     } finally {
-      setIsSaving(false);
+      setIsSaving(false)
     }
-  };
+  }
 
   const handleOpenDeleteModal = (role: Rol) => {
-    setDeletingRole(role);
-    setDeleteError(null);
-    onDeleteOpen();
-  };
+    setDeletingRole(role)
+    setDeleteError(null)
+    onDeleteOpen()
+  }
 
   const handleDelete = async () => {
-    if (!deletingRole || !token) return;
+    if (!deletingRole || !token) return
 
-    setIsDeleting(true);
-    setDeleteError(null);
+    setIsDeleting(true)
+    setDeleteError(null)
 
     try {
-      await eliminarRol(token, deletingRole.id_rol);
+      await eliminarRol(token, deletingRole.id_rol)
 
       // Recargar la lista de roles
-      refetch();
+      refetch()
 
       // Cerrar el modal
-      onDeleteClose();
+      onDeleteClose()
     } catch (err: any) {
-      console.error("❌ Error al eliminar rol:", err);
-      setDeleteError(err.message || "Error al eliminar el rol");
+      console.error("❌ Error al eliminar rol:", err)
+      setDeleteError(err.message || "Error al eliminar el rol")
     } finally {
-      setIsDeleting(false);
+      setIsDeleting(false)
     }
-  };
+  }
 
   const togglePermission = (permisoId: number) => {
     setFormData((prev) => ({
@@ -222,24 +241,24 @@ export default function RolesPage() {
       permisos: prev.permisos.includes(permisoId)
         ? prev.permisos.filter((id) => id !== permisoId)
         : [...prev.permisos, permisoId],
-    }));
-  };
+    }))
+  }
 
   // Agrupar permisos por categoría
   const permisosByCategory = permisosDisponibles.reduce(
     (acc, permiso) => {
-      const category = permiso.categoria || "General";
+      const category = permiso.categoria || "General"
 
       if (!acc[category]) {
-        acc[category] = [];
+        acc[category] = []
       }
 
-      acc[category].push(permiso);
+      acc[category].push(permiso)
 
-      return acc;
+      return acc
     },
     {} as Record<string, Permiso[]>,
-  );
+  )
 
   if (loading) {
     return (
@@ -248,7 +267,7 @@ export default function RolesPage() {
           <p>Cargando datos...</p>
         </div>
       </div>
-    );
+    )
   }
 
   if (error) {
@@ -259,7 +278,7 @@ export default function RolesPage() {
           <p className="text-sm mt-2">{error}</p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -268,15 +287,9 @@ export default function RolesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Gestión de Roles y Permisos</h1>
-          <p className="text-muted-foreground mt-1">
-            Configura roles y sus permisos asociados
-          </p>
+          <p className="text-muted-foreground mt-1">Configura roles y sus permisos asociados</p>
         </div>
-        <Button
-          color="primary"
-          startContent={<Plus className="h-4 w-4" />}
-          onPress={() => handleOpenModal()}
-        >
+        <Button color="primary" startContent={<Plus className="h-4 w-4" />} onPress={() => handleOpenModal()}>
           Nuevo Rol
         </Button>
       </div>
@@ -296,37 +309,25 @@ export default function RolesPage() {
               </div>
             </CardHeader>
             <CardBody className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                {role.descripcion || "Sin descripción"}
-              </p>
+              <p className="text-sm text-muted-foreground">{role.descripcion || "Sin descripción"}</p>
               <div>
                 <p className="text-xs font-medium text-muted-foreground mb-2">
                   Permisos ({role.permisos?.length || 0})
                 </p>
                 <div className="space-y-1">
                   {role.permisos?.slice(0, 3).map((permiso) => (
-                    <div
-                      key={permiso.id_permiso}
-                      className="flex items-center gap-2 text-xs"
-                    >
+                    <div key={permiso.id_permiso} className="flex items-center gap-2 text-xs">
                       <CheckCircle2 className="h-3 w-3 text-green-600" />
                       <span>{permiso.nombre}</span>
                     </div>
                   ))}
                   {role.permisos && role.permisos.length > 3 && (
-                    <p className="text-xs text-muted-foreground">
-                      +{role.permisos.length - 3} más
-                    </p>
+                    <p className="text-xs text-muted-foreground">+{role.permisos.length - 3} más</p>
                   )}
                 </div>
               </div>
               <div className="flex gap-2 pt-2">
-                <Button
-                  className="flex-1"
-                  size="sm"
-                  variant="bordered"
-                  onPress={() => handleOpenModal(role)}
-                >
+                <Button className="flex-1" size="sm" variant="bordered" onPress={() => handleOpenModal(role)}>
                   <Edit className="h-3 w-3" />
                   Editar
                 </Button>
@@ -346,21 +347,14 @@ export default function RolesPage() {
       </div>
 
       {/* Role Modal */}
-      <Modal
-        isOpen={isOpen}
-        scrollBehavior="inside"
-        size="3xl"
-        onClose={onClose}
-      >
+      <Modal isOpen={isOpen} scrollBehavior="inside" size="3xl" onClose={onClose}>
         <ModalContent>
           <ModalHeader>{editingRole ? "Editar Rol" : "Nuevo Rol"}</ModalHeader>
           <ModalBody>
             <div className="space-y-4">
               {saveError && (
                 <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                  <p className="text-sm text-red-600 dark:text-red-400">
-                    {saveError}
-                  </p>
+                  <p className="text-sm text-red-600 dark:text-red-400">{saveError}</p>
                 </div>
               )}
               <Input
@@ -391,38 +385,36 @@ export default function RolesPage() {
               {!editingRole && (
                 <Select
                   isRequired
-                  description="Primero selecciona un arquetipo para cargar los permisos"
+                  description="Selecciona uno o más arquetipos para cargar sus permisos"
                   label="Arquetipo de Rol"
-                  placeholder="Seleccione un arquetipo"
-                  selectedKeys={selectedArquetipo ? [selectedArquetipo] : []}
+                  aria-label="Arquetipo"
+                  placeholder="Seleccione arquetipos"
+                  selectedKeys={selectedArquetipos}
+                  selectionMode="multiple"
                   onSelectionChange={(keys) => {
-                    const selected = Array.from(keys)[0] as string;
-                    handleArquetipoChange(selected || "");
+                    const selected = Array.from(keys) as string[]
+                    handleArquetiposChange(selected)
                   }}
                 >
                   {arquetipos.map((arq) => (
-                    <SelectItem key={arq.id.toString()}>
-                      {arq.nombre}
-                    </SelectItem>
+                    <SelectItem key={arq.id.toString()}>{arq.nombre}</SelectItem>
                   ))}
                 </Select>
               )}
 
               <Select
-                description="Deja vacío para que el rol acceda a todas las categorías"
+                description="Selecciona una o más categorías. Deja vacío para acceso a todas"
                 label="Categoría de Denuncia (Opcional)"
                 placeholder="Sin restricción de categoría"
-                selectedKeys={selectedCategoria ? [selectedCategoria] : []}
+                selectedKeys={selectedCategorias}
+                selectionMode="multiple"
                 onSelectionChange={(keys) => {
-                  const selected = Array.from(keys)[0] as string;
-                  setSelectedCategoria(selected || "");
+                  const selected = Array.from(keys) as string[]
+                  setSelectedCategorias(selected)
                 }}
-                multiple
               >
                 {categoriasDisponibles.map((cat) => (
-                  <SelectItem key={cat.id.toString()}>
-                    {cat.nombre}
-                  </SelectItem>
+                  <SelectItem key={cat.id.toString()}>{cat.nombre}</SelectItem>
                 ))}
               </Select>
 
@@ -430,48 +422,30 @@ export default function RolesPage() {
                 <h3 className="font-semibold mb-3">Permisos</h3>
                 {Object.keys(permisosByCategory).length > 0 ? (
                   <Tabs aria-label="Permissions by category">
-                    {Object.entries(permisosByCategory).map(
-                      ([categoria, permisos]) => (
-                        <Tab
-                          key={categoria}
-                          title={
-                            categoria.charAt(0).toUpperCase() +
-                            categoria.slice(1)
-                          }
-                        >
-                          <div className="space-y-2 pt-4">
-                            {permisos.map((permiso) => (
-                              <div
-                                key={permiso.id_permiso}
-                                className="flex items-center justify-between p-3 bg-default-50 dark:bg-default-100/50 rounded-lg"
-                              >
-                                <div>
-                                  <p className="font-medium text-sm">
-                                    {permiso.nombre}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {permiso.codigo}
-                                  </p>
-                                </div>
-                                <Checkbox
-                                  isSelected={formData.permisos.includes(
-                                    permiso.id_permiso,
-                                  )}
-                                  onValueChange={() =>
-                                    togglePermission(permiso.id_permiso)
-                                  }
-                                />
+                    {Object.entries(permisosByCategory).map(([categoria, permisos]) => (
+                      <Tab key={categoria} title={categoria.charAt(0).toUpperCase() + categoria.slice(1)}>
+                        <div className="space-y-2 pt-4">
+                          {permisos.map((permiso) => (
+                            <div
+                              key={permiso.id_permiso}
+                              className="flex items-center justify-between p-3 bg-default-50 dark:bg-default-100/50 rounded-lg"
+                            >
+                              <div>
+                                <p className="font-medium text-sm">{permiso.nombre}</p>
+                                <p className="text-xs text-muted-foreground">{permiso.codigo}</p>
                               </div>
-                            ))}
-                          </div>
-                        </Tab>
-                      ),
-                    )}
+                              <Checkbox
+                                isSelected={formData.permisos.includes(permiso.id_permiso)}
+                                onValueChange={() => togglePermission(permiso.id_permiso)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </Tab>
+                    ))}
                   </Tabs>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No hay permisos disponibles
-                  </p>
+                  <p className="text-sm text-muted-foreground">No hay permisos disponibles</p>
                 )}
               </div>
             </div>
@@ -494,38 +468,26 @@ export default function RolesPage() {
           <ModalBody>
             {deleteError && (
               <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg mb-3">
-                <p className="text-sm text-red-600 dark:text-red-400">
-                  {deleteError}
-                </p>
+                <p className="text-sm text-red-600 dark:text-red-400">{deleteError}</p>
               </div>
             )}
             <p>
-              ¿Estás seguro de que deseas eliminar el rol{" "}
-              <strong>{deletingRole?.nombre}</strong>?
+              ¿Estás seguro de que deseas eliminar el rol <strong>{deletingRole?.nombre}</strong>?
             </p>
             <p className="text-sm text-danger mt-2">
-              Esta acción no se puede deshacer. Los usuarios con este rol
-              perderán los permisos asociados.
+              Esta acción no se puede deshacer. Los usuarios con este rol perderán los permisos asociados.
             </p>
           </ModalBody>
           <ModalFooter>
-            <Button
-              disabled={isDeleting}
-              variant="bordered"
-              onPress={onDeleteClose}
-            >
+            <Button disabled={isDeleting} variant="bordered" onPress={onDeleteClose}>
               Cancelar
             </Button>
-            <Button
-              color="danger"
-              isLoading={isDeleting}
-              onPress={handleDelete}
-            >
+            <Button color="danger" isLoading={isDeleting} onPress={handleDelete}>
               Eliminar
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
     </div>
-  );
+  )
 }

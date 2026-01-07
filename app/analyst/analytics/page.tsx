@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download } from "lucide-react";
+import { Download, RefreshCw } from "lucide-react";
 import { Card, CardBody, CardHeader, Input, Button } from "@heroui/react";
 import {
   BarChart,
@@ -149,7 +149,7 @@ export default function AnalystAnalytics() {
               setDateRange((prev) => ({ ...prev, end: e.target.value }))
             }
           />
-          <Button color="primary" isLoading={loading} onPress={handleSearch}>
+          <Button color="primary" isLoading={loading} onPress={handleSearch} startContent={<RefreshCw className="w-4 h-4" />}>
             Actualizar
           </Button>
           <Button
