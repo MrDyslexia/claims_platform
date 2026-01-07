@@ -37,7 +37,23 @@ export async function authMiddleware(
             },
         });
         if (!session) return res.status(401).json({ error: 'invalid session' });
-        const user = await models.Usuario.findByPk(decoded.sub);
+        
+        // Cargar usuario con sus roles para que estén disponibles en controladores
+        const user = await models.Usuario.findByPk(decoded.sub, {
+            include: [
+                {
+                    association: 'roles',
+                    attributes: ['id', 'codigo', 'nombre', 'arquetipo_id'],
+                    through: { attributes: [] },
+                    include: [
+                        {
+                            association: 'arquetipo',
+                            attributes: ['id', 'codigo', 'nombre'],
+                        },
+                    ],
+                },
+            ],
+        });
         if (!user) return res.status(401).json({ error: 'user not found' });
         req.user = user;
         return next();
@@ -92,13 +108,19 @@ export function requireRoles(...rolesRequeridos: string[]) {
         try {
             const usuarioId = req.user.get('id');
 
-            // Obtener el usuario con sus roles asociados
+            // Obtener el usuario con sus roles y arquetipos asociados
             const usuario = await models.Usuario.findByPk(usuarioId, {
                 include: [
                     {
                         association: 'roles',
-                        attributes: ['codigo', 'nombre'],
+                        attributes: ['codigo', 'nombre', 'arquetipo_id'],
                         through: { attributes: [] },
+                        include: [
+                            {
+                                association: 'arquetipo',
+                                attributes: ['codigo', 'nombre'],
+                            },
+                        ],
                     },
                 ],
             });
@@ -113,12 +135,13 @@ export function requireRoles(...rolesRequeridos: string[]) {
                 return res.status(403).json({ error: 'forbidden' });
             }
 
-            const rolesCodigos = rolesUsuario.map((rol: any) =>
-                rol.get('codigo')
-            );
+            // Obtener códigos de arquetipos (no de roles)
+            const arquetiposCodigos = rolesUsuario
+                .map((rol: any) => rol.get('arquetipo')?.get('codigo'))
+                .filter(Boolean);
 
             const tieneRol = rolesRequeridos.some((rol) =>
-                rolesCodigos.includes(rol)
+                arquetiposCodigos.includes(rol)
             );
 
             if (!tieneRol) {

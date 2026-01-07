@@ -201,10 +201,40 @@ function getColorForType(index: number): string {
     return colors[index % colors.length];
 }
 
-export const getDashboardStats = async (req: Request, res: Response) => {
+export const getDashboardStats = async (req: Request & { user?: any }, res: Response) => {
     try {
+        // Obtener filtro de tipos basado en categorías del rol del usuario
+        const userRoles = req.user?.get('roles') || [];
+        const roleIds = userRoles.map((r: any) => r.get('id'));
+        
+        // Obtener categorías de todos los roles del usuario
+        const rolCategorias = await models.RolCategoria.findAll({
+            where: { rol_id: roleIds },
+            attributes: ['categoria_id'],
+        });
+
+        let tipoIdsPermitidos: number[] = [];
+        let baseWhere: any = {};
+
+        if (rolCategorias.length > 0) {
+            // Roles tienen categorías asignadas
+            const categoryIds = [...new Set(rolCategorias.map((rc) => rc.get('categoria_id')))];
+
+            // Obtener tipos de denuncia que pertenecen a esas categorías
+            const tiposDenuncia = await models.TipoDenuncia.findAll({
+                where: {
+                    categoria_id: categoryIds,
+                },
+                attributes: ['id'],
+            });
+
+            tipoIdsPermitidos = tiposDenuncia.map((t) => t.get('id') as number);
+            baseWhere = { tipo_id: tipoIdsPermitidos };
+        }
+        // Si no tiene categorías asignadas, baseWhere queda vacío = ve todas las denuncias
+
         // 1. STATS PRINCIPALES usando Sequelize count
-        const totalDenuncias = await models.Denuncia.count();
+        const totalDenuncias = await models.Denuncia.count({ where: baseWhere });
 
         // Obtener todos los estados disponibles
         const estados = await models.EstadoDenuncia.findAll({
@@ -221,6 +251,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         const estadoProcesoId = estadosMap.get('PENDIENTE') || 1;
         const enProceso = await models.Denuncia.count({
             where: {
+                ...baseWhere,
                 estado_id: { [Op.ne]: estadoProcesoId },
             },
         });
@@ -229,6 +260,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         // Por ahora, asumimos que son las que no están pendientes
         const resueltas = await models.Denuncia.count({
             where: {
+                ...baseWhere,
                 estado_id: estadosMap.get('RESUELTO') || 2,
             },
         }); // Ajustar cuando tengas más estados
@@ -236,6 +268,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         // Denuncias críticas
         const criticas = await models.Denuncia.count({
             where: {
+                ...baseWhere,
                 prioridad_id: 'CRITICA',
                 estado_id: { [Op.ne]: estadosMap.get('RESUELTO') || 2 },
             },
@@ -245,7 +278,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         // Obtener conteos por cada estado
         const estadosCount = await Promise.all(
             Array.from(estadosMap.values()).map((estadoId: any) =>
-                models.Denuncia.count({ where: { estado_id: estadoId } })
+                models.Denuncia.count({ where: { ...baseWhere, estado_id: estadoId } })
             )
         );
 
@@ -270,6 +303,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         // Tiempo promedio de resolución usando created_at y updated_at
         const denunciasConFechas = await models.Denuncia.findAll({
             where: {
+                ...baseWhere,
                 updated_at: { [Op.ne]: null },
                 created_at: { [Op.ne]: null },
             },
@@ -300,6 +334,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
 
         // 4. RECLAMOS RECIENTES usando Sequelize include
         const reclamosRecientes = await models.Denuncia.findAll({
+            where: baseWhere,
             attributes: [
                 'id',
                 'numero',

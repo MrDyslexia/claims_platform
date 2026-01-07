@@ -356,7 +356,7 @@ export const crearComentarioPublico = async (req: Request, res: Response) => {
 
         // Verificar que el estado sea INFO (5)
         const estadoId = denuncia.get('estado_id');
-        if (Number(estadoId) !== 5) {
+        if (Number(estadoId) !== 3) {
             return res.status(400).json({
                 error: 'Solo puede agregar comentarios cuando la denuncia está en estado "Requiere información"',
             });
@@ -373,6 +373,22 @@ export const crearComentarioPublico = async (req: Request, res: Response) => {
             autor_email: denuncia.get('denunciante_email') || null,
             autor_rol: 'Denunciante',
         });
+
+        // Cambiar el estado de la denuncia a 2 (En Proceso) después de recibir información
+        // Solo si el estado sigue siendo 3 (evita duplicación si se envían comentarios y archivos juntos)
+        const estadoActual = denuncia.get('estado_id');
+        if (Number(estadoActual) === 3) {
+            await denuncia.update({ estado_id: 2 });
+
+            // Registrar el cambio de estado en el historial
+            await models.DenunciaHistorialEstado.create({
+                denuncia_id: denuncia.get('id'),
+                de_estado_id: estadoActual,
+                a_estado_id: 2,
+                cambiado_por: null,
+                motivo: 'Información adicional recibida del denunciante',
+            });
+        }
 
         return res.status(201).json({
             mensaje: 'Comentario agregado exitosamente',

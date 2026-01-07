@@ -7,6 +7,8 @@ import {
     eliminarRol,
     asignarPermisosRol,
     obtenerPermisosRol,
+    asignarCategoriasRol,
+    obtenerCategoriasRol,
 } from '../controllers/rol.controller';
 import { authMiddleware, requirePermission } from '../middlewares/auth';
 
@@ -68,4 +70,23 @@ router.post(
  */
 router.get('/:id/permisos', obtenerPermisosRol);
 
+/**
+ * @route POST /api/roles/:id/categorias
+ * @desc Asignar categorías a un rol
+ * @access Privado - Requiere permiso MANAGE_ROL_PERMISOS
+ */
+router.post(
+    '/:id/categorias',
+    requirePermission('roles:gestionar_permisos'),
+    asignarCategoriasRol
+);
+
+/**
+ * @route GET /api/roles/:id/categorias
+ * @desc Obtener categorías de un rol
+ * @access Privado
+ */
+router.get('/:id/categorias', obtenerCategoriasRol);
+
 export default router;
+

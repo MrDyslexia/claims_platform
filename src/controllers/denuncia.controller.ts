@@ -48,7 +48,7 @@ interface PublicDenunciaPayload {
     timeframeLabel?: string;
     involvedParties?: InvolvedPartyPayload[];
     evidence?: EvidencePayload[];
-    isAnonymous?: boolean;
+    isAnonymous?: boolean | string;  // FormData sends strings
     canal_id?: number | null;
     fullName?: string;
     rut?: string;
@@ -65,6 +65,7 @@ interface CreateDenunciaInput {
     canalOrigen?: string;
     canalId?: number | null;
     denuncianteNombre?: string | null;
+    denuncianteRut?: string | null;
     denuncianteEmail?: string | null;
     denuncianteFono?: string | null;
     esAnonima?: boolean | number;
@@ -140,6 +141,7 @@ async function createDenunciaRecord(
                 denunciante_email: normalizeNullableString(
                     input.denuncianteEmail
                 ),
+                denunciante_rut: normalizeNullableString(input.denuncianteRut),
                 denunciante_fono: normalizeNullableString(
                     input.denuncianteFono
                 ),
@@ -281,6 +283,86 @@ function buildDescripcionFromPayload(payload: PublicDenunciaPayload) {
     return `Reclamo registrado para la categoría ${fallbackSubcategoria}.`;
 }
 
+/**
+ * Notifica a los administradores que tienen permiso para ver la categoría de la denuncia
+ * Un admin sin categorías asignadas puede ver todas las denuncias
+ */
+async function notifyAdminsOfNewClaim(
+    tipoId: number,
+    numero: string,
+    asunto: string
+): Promise<void> {
+    try {
+        // Obtener el nombre de la categoría
+        const tipo = await models.TipoDenuncia.findByPk(tipoId);
+        const categoriaNombre = tipo?.get('nombre') as string || 'Sin categoría';
+
+        // Buscar todos los usuarios con arquetipo ADMIN
+        // JOIN: usuario -> usuario_rol -> rol -> arquetipo
+        const admins = await models.Usuario.findAll({
+            where: { activo: 1 },
+            include: [
+                {
+                    model: models.Rol,
+                    as: 'roles',
+                    required: true,
+                    include: [
+                        {
+                            model: models.Arquetipo,
+                            as: 'arquetipo',
+                            where: { codigo: 'ADMIN' },
+                            required: true,
+                        },
+                    ],
+                },
+            ],
+        });
+
+        if (!admins || admins.length === 0) {
+            console.log('No admin users found to notify');
+            return;
+        }
+
+        // Para cada admin, verificar si tiene la categoría permitida
+        for (const admin of admins) {
+            const adminId = admin.get('id') as number;
+            const adminEmail = admin.get('email') as string;
+            const adminNombre = admin.get('nombre_completo') as string;
+
+            // Buscar categorías asignadas al admin
+            const categoriasAsignadas = await models.UsuarioCategoria.findAll({
+                where: { usuario_id: adminId },
+            });
+
+            // Si el admin no tiene categorías asignadas, puede ver todas
+            // Si tiene categorías, verificar que incluya la de la denuncia
+            const tieneAcceso = 
+                categoriasAsignadas.length === 0 || 
+                categoriasAsignadas.some(
+                    (uc: any) => Number(uc.get('categoria_id')) === tipoId
+                );
+
+            if (tieneAcceso && adminEmail) {
+                try {
+                    await emailService.sendNewClaimNotificationToAdmin(adminEmail, {
+                        adminNombre,
+                        numero,
+                        asunto,
+                        categoria: categoriaNombre,
+                        fechaCreacion: new Date(),
+                    });
+                    console.log(`Admin notification sent to ${adminEmail} for claim ${numero}`);
+                } catch (emailError) {
+                    console.error(`Error sending notification to ${adminEmail}:`, emailError);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error in notifyAdminsOfNewClaim:', error);
+        // No fallar el proceso principal si falla la notificación
+    }
+}
+
 export const crearDenuncia = async (
     req: Request & { user?: any },
     res: Response
@@ -340,6 +422,13 @@ export const crearDenuncia = async (
                 // No fallar la creación de la denuncia si falla el email
             }
         }
+
+        // Notificar a administradores
+        await notifyAdminsOfNewClaim(
+            tipoId,
+            denuncia.get('numero') as string,
+            asunto
+        );
 
         return res.status(201).json({
             id: denuncia.get('id'),
@@ -457,10 +546,16 @@ export const crearDenunciaPublica = async (req: Request, res: Response) => {
             subcategoryName,
         });
 
-        const denuncianteNombre = payload.isAnonymous
+        // Parse isAnonymous correctly - it comes as a string from FormData
+        const esAnonima = payload.isAnonymous === true || payload.isAnonymous === 'true';
+
+        const denuncianteNombre = esAnonima
             ? null
             : sanitizeString(payload.fullName);
-        const denuncianteFono = payload.isAnonymous
+        const denuncianteRut = esAnonima
+            ? null
+            : sanitizeString(payload.rut);
+        const denuncianteFono = esAnonima
             ? null
             : sanitizeString(payload.phone);
 
@@ -476,9 +571,10 @@ export const crearDenunciaPublica = async (req: Request, res: Response) => {
             canalOrigen: 'WEB',
             canalId,
             denuncianteNombre,
+            denuncianteRut,
             denuncianteEmail: emailDenunciante,
             denuncianteFono,
-            esAnonima: payload.isAnonymous ?? false,
+            esAnonima,
             createdBy: null,
             pais: payload.country,
         });
@@ -500,6 +596,13 @@ export const crearDenunciaPublica = async (req: Request, res: Response) => {
                 // No fallar la creación de la denuncia si falla el email
             }
         }
+
+        // Notificar a administradores
+        await notifyAdminsOfNewClaim(
+            Number(tipoFinal!.get('id')),
+            denuncia.get('numero') as string,
+            asunto
+        );
 
         // Subir archivos adjuntos si existen
         const files = req.files as Express.Multer.File[];
@@ -677,6 +780,7 @@ export const lookupDenuncia = async (req: Request, res: Response) => {
         denunciante_fono: denuncia.get('denunciante_fono') || null,
         es_anonima: denuncia.get('es_anonima'),
         nota_satisfaccion: denuncia.get('nota_satisfaccion') || null,
+        comentario_satisfaccion: denuncia.get('comentario_satisfaccion') || null,
         statusHistory: statusHistoryWithNames,
         comments: commentsWithAuthor,
     });
@@ -703,10 +807,11 @@ const ESTADOS_CALIFICABLES = ['RESUELTO', 'CERRADO'];
  * Solo se puede calificar una vez
  */
 export const guardarNotaSatisfaccion = async (req: Request, res: Response) => {
-    const { numero, clave, nota } = req.body as { 
+    const { numero, clave, nota, comentario } = req.body as { 
         numero?: string; 
         clave?: string; 
-        nota?: number 
+        nota?: number;
+        comentario?: string;
     };
 
     // Validar campos requeridos
@@ -719,6 +824,9 @@ export const guardarNotaSatisfaccion = async (req: Request, res: Response) => {
     if (!nota || isNaN(notaNum) || notaNum < 1 || notaNum > 5) {
         return res.status(400).json({ error: 'nota must be between 1 and 5' });
     }
+
+    // Validar comentario (máximo 500 caracteres)
+    const comentarioLimpio = comentario?.trim().slice(0, 500) || null;
 
     // Buscar denuncia
     const denuncia = await models.Denuncia.findOne({ where: { numero } });
@@ -758,12 +866,16 @@ export const guardarNotaSatisfaccion = async (req: Request, res: Response) => {
         });
     }
 
-    // Guardar la nota
+    // Guardar la nota y comentario
     try {
-        await denuncia.update({ nota_satisfaccion: notaNum });
+        await denuncia.update({ 
+            nota_satisfaccion: notaNum,
+            comentario_satisfaccion: comentarioLimpio
+        });
         return res.json({ 
             ok: true, 
             nota_satisfaccion: notaNum,
+            comentario_satisfaccion: comentarioLimpio,
             message: 'Gracias por tu calificación' 
         });
     } catch (e: any) {
@@ -878,6 +990,22 @@ export const actualizarEstado = async (
             ? await models.EstadoDenuncia.findByPk(Number(estadoAnteriorId))
             : null;
 
+        // Validar transición de estados
+        const oldStateId = Number(estadoAnteriorId);
+        const newStateId = Number(estado_id);
+
+        if (newStateId < oldStateId) {
+            // Regla general: no se puede volver atrás
+            // Excepción: Del estado 3 (Requiere info) se puede volver al 2 (En proceso)
+            const esExcepcionPermitida = oldStateId === 3 && newStateId === 2;
+
+            if (!esExcepcionPermitida) {
+                return res.status(400).json({ 
+                    error: 'No se puede volver a un estado anterior (secuencia: 1->2->3->4/5)' 
+                });
+            }
+        }
+
         // Crear registro en historial de estados
         await models.DenunciaHistorialEstado.create({
             denuncia_id: id,
@@ -979,17 +1107,50 @@ export const obtenerTodosLosReclamos = async (
     try {
         const userId = req.user?.get('id');
         const userRoles = req.user?.get('roles') || [];
-        const rolesCodigos = userRoles.map((r: any) => r.get('codigo'));
+        
+        // Usar código del arquetipo, no del rol
+        const arquetiposCodigos = userRoles
+            .map((r: any) => r.get('arquetipo')?.get('codigo'))
+            .filter(Boolean);
 
-        const isAdminOrAnalyst = rolesCodigos.some((role: string) =>
-            ['ADMIN', 'ANALISTA'].includes(role)
+        const isAdminOrAnalyst = arquetiposCodigos.some((code: string) =>
+            ['ADMIN', 'ANALISTA'].includes(code)
         );
 
-        let whereClause = {};
+        let whereClause: any = {};
+        let requiredIncludes: any[] = [];
 
-        // Si es supervisor y no es admin/analista, filtrar solo sus asignaciones
-        if (!isAdminOrAnalyst && rolesCodigos.includes('SUPERVISOR')) {
-            // Buscar IDs de denuncias asignadas
+        // Primero: Verificar categorías del rol para TODOS los usuarios
+        const roleIds = userRoles.map((r: any) => r.get('id'));
+        
+        // Obtener categorías de todos los roles del usuario
+        const rolCategorias = await models.RolCategoria.findAll({
+            where: { rol_id: roleIds },
+            attributes: ['categoria_id'],
+        });
+
+        let tipoIdsPermitidos: number[] = [];
+        let tieneRestriccionCategorias = false;
+
+        if (rolCategorias.length > 0) {
+            // Roles tienen categorías asignadas
+            tieneRestriccionCategorias = true;
+            const categoryIds = [...new Set(rolCategorias.map((rc) => rc.get('categoria_id')))];
+
+            // Obtener tipos de denuncia que pertenecen a esas categorías
+            const tiposDenuncia = await models.TipoDenuncia.findAll({
+                where: {
+                    categoria_id: categoryIds,
+                },
+                attributes: ['id'],
+            });
+
+            tipoIdsPermitidos = tiposDenuncia.map((t) => t.get('id') as number);
+        }
+
+        // Segundo: Aplicar filtros según el tipo de usuario
+        if (!isAdminOrAnalyst && arquetiposCodigos.includes('SUPERVISOR')) {
+            // Para supervisores: Solo sus asignaciones Y dentro de sus categorías
             const asignaciones = await models.DenunciaAsignacion.findAll({
                 where: {
                     usuario_id: userId,
@@ -999,9 +1160,27 @@ export const obtenerTodosLosReclamos = async (
             });
 
             const denunciaIds = asignaciones.map((a) => a.get('denuncia_id'));
-            whereClause = {
-                id: denunciaIds,
-            };
+            
+            if (tieneRestriccionCategorias) {
+                // Tiene restricción de categorías - combinar ambos filtros
+                whereClause = {
+                    id: denunciaIds,
+                    tipo_id: tipoIdsPermitidos,
+                };
+            } else {
+                // Sin restricción de categorías - solo por asignaciones
+                whereClause = {
+                    id: denunciaIds,
+                };
+            }
+        } else if (isAdminOrAnalyst) {
+            // Para admin/analista: Solo aplicar restricción de categorías si existe
+            if (tieneRestriccionCategorias) {
+                whereClause = {
+                    tipo_id: tipoIdsPermitidos,
+                };
+            }
+            // Si no tiene categorías asignadas, whereClause queda vacío = ve todas las denuncias
         }
 
         // Obtener todos los reclamos
@@ -1217,7 +1396,10 @@ export const obtenerTodosLosReclamos = async (
                         email: denuncia.get('denunciante_email'),
                         telefono: denuncia.get('denunciante_fono'),
                         anonimo: denuncia.get('es_anonima') === 1,
+                        rut: denuncia.get('denunciante_rut'),
                     },
+                    nota_satisfaccion: denuncia.get('nota_satisfaccion'),
+                    comentario_satisfaccion: denuncia.get('comentario_satisfaccion'),
                     supervisor: asignacion?.get('asignado')
                         ? {
                               id: (asignacion.get('asignado') as any).id,

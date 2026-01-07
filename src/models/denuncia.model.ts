@@ -108,6 +108,13 @@ export const defineDenuncia = (sequelize: Sequelize) => {
                     len: [0, 50],
                 },
             },
+            denunciante_rut: {
+                type: DataTypes.STRING(20),
+                allowNull: true,
+                validate: {
+                    len: [0, 20],
+                },
+            },
             es_anonima: {
                 type: DataTypes.TINYINT,
                 allowNull: false,
@@ -147,6 +154,13 @@ export const defineDenuncia = (sequelize: Sequelize) => {
                 validate: {
                     min: 1,
                     max: 5,
+                },
+            },
+            comentario_satisfaccion: {
+                type: DataTypes.STRING(500),
+                allowNull: true,
+                validate: {
+                    len: [0, 500],
                 },
             },
         },

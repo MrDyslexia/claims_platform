@@ -320,7 +320,17 @@ export const obtenerListaCompletaUsuarios = async (
                             as: 'permisos',
                             through: { attributes: [] },
                         },
+                        {
+                            model: models.Arquetipo,
+                            as: 'arquetipo',
+                            attributes: ['id', 'codigo', 'nombre'],
+                        },
                     ],
+                },
+                {
+                    model: models.CategoriaDenuncia,
+                    as: 'categorias',
+                    through: { attributes: [] },
                 },
             ],
             order: [['created_at', 'DESC']],
@@ -366,6 +376,12 @@ export const obtenerListaCompletaUsuarios = async (
                         nombre: rol.nombre,
                         descripcion: rol.descripcion,
                         fecha_creacion: rol.createdAt,
+                        arquetipo_id: rol.arquetipo_id,
+                        arquetipo: rol.arquetipo ? {
+                            id: rol.arquetipo.id,
+                            codigo: rol.arquetipo.codigo,
+                            nombre: rol.arquetipo.nombre,
+                        } : null,
                     })) || [],
                 permisos:
                     usuarioJSON.roles?.flatMap(
@@ -383,6 +399,11 @@ export const obtenerListaCompletaUsuarios = async (
                     comentarios_realizados: 0,
                     ultimo_acceso: null,
                 },
+                categorias:
+                    usuarioJSON.categorias?.map((cat: any) => ({
+                        id: cat.id,
+                        nombre: cat.nombre,
+                    })) || [],
             };
         });
 
@@ -465,6 +486,94 @@ export const toggleActivo = async (req: Request, res: Response) => {
             ok: true,
             message: `usuario ${nuevoEstado === 1 ? 'activado' : 'desactivado'}`,
             activo: nuevoEstado,
+        });
+    } catch (e: any) {
+        return res.status(400).json({ error: e.message });
+    }
+};
+
+/**
+ * Asignar categorías a usuario (para filtrado de denuncias)
+ * POST /api/usuarios/:id/categorias
+ * Body: { categoria_ids: number[] }
+ * 
+ * Si categoria_ids está vacío, el usuario puede ver todas las denuncias.
+ * Si tiene categorías asignadas, solo ve denuncias de esas categorías.
+ */
+export const asignarCategoriasUsuario = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { categoria_ids } = req.body;
+
+        if (!Array.isArray(categoria_ids)) {
+            return res.status(400).json({ error: 'categoria_ids must be an array' });
+        }
+
+        const usuario = await models.Usuario.findByPk(id);
+        if (!usuario) {
+            return res.status(404).json({ error: 'usuario not found' });
+        }
+
+        // Borrar asignaciones anteriores
+        await models.UsuarioCategoria.destroy({
+            where: { usuario_id: id },
+        });
+
+        // Crear nuevas asignaciones
+        if (categoria_ids.length > 0) {
+            const asignaciones = categoria_ids.map((categoria_id: number) => ({
+                usuario_id: id,
+                categoria_id,
+                created_at: new Date(),
+            }));
+
+            await models.UsuarioCategoria.bulkCreate(asignaciones);
+        }
+
+        return res.json({
+            ok: true,
+            message: categoria_ids.length > 0
+                ? 'categorias assigned - user will only see claims from these categories'
+                : 'categories cleared - user can see all claims',
+            categoria_ids,
+        });
+    } catch (e: any) {
+        return res.status(400).json({ error: e.message });
+    }
+};
+
+/**
+ * Obtener categorías asignadas a un usuario
+ * GET /api/usuarios/:id/categorias
+ */
+export const obtenerCategoriasUsuario = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        const usuario = await models.Usuario.findByPk(id);
+        if (!usuario) {
+            return res.status(404).json({ error: 'usuario not found' });
+        }
+
+        const asignaciones = await models.UsuarioCategoria.findAll({
+            where: { usuario_id: id },
+            attributes: ['categoria_id', 'created_at'],
+        });
+
+        // Obtener detalles de las categorías
+        const categoriaIds = asignaciones.map((a) => a.get('categoria_id'));
+        const categorias = await models.CategoriaDenuncia.findAll({
+            where: { id: categoriaIds },
+        });
+
+        return res.json({
+            usuario_id: id,
+            tiene_restriccion: categorias.length > 0,
+            categorias: categorias.map((c: any) => ({
+                id: c.get('id'),
+                nombre: c.get('nombre'),
+                descripcion: c.get('descripcion'),
+            })),
         });
     } catch (e: any) {
         return res.status(400).json({ error: e.message });

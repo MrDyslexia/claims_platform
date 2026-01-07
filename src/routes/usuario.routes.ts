@@ -11,6 +11,8 @@ import {
     obtenerSesionesUsuario,
     obtenerListaCompletaUsuarios,
     toggleActivo,
+    asignarCategoriasUsuario,
+    obtenerCategoriasUsuario,
 } from '../controllers/usuario.controller';
 import { authMiddleware, requirePermission } from '../middlewares/auth';
 
@@ -106,5 +108,23 @@ router.patch(
     requirePermission('usuarios:editar'),
     toggleActivo
 );
+
+/**
+ * @route POST /api/usuarios/:id/categorias
+ * @desc Asignar categorías a usuario para filtrado de denuncias
+ * @access Privado - Requiere permiso UPDATE_USUARIO
+ */
+router.post(
+    '/:id/categorias',
+    requirePermission('usuarios:editar'),
+    asignarCategoriasUsuario
+);
+
+/**
+ * @route GET /api/usuarios/:id/categorias
+ * @desc Obtener categorías asignadas a usuario
+ * @access Privado
+ */
+router.get('/:id/categorias', obtenerCategoriasUsuario);
 
 export default router;

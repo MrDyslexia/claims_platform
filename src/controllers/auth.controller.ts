@@ -35,13 +35,18 @@ export const login = async (req: Request, res: Response) => {
                 model: models.Rol,
                 as: 'roles',
                 through: { attributes: [] },
-                attributes: ['id', 'codigo', 'nombre'],
+                attributes: ['id', 'codigo', 'nombre', 'arquetipo_id'],
                 include: [
                     {
                         model: models.Permiso,
                         as: 'permisos',
                         through: { attributes: [] },
                         attributes: ['codigo', 'nombre'],
+                    },
+                    {
+                        model: models.Arquetipo,
+                        as: 'arquetipo',
+                        attributes: ['id', 'codigo', 'nombre'],
                     },
                 ],
             },
@@ -93,6 +98,12 @@ export const login = async (req: Request, res: Response) => {
             id: rol.id,
             codigo: rol.codigo,
             nombre: rol.nombre,
+            arquetipo_id: rol.arquetipo_id,
+            arquetipo: rol.arquetipo ? {
+                id: rol.arquetipo.id,
+                codigo: rol.arquetipo.codigo,
+                nombre: rol.arquetipo.nombre,
+            } : null,
         };
     });
 
@@ -151,13 +162,18 @@ export const me = async (req: Request & { user?: any }, res: Response) => {
                     model: models.Rol,
                     as: 'roles',
                     through: { attributes: [] },
-                    attributes: ['id', 'nombre', 'descripcion'],
+                    attributes: ['id', 'nombre', 'descripcion', 'arquetipo_id'],
                     include: [
                         {
                             model: models.Permiso,
                             as: 'permisos',
                             through: { attributes: [] },
                             attributes: ['codigo', 'nombre'],
+                        },
+                        {
+                            model: models.Arquetipo,
+                            as: 'arquetipo',
+                            attributes: ['id', 'codigo', 'nombre'],
                         },
                     ],
                 },
@@ -198,6 +214,12 @@ export const me = async (req: Request & { user?: any }, res: Response) => {
                 id: rol.id,
                 nombre: rol.nombre,
                 descripcion: rol.descripcion,
+                arquetipo_id: rol.arquetipo_id,
+                arquetipo: rol.arquetipo ? {
+                    id: rol.arquetipo.id,
+                    codigo: rol.arquetipo.codigo,
+                    nombre: rol.arquetipo.nombre,
+                } : null,
             })),
             empresa: user.get('empresa'),
             permisos: Array.from(permisos),

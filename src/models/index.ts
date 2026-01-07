@@ -29,6 +29,8 @@ import { defineAPIRequestLog } from './api-request-log.model';
 import { defineKPIDenunciasDiario } from './kpi-denuncias-diario.model';
 import { defineSeqDenuncia } from './seq-denuncia.model';
 import { defineVDenunciaLookup } from './v-denuncia-lookup.model';
+import { defineUsuarioCategoria } from './usuario-categoria.model';
+import { defineRolCategoria } from './rol-categoria.model';
 
 /**
  * Inicializa todos los modelos y sus asociaciones
@@ -64,6 +66,8 @@ export const initModels = (sequelize: Sequelize) => {
     const KPIDenunciasDiario = defineKPIDenunciasDiario(sequelize);
     const SeqDenuncia = defineSeqDenuncia(sequelize);
     const VDenunciaLookup = defineVDenunciaLookup(sequelize);
+    const UsuarioCategoria = defineUsuarioCategoria(sequelize);
+    const RolCategoria = defineRolCategoria(sequelize);
 
     // ==========================================
     // ASOCIACIONES / RELATIONSHIPS
@@ -111,6 +115,20 @@ export const initModels = (sequelize: Sequelize) => {
         as: 'usuarios',
     });
 
+    // Usuario <-> CategoriaDenuncia (many-to-many) - Categorías asignadas a admins
+    Usuario.belongsToMany(CategoriaDenuncia, {
+        through: UsuarioCategoria,
+        foreignKey: 'usuario_id',
+        otherKey: 'categoria_id',
+        as: 'categorias',
+    });
+    CategoriaDenuncia.belongsToMany(Usuario, {
+        through: UsuarioCategoria,
+        foreignKey: 'categoria_id',
+        otherKey: 'usuario_id',
+        as: 'usuarios',
+    });
+
     // Arquetipo <-> Permiso (many-to-many) - Permisos base del arquetipo
     Arquetipo.belongsToMany(Permiso, {
         through: ArquetipoPermiso,
@@ -139,6 +157,20 @@ export const initModels = (sequelize: Sequelize) => {
     Permiso.belongsToMany(Rol, {
         through: RolPermiso,
         foreignKey: 'permiso_id',
+        otherKey: 'rol_id',
+        as: 'roles',
+    });
+
+    // Rol <-> CategoriaDenuncia (many-to-many) - Categorías asignadas a roles
+    Rol.belongsToMany(CategoriaDenuncia, {
+        through: RolCategoria,
+        foreignKey: 'rol_id',
+        otherKey: 'categoria_id',
+        as: 'categorias',
+    });
+    CategoriaDenuncia.belongsToMany(Rol, {
+        through: RolCategoria,
+        foreignKey: 'categoria_id',
         otherKey: 'rol_id',
         as: 'roles',
     });
@@ -293,6 +325,8 @@ export const initModels = (sequelize: Sequelize) => {
         KPIDenunciasDiario,
         SeqDenuncia,
         VDenunciaLookup,
+        UsuarioCategoria,
+        RolCategoria,
     } as const;
 };
 

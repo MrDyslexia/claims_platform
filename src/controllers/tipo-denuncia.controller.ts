@@ -8,7 +8,7 @@ import { Op } from 'sequelize';
  */
     export const crearTipoDenuncia = async (req: Request, res: Response) => {
     try {
-        const { nombre, descripcion, categoria_id, activo } = req.body;
+        const { nombre, codigo, categoria_id, activo, descripcion } = req.body;
 
         if (!nombre) {
             return res.status(400).json({ error: 'missing field: nombre' });
@@ -16,8 +16,9 @@ import { Op } from 'sequelize';
 
         const tipo = await models.TipoDenuncia.create({
             nombre,
-            descripcion: descripcion ?? null,
+            codigo: codigo ? codigo.toUpperCase() : null,
             categoria_id: categoria_id ?? null,
+            descripcion: descripcion ?? null,
             activo: activo !== undefined ? activo : 1,
         });
 

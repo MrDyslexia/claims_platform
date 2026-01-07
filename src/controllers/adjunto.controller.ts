@@ -344,11 +344,12 @@ export const subirAdjuntoPublico = async (req: Request, res: Response) => {
             return res.status(401).json({ error: 'Clave de acceso inválida' });
         }
 
-        // Verificar que el estado sea INFO (5)
+        // Verificar que el estado sea INFO (3) o EN PROCESO (2)
+        // Se acepta estado 2 porque el comentario podría haberse procesado primero y cambiado el estado
         const estadoId = denuncia.get('estado_id');
-        if (Number(estadoId) !== 5) {
+        if (Number(estadoId) !== 3 && Number(estadoId) !== 2) {
             return res.status(400).json({
-                error: 'Solo puede agregar archivos cuando la denuncia está en estado "Requiere información"',
+                error: 'Solo puede agregar archivos cuando la denuncia está en estado "Requiere información" o "En Proceso"',
             });
         }
 
@@ -369,6 +370,27 @@ export const subirAdjuntoPublico = async (req: Request, res: Response) => {
         // Separar éxitos y errores
         const successful = results.filter((r) => r.success);
         const failed = results.filter((r) => !r.success);
+
+        // Si se subieron archivos exitosamente, cambiar el estado a 2 (En Proceso)
+        // Solo si el estado sigue siendo 3 (evita duplicación si se envían comentarios y archivos juntos)
+        if (successful.length > 0) {
+            // Recargar la denuncia para obtener el estado actual
+            await denuncia.reload();
+            const estadoActual = denuncia.get('estado_id');
+            
+            if (Number(estadoActual) === 3) {
+                await denuncia.update({ estado_id: 2 });
+
+                // Registrar el cambio de estado en el historial
+                await models.DenunciaHistorialEstado.create({
+                    denuncia_id: denunciaId,
+                    de_estado_id: estadoActual,
+                    a_estado_id: 2,
+                    cambiado_por: null,
+                    motivo: 'Archivos adicionales recibidos del denunciante',
+                });
+            }
+        }
 
         return res.status(successful.length > 0 ? 201 : 400).json({
             mensaje:

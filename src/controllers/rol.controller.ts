@@ -289,3 +289,82 @@ export const obtenerPermisosRol = async (req: Request, res: Response) => {
         return res.status(400).json({ error: e.message });
     }
 };
+
+/**
+ * Asignar categorías a un rol
+ * POST /api/roles/:id/categorias
+ * Body: { categoria_ids: number[] }
+ * 
+ * Si categoria_ids está vacío, el rol puede ver todas las denuncias.
+ * Si tiene categorías asignadas, solo ve denuncias de esas categorías.
+ */
+export const asignarCategoriasRol = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { categoria_ids } = req.body;
+
+        if (!Array.isArray(categoria_ids)) {
+            return res.status(400).json({ error: 'categoria_ids must be an array' });
+        }
+
+        const rol = await models.Rol.findByPk(id);
+        if (!rol) {
+            return res.status(404).json({ error: 'rol not found' });
+        }
+
+        // Usar la asociación many-to-many para asignar categorías
+        await (rol as any).setCategorias(categoria_ids);
+
+        // Retornar rol actualizado con categorías
+        const rolActualizado = await models.Rol.findByPk(id, {
+            include: [
+                { association: 'categorias', through: { attributes: [] } },
+            ],
+        });
+
+        return res.json({
+            ok: true,
+            message: categoria_ids.length > 0
+                ? 'categorias assigned - role will only see claims from these categories'
+                : 'categories cleared - role can see all claims',
+            categoria_ids,
+            rol: rolActualizado?.toJSON(),
+        });
+    } catch (e: any) {
+        return res.status(400).json({ error: e.message });
+    }
+};
+
+/**
+ * Obtener categorías asignadas a un rol
+ * GET /api/roles/:id/categorias
+ */
+export const obtenerCategoriasRol = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        const rol = await models.Rol.findByPk(id, {
+            include: [
+                { association: 'categorias', through: { attributes: [] } },
+            ],
+        });
+
+        if (!rol) {
+            return res.status(404).json({ error: 'rol not found' });
+        }
+
+        const categorias = (rol as any).categorias || [];
+
+        return res.json({
+            rol_id: id,
+            tiene_restriccion: categorias.length > 0,
+            categorias: categorias.map((c: any) => ({
+                id: c.id,
+                nombre: c.nombre,
+                descripcion: c.descripcion,
+            })),
+        });
+    } catch (e: any) {
+        return res.status(400).json({ error: e.message });
+    }
+};

@@ -827,6 +827,115 @@ Este es un correo automático, por favor no responda a este mensaje.
         }
     }
 
+    async sendNewClaimNotificationToAdmin(
+        to: string,
+        data: {
+            adminNombre: string;
+            numero: string;
+            asunto: string;
+            categoria: string;
+            fechaCreacion: Date;
+        }
+    ): Promise<boolean> {
+        try {
+            const transporter = await this.getTransporter();
+
+            const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #7c3aed; color: white; padding: 20px; text-align: center; }
+        .content { background-color: #f7fafc; padding: 30px; border-radius: 5px; margin-top: 20px; }
+        .info-box { background-color: white; padding: 20px; border-left: 4px solid #7c3aed; margin: 20px 0; }
+        .alert-box { background-color: #fef3c7; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #f59e0b; }
+        .footer { text-align: center; margin-top: 30px; color: #718096; font-size: 12px; }
+        .button-container { text-align: center; margin: 25px 0; }
+        .action-button { display: inline-block; background-color: #7c3aed; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; }
+        .category-badge { display: inline-block; background-color: #e9d5ff; color: #7c3aed; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔔 Nueva Denuncia Registrada</h1>
+        </div>
+        
+        <div class="content">
+            <p>Estimado/a ${data.adminNombre},</p>
+            
+            <p>Se ha registrado una nueva denuncia en una categoría que usted administra.</p>
+            
+            <div class="info-box">
+                <h3 style="margin-top: 0;">Información de la Denuncia</h3>
+                <p><strong>Número:</strong> ${data.numero}</p>
+                <p><strong>Asunto:</strong> ${data.asunto}</p>
+                <p><strong>Categoría:</strong> <span class="category-badge">${data.categoria}</span></p>
+                <p><strong>Fecha:</strong> ${data.fechaCreacion.toLocaleString('es-CL')}</p>
+            </div>
+
+            <div class="alert-box">
+                <strong>⚡ Acción Requerida:</strong> Por favor revise la denuncia y asígnela a un supervisor para su gestión.
+            </div>
+
+            <div class="button-container">
+                <a href="${env.frontendUrl}/admin/claims" class="action-button">
+                    📋 Ver Denuncias Pendientes
+                </a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Este es un correo automático, por favor no responda a este mensaje.</p>
+            <p>&copy; ${new Date().getFullYear()} Sistema de Denuncias. Todos los derechos reservados.</p>
+        </div>
+    </div>
+</body>
+</html>
+            `;
+
+            const textContent = `
+🔔 NUEVA DENUNCIA REGISTRADA
+
+Estimado/a ${data.adminNombre},
+
+Se ha registrado una nueva denuncia en una categoría que usted administra.
+
+INFORMACIÓN DE LA DENUNCIA
+Número: ${data.numero}
+Asunto: ${data.asunto}
+Categoría: ${data.categoria}
+Fecha: ${data.fechaCreacion.toLocaleString('es-CL')}
+
+⚡ ACCIÓN REQUERIDA
+Por favor revise la denuncia y asígnela a un supervisor para su gestión.
+
+VER DENUNCIAS PENDIENTES
+${env.frontendUrl}/admin/claims
+
+---
+Este es un correo automático, por favor no responda a este mensaje.
+© ${new Date().getFullYear()} Sistema de Denuncias. Todos los derechos reservados.
+            `;
+
+            await transporter.sendMail({
+                from: env.email.from,
+                to,
+                subject: `🔔 Nueva Denuncia - ${data.numero} - ${data.categoria}`,
+                text: textContent,
+                html: htmlContent,
+            });
+
+            return true;
+        } catch (error) {
+            console.error('Error sending admin notification email:', error);
+            return false;
+        }
+    }
+
     async queueEmail(emailData: {
         to: string;
         subject: string;
