@@ -280,7 +280,7 @@ export default function AuditPage() {
                 size="sm"
                 startContent={<XCircle className="h-4 w-4" />}
                 variant="flat"
-                onClick={() => {
+                onPress={() => {
                   setFiltros({ page: 1, limit: 10 });
                   setPage(1);
                 }}

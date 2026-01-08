@@ -36,7 +36,7 @@ import {
   Tabs,
   Textarea,
   useDisclosure,
-  cn,
+  Tooltip,
 } from "@heroui/react";
 import {
   AlertCircle,
@@ -849,6 +849,15 @@ export default function ClaimsPage() {
                       ? "N/A"
                       : selectedClaim?.prioridad}
                   </Chip>
+                  <Tooltip content="Días desde creación">
+                    <Chip
+                    color='warning'
+                    size="lg"
+                    variant="flat"
+                  >
+                    {selectedClaim?.dias}
+                  </Chip>
+                  </Tooltip>
                 </div>
                 <p className="text-sm text-muted-foreground font-normal">
                   {selectedClaim?.tipo.nombre}

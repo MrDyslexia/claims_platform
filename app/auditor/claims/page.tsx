@@ -27,8 +27,7 @@ import {
   TableHeader,
   TableRow,
   Tabs,
-  Textarea,
-  Divider,
+  Tooltip,
   useDisclosure,
 } from "@heroui/react";
 import {
@@ -199,47 +198,6 @@ export default function ClaimsPage() {
       fetchClaims();
     }
   }, [token, fetchClaims]);
-
-  const handleSendComment = async () => {
-    if (!selectedClaim || !newComment.trim()) return;
-    if (!token) return;
-
-    setIsSubmittingComment(true);
-    setCommentError(null);
-
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/denuncias/${selectedClaim.id}/comentarios`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            contenido: newComment,
-            es_interno: isCommentInternal,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Error al enviar comentario");
-      }
-
-      // Limpiar el comentario
-      setNewComment("");
-      // Recargar reclamos para obtener el nuevo comentario
-      fetchClaims();
-    } catch (error) {
-      setCommentError(
-        error instanceof Error ? error.message : "Error desconocido"
-      );
-    } finally {
-      setIsSubmittingComment(false);
-    }
-  };
 
   const filteredClaims = (claims || []).filter((claim) => {
     // Use local claims state
@@ -508,15 +466,22 @@ export default function ClaimsPage() {
                   >
                     {selectedClaim?.prioridad}
                   </Chip>
+                  <Tooltip content="Días desde creación">
+                    <Chip
+                    color='warning'
+                    size="lg"
+                    variant="flat"
+                  >
+                    {selectedClaim?.dias}
+                  </Chip>
+                  </Tooltip>
                 </div>
                 <p className="text-sm text-muted-foreground font-normal">
                   {selectedClaim?.tipo.nombre}
                 </p>
               </ModalHeader>
-              <ModalBody>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Main Content */}
-                  <div className="lg:col-span-2">
+              <ModalBody className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-4">
+                <div className="lg:col-span-2">
                     {/* Description */}
                     <Card>
                       <CardBody>
@@ -592,47 +557,7 @@ export default function ClaimsPage() {
                                     </div>
                                   </div>
                                 ))}
-                              </div>
-                              <Divider />
-                              <div className="space-y-2">
-                                {commentError && (
-                                  <div className="bg-red-50 border border-red-200 rounded-lg p-2">
-                                    <p className="text-sm text-red-700">
-                                      {commentError}
-                                    </p>
-                                  </div>
-                                )}
-                                <Textarea
-                                  disabled={isSubmittingComment}
-                                  minRows={3}
-                                  placeholder="Agregar un comentario..."
-                                  value={newComment}
-                                  onChange={(e) =>
-                                    setNewComment(e.target.value)
-                                  }
-                                />
-                                <div className="flex items-center justify-end gap-2">
-                                  <CommentTypeSwitch
-                                    isInternal={isCommentInternal}
-                                    onValueChange={setIsCommentInternal}
-                                    isDisabled={isSubmittingComment}
-                                  />
-                                  <Button
-                                    color="primary"
-                                    disabled={
-                                      isSubmittingComment || !newComment.trim()
-                                    }
-                                    isLoading={isSubmittingComment}
-                                    size="sm"
-                                    startContent={<Send className="h-4 w-4" />}
-                                    onClick={handleSendComment}
-                                  >
-                                    {isSubmittingComment
-                                      ? "Enviando..."
-                                      : "Enviar"}
-                                  </Button>
-                                </div>
-                              </div>
+                              </div>                              
                             </div>
                           </Tab>
                           <Tab
@@ -860,7 +785,6 @@ export default function ClaimsPage() {
                       </CardBody>
                     </Card>
                   </div>
-                </div>
               </ModalBody>
             </>
           )}

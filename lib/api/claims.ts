@@ -95,6 +95,7 @@ export interface Reclamo {
   pais?: string;
   descripcion: string;
   canal_origen: string;
+  dias: number;
   fecha_creacion: string;
   fecha_actualizacion: string;
   estado: Estado;

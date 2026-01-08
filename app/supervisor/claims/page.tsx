@@ -33,8 +33,8 @@ import {
   TableRow,
   Tabs,
   Textarea,
+  Tooltip,
   useDisclosure,
-  cn,
 } from "@heroui/react";
 import {
   AlertCircle,
@@ -52,7 +52,10 @@ import {
   Search,
   Send,
   User,
+  Upload,
+  FileDown,
 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
 const priorityColors = {
   baja: "default",
@@ -81,15 +84,22 @@ const availableStates = [
 
 export default function SupervisorClaims() {
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const searchParams = useSearchParams();
   const [token, setToken] = useState<string | null>(null);
   const [claims, setClaims] = useState<Reclamo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [selectedClaim, setSelectedClaim] = useState<Reclamo | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [filterPriority, setFilterPriority] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState(
+    searchParams.get("search") || ""
+  );
+  const [filterStatus, setFilterStatus] = useState<string>(
+    searchParams.get("status") || "all"
+  );
+  const [filterPriority, setFilterPriority] = useState<string>(
+    searchParams.get("priority") || "all"
+  );
   const [page, setPage] = useState(1);
   const [newComment, setNewComment] = useState("");
   const [isCommentInternal, setIsCommentInternal] = useState(true);
@@ -101,6 +111,12 @@ export default function SupervisorClaims() {
   const [statusChangeError, setStatusChangeError] = useState<string | null>(
     null
   );
+  const [reportFile, setReportFile] = useState<File | null>(null);
+  const [isUploadingReport, setIsUploadingReport] = useState(false);
+  const [reportUploadError, setReportUploadError] = useState<string | null>(
+    null
+  );
+  const [reportUploadSuccess, setReportUploadSuccess] = useState(false);
   const rowsPerPage = 10;
 
   // Helper para formatear fechas de forma segura
@@ -168,12 +184,22 @@ export default function SupervisorClaims() {
     }
   };
 
-  // Cargar token de localStorage al montar
+  // Cargar token de localStorage al<bos>montar
   useEffect(() => {
     const storedToken = localStorage.getItem("auth_token");
 
     setToken(storedToken);
   }, []);
+
+  useEffect(() => {
+    const status = searchParams.get("status");
+    const priority = searchParams.get("priority");
+    const search = searchParams.get("search");
+
+    if (status) setFilterStatus(status);
+    if (priority) setFilterPriority(priority);
+    if (search) setSearchQuery(search);
+  }, [searchParams]);
 
   const fetchClaims = useCallback(async () => {
     if (!token) return;
@@ -303,10 +329,63 @@ export default function SupervisorClaims() {
   const handleStatusChange = async () => {
     if (!token || !selectedClaim || !selectedStatus) return;
 
+    const selectedState = availableStates.find((s) => s.id === selectedStatus);
+    if (selectedState?.codigo === "CERRADO" && !reportFile) {
+      setStatusChangeError(
+        "Debe adjuntar un informe PDF antes de cambiar el estado a 'Reclamo desestimado'"
+      );
+      return;
+    }
+
     setIsChangingStatus(true);
     setStatusChangeError(null);
 
     try {
+      if (reportFile && selectedState?.codigo === "CERRADO") {
+        const formData = new FormData();
+        formData.append("pdf", reportFile);
+
+        const uploadResponse = await fetch(
+          `${API_BASE_URL}/denuncias/${selectedClaim.id}/informe-resolucion`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: formData,
+          }
+        );
+
+        if (!uploadResponse.ok) {
+          const errorData = await uploadResponse.json();
+          throw new Error(
+            errorData.error ||
+              "Error al subir el informe antes de cambiar el estado"
+          );
+        }
+      }
+
+      if (reportFile && selectedState?.codigo === "RESUELTO") {
+        const formData = new FormData();
+        formData.append("pdf", reportFile);
+
+        const uploadResponse = await fetch(
+          `${API_BASE_URL}/denuncias/${selectedClaim.id}/informe-resolucion`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: formData,
+          }
+        );
+
+        if (!uploadResponse.ok) {
+          const errorData = await uploadResponse.json();
+          throw new Error(errorData.error || "Error al subir el informe");
+        }
+      }
+
       const response = await fetch(
         `${API_BASE_URL}/denuncias/${selectedClaim.id}/estado`,
         {
@@ -351,14 +430,73 @@ export default function SupervisorClaims() {
         }
       }
 
-      // Limpiar el formulario
+      alert(
+        `Estado del reclamo cambiado exitosamente a: ${selectedState?.nombre || "nuevo estado"}`
+      );
+
       setStatusChangeReason("");
+      setReportFile(null);
+      const fileInput = document.getElementById(
+        "report-file-upload"
+      ) as HTMLInputElement;
+      if (fileInput) fileInput.value = "";
     } catch (error) {
       setStatusChangeError(
         error instanceof Error ? error.message : "Error desconocido"
       );
     } finally {
       setIsChangingStatus(false);
+    }
+  };
+
+  const handleUploadReport = async () => {
+    if (!reportFile || !selectedClaim) return;
+
+    setIsUploadingReport(true);
+    setReportUploadError(null);
+
+    try {
+      const token = localStorage.getItem("auth_token");
+
+      const formData = new FormData();
+      formData.append("pdf", reportFile);
+
+      const response = await fetch(
+        `${API_BASE_URL}/denuncias/${selectedClaim.id}/informe-resolucion`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Error al subir el informe");
+      }
+
+      setReportUploadSuccess(true);
+      setReportFile(null);
+
+      // Reset file input
+      const fileInput = document.getElementById(
+        "file-resuelto"
+      ) as HTMLInputElement;
+      if (fileInput) fileInput.value = "";
+
+      // Fetch claims first to ensure we have the latest list
+      await fetchClaims();
+      alert("Informe PDF subido correctamente");
+      onClose();
+      setTimeout(() => setReportUploadSuccess(false), 3000);
+    } catch (error) {
+      setReportUploadError(
+        error instanceof Error ? error.message : "Error al subir el informe"
+      );
+    } finally {
+      setIsUploadingReport(false);
     }
   };
 
@@ -389,6 +527,9 @@ export default function SupervisorClaims() {
     setSelectedStatus(claim.estado?.id || null);
     setStatusChangeReason("");
     setStatusChangeError(null);
+    setReportFile(null); // Limpiar el archivo de reporte al abrir un nuevo reclamo
+    setReportUploadError(null);
+    setReportUploadSuccess(false);
     onOpen();
   };
 
@@ -422,7 +563,7 @@ export default function SupervisorClaims() {
                 className="bg-red-100 text-red-700 hover:bg-red-200"
                 size="sm"
                 variant="flat"
-                onClick={() => fetchClaims()}
+                onPress={() => fetchClaims()}
               >
                 Reintentar
               </Button>
@@ -618,6 +759,11 @@ export default function SupervisorClaims() {
                   >
                     {selectedClaim?.prioridad}
                   </Chip>
+                  <Tooltip content="Días desde creación">
+                    <Chip color="warning" size="lg" variant="flat">
+                      {selectedClaim?.dias}
+                    </Chip>
+                  </Tooltip>
                 </div>
                 <p className="text-sm text-muted-foreground font-normal">
                   {selectedClaim?.tipo.nombre}
@@ -779,8 +925,7 @@ export default function SupervisorClaims() {
                                         isIconOnly
                                         size="sm"
                                         variant="light"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
+                                        onPress={() => {
                                           handleDownloadAttachment(
                                             adjunto.id,
                                             adjunto.nombre
@@ -971,7 +1116,26 @@ export default function SupervisorClaims() {
                             </DropdownTrigger>
                             <DropdownMenu
                               aria-label="Estado del reclamo"
-                              onAction={(key) => setSelectedStatus(Number(key))}
+                              onAction={(key) => {
+                                const newStateId = Number(key);
+                                setSelectedStatus(newStateId);
+                                // Si se selecciona un estado que no es CERRADO, limpiar el reporte
+                                if (
+                                  availableStates.find(
+                                    (s) => s.id === newStateId
+                                  )?.codigo !== "CERRADO"
+                                ) {
+                                  setReportFile(null);
+                                  setReportUploadError(null);
+                                  setReportUploadSuccess(false);
+                                  const fileInput = document.getElementById(
+                                    "file"
+                                  ) as HTMLInputElement; // Changed ID to 'file' for consistency with JSX
+                                  if (fileInput) fileInput.value = "";
+                                }
+                                setStatusChangeReason(""); // Limpiar el motivo al cambiar de estado
+                                setStatusChangeError(null); // Limpiar errores al cambiar de estado
+                              }}
                             >
                               {availableStates.map((estado) => (
                                 <DropdownItem
@@ -1027,12 +1191,385 @@ export default function SupervisorClaims() {
                                       setSelectedStatus(null);
                                       setStatusChangeReason("");
                                       setStatusChangeError(null);
+                                      // Reset report file if cancellation occurs
+                                      setReportFile(null);
+                                      const fileInput = document.getElementById(
+                                        "file"
+                                      ) as HTMLInputElement; // Changed ID to 'file' for consistency with JSX
+                                      if (fileInput) fileInput.value = "";
                                     }}
                                   >
                                     Cancelar
                                   </Button>
                                 </div>
                               </>
+                            )}
+
+                          {/* CHANGE: Modified condition to show download card if claim has resolution */}
+                          {selectedStatus === 5 &&
+                            selectedStatus !== selectedClaim?.estado.id &&
+                            !selectedClaim?.resolucion && (
+                              <Card className="bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-300 shadow-lg mt-3">
+                                <CardBody className="space-y-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-amber-600 rounded-xl flex items-center justify-center">
+                                      <FileText className="w-5 h-5 text-white" />
+                                    </div>
+                                    <div>
+                                      <h3 className="font-semibold text-amber-900">
+                                        Informe Final Requerido
+                                      </h3>
+                                      <p className="text-xs text-amber-700">
+                                        Debe adjuntar un informe PDF para cerrar
+                                        el reclamo
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="bg-white rounded-lg p-4 border-2 border-amber-200">
+                                    <input
+                                      accept=".pdf,application/pdf"
+                                      className="hidden"
+                                      disabled={isUploadingReport}
+                                      id="file" // Changed ID to 'file' for consistency with JSX
+                                      type="file"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (
+                                          file &&
+                                          file.type === "application/pdf"
+                                        ) {
+                                          setReportFile(file);
+                                          setReportUploadError(null);
+                                          setStatusChangeError(null);
+                                        } else if (file) {
+                                          setReportUploadError(
+                                            "Solo se permiten archivos PDF"
+                                          );
+                                          setStatusChangeError(
+                                            "Solo se permiten archivos PDF"
+                                          );
+                                          e.target.value = "";
+                                        }
+                                      }}
+                                    />
+
+                                    <label
+                                      htmlFor="file"
+                                      className="cursor-pointer flex flex-col items-center gap-2 py-4"
+                                    >
+                                      <Upload className="w-8 h-8 text-amber-400" />
+                                      <span className="text-sm text-amber-900 text-center font-medium">
+                                        {reportFile
+                                          ? reportFile.name
+                                          : "Seleccionar archivo PDF"}
+                                      </span>
+                                      {reportFile && (
+                                        <span className="text-xs text-amber-600">
+                                          {(
+                                            reportFile.size /
+                                            1024 /
+                                            1024
+                                          ).toFixed(2)}{" "}
+                                          MB
+                                        </span>
+                                      )}
+                                    </label>
+
+                                    {reportUploadError && (
+                                      <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+                                        <p className="text-xs text-red-700">
+                                          {reportUploadError}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {reportFile && (
+                                    <div className="flex items-center gap-2 text-xs text-amber-700 bg-white p-2 rounded border border-amber-200">
+                                      <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                      <span>
+                                        Archivo listo para subir al confirmar el
+                                        cambio
+                                      </span>
+                                    </div>
+                                  )}
+                                </CardBody>
+                              </Card>
+                            )}
+
+                          {/* CHANGE: Show upload card for RESUELTO only if no resolution exists */}
+                          {selectedClaim?.estado.codigo === "RESUELTO" &&
+                            !selectedClaim?.resolucion &&
+                            (!selectedStatus ||
+                              selectedStatus === selectedClaim?.estado.id) && (
+                              <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 shadow-lg mt-3">
+                                <CardBody className="space-y-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-green-600 rounded-xl flex items-center justify-center">
+                                      <FileText className="w-5 h-5 text-white" />
+                                    </div>
+                                    <div>
+                                      <h3 className="font-semibold text-green-900">
+                                        Informe de Resolución (Opcional)
+                                      </h3>
+                                      <p className="text-xs text-green-700">
+                                        Puede adjuntar un informe PDF con los
+                                        detalles de la resolución
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="bg-white rounded-lg p-4 border-2 border-green-200">
+                                    <input
+                                      accept=".pdf,application/pdf"
+                                      className="hidden"
+                                      disabled={isUploadingReport}
+                                      id="file-resuelto" // Unique ID for this file input
+                                      type="file"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (
+                                          file &&
+                                          file.type === "application/pdf"
+                                        ) {
+                                          setReportFile(file);
+                                          setReportUploadError(null);
+                                          setStatusChangeError(null);
+                                        } else if (file) {
+                                          setReportUploadError(
+                                            "Solo se permiten archivos PDF"
+                                          );
+                                          e.target.value = "";
+                                        }
+                                      }}
+                                    />
+
+                                    <label
+                                      htmlFor="file-resuelto"
+                                      className="cursor-pointer flex flex-col items-center gap-2 py-4"
+                                    >
+                                      <Upload className="w-8 h-8 text-green-400" />
+                                      <span className="text-sm text-green-900 text-center font-medium">
+                                        {reportFile
+                                          ? reportFile.name
+                                          : "Seleccionar archivo PDF"}
+                                      </span>
+                                      {reportFile && (
+                                        <span className="text-xs text-green-600">
+                                          {(
+                                            reportFile.size /
+                                            1024 /
+                                            1024
+                                          ).toFixed(2)}{" "}
+                                          MB
+                                        </span>
+                                      )}
+                                    </label>
+
+                                    {reportUploadError && (
+                                      <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+                                        <p className="text-xs text-red-700">
+                                          {reportUploadError}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {reportFile && (
+                                    <div className="flex items-center gap-2 text-xs text-green-700 bg-white p-2 rounded border border-green-200">
+                                      <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                      <span>
+                                        Archivo listo para subir al confirmar el
+                                        cambio
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  <Button
+                                    color="success"
+                                    isLoading={isUploadingReport}
+                                    size="sm"
+                                    startContent={
+                                      <Upload className="w-4 h-4" />
+                                    }
+                                    onPress={handleUploadReport}
+                                    isDisabled={!reportFile}
+                                    className="w-full"
+                                  >
+                                    Subir Informe
+                                  </Button>
+
+                                  {reportUploadSuccess && (
+                                    <div className="flex items-center gap-2 text-xs text-green-700 bg-green-100 p-2 rounded border border-green-300">
+                                      <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                      <span>
+                                        Informe PDF subido correctamente
+                                      </span>
+                                    </div>
+                                  )}
+                                </CardBody>
+                              </Card>
+                            )}
+
+                          {selectedStatus === 4 &&
+                            selectedStatus !== selectedClaim?.estado.id &&
+                            !selectedClaim?.resolucion && (
+                              <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 shadow-lg mt-3">
+                                <CardBody className="space-y-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-green-600 rounded-xl flex items-center justify-center">
+                                      <FileText className="w-5 h-5 text-white" />
+                                    </div>
+                                    <div>
+                                      <h3 className="font-semibold text-green-900">
+                                        Informe de Resolución (Opcional)
+                                      </h3>
+                                      <p className="text-xs text-green-700">
+                                        Puede adjuntar un informe PDF con los
+                                        detalles de la resolución
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="bg-white rounded-lg p-4 border-2 border-green-200">
+                                    <input
+                                      accept=".pdf,application/pdf"
+                                      className="hidden"
+                                      disabled={isUploadingReport}
+                                      id="file-resuelto-change" // Unique ID for this file input
+                                      type="file"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (
+                                          file &&
+                                          file.type === "application/pdf"
+                                        ) {
+                                          setReportFile(file);
+                                          setReportUploadError(null);
+                                          setStatusChangeError(null);
+                                        } else if (file) {
+                                          setReportUploadError(
+                                            "Solo se permiten archivos PDF"
+                                          );
+                                          e.target.value = "";
+                                        }
+                                      }}
+                                    />
+
+                                    <label
+                                      htmlFor="file-resuelto-change"
+                                      className="cursor-pointer flex flex-col items-center gap-2 py-4"
+                                    >
+                                      <Upload className="w-8 h-8 text-green-400" />
+                                      <span className="text-sm text-green-900 text-center font-medium">
+                                        {reportFile
+                                          ? reportFile.name
+                                          : "Seleccionar archivo PDF (opcional)"}
+                                      </span>
+                                      {reportFile && (
+                                        <span className="text-xs text-green-600">
+                                          {(
+                                            reportFile.size /
+                                            1024 /
+                                            1024
+                                          ).toFixed(2)}{" "}
+                                          MB
+                                        </span>
+                                      )}
+                                    </label>
+
+                                    {reportUploadError && (
+                                      <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+                                        <p className="text-xs text-red-700">
+                                          {reportUploadError}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {reportFile && (
+                                    <div className="flex items-center gap-2 text-xs text-green-700 bg-white p-2 rounded border border-green-200">
+                                      <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                      <span>
+                                        Archivo listo para subir al confirmar el
+                                        cambio
+                                      </span>
+                                    </div>
+                                  )}
+                                </CardBody>
+                              </Card>
+                            )}
+
+                          {(selectedClaim?.estado.codigo === "CERRADO" ||
+                            selectedClaim?.estado.codigo === "RESUELTO") &&
+                            selectedClaim?.resolucion &&
+                            (!selectedStatus ||
+                              selectedStatus === selectedClaim?.estado.id) && (
+                              <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-300 shadow-lg mt-3">
+                                <CardBody className="space-y-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center">
+                                      <FileDown className="w-10 h-10 text-blue-600" />
+                                    </div>
+                                    <div>
+                                      <h3 className="font-semibold text-blue-900">
+                                        Informe de Resolución
+                                      </h3>
+                                      <p className="text-xs text-blue-700">
+                                        El reclamo tiene un informe adjunto
+                                        disponible para descargar
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <Button
+                                    className="w-full"
+                                    color="primary"
+                                    size="sm"
+                                    startContent={
+                                      <Download className="w-4 h-4" />
+                                    }
+                                    onPress={async () => {
+                                      try {
+                                        const response = await fetch(
+                                          `${API_BASE_URL}/denuncias/${selectedClaim.id}/informe-resolucion`,
+                                          {
+                                            headers: {
+                                              Authorization: `Bearer ${token}`,
+                                            },
+                                            method: "GET",
+                                          }
+                                        );
+
+                                        if (!response.ok)
+                                          throw new Error(
+                                            "Error al descargar el informe"
+                                          );
+
+                                        const blob = await response.blob();
+                                        const url =
+                                          window.URL.createObjectURL(blob);
+                                        const a = document.createElement("a");
+                                        a.href = url;
+                                        a.download = `informe-resolucion-${selectedClaim.id}.pdf`;
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        window.URL.revokeObjectURL(url);
+                                        document.body.removeChild(a);
+                                      } catch (error) {
+                                        console.error(
+                                          "Error al descargar el informe:",
+                                          error
+                                        );
+                                        alert("Error al descargar el informe");
+                                      }
+                                    }}
+                                  >
+                                    Descargar Informe PDF
+                                  </Button>
+                                </CardBody>
+                              </Card>
                             )}
                         </div>
 
@@ -1069,7 +1606,8 @@ export default function SupervisorClaims() {
                             <div>
                               <p className="text-sm font-medium">
                                 {selectedClaim?.supervisor
-                                  ? `${selectedClaim.supervisor.nombre} ${selectedClaim.supervisor.apellido}`
+                                  ? `${selectedClaim.supervisor.nombre || ""} ${selectedClaim.supervisor.apellido || ""}`.trim() ||
+                                    "Sin asignar"
                                   : "Sin asignar"}
                               </p>
                               {selectedClaim?.supervisor && (

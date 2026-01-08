@@ -28,17 +28,7 @@ export function SupervisorSidebar() {
       label: "Mis Reclamos",
       href: "/supervisor/claims",
       icon: FileText,
-    },
-    {
-      label: "Pendientes",
-      href: "/supervisor/pending",
-      icon: Clock,
-    },
-    {
-      label: "Resueltos",
-      href: "/supervisor/resolved",
-      icon: CheckCircle2,
-    },
+    }
   ];
 
   const handleLogout = async () => {

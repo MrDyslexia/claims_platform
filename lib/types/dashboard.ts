@@ -49,3 +49,59 @@ export interface DashboardResponse {
   data: DashboardData;
   error?: string;
 }
+
+// ==========================================
+// ADMIN DASHBOARD COMPLETE - TYPES
+// ==========================================
+
+export interface TrendComparison {
+  actual: number;
+  mesAnterior: number;
+  variacion: number;
+  tendencia: "up" | "down" | "neutral";
+}
+
+export interface AdminSummary {
+  totalReclamos: number;
+  tasaResolucion: TrendComparison;
+  tiempoPromedioResolucion: TrendComparison;
+  empresasActivas: number;
+  reclamosCriticos: number;
+  satisfaccionPromedio: number;
+}
+
+export interface MonthlyDistribution {
+  mes: string;
+  resueltos: number;
+  pendientes: number;
+}
+
+export interface TypeDistribution {
+  tipo: string;
+  cantidad: number;
+  porcentaje: number;
+}
+
+export interface CompanyClaims {
+  empresa: string;
+  cantidad: number;
+}
+
+export interface ResolutionTimeRange {
+  rango: string;
+  cantidad: number;
+}
+
+export interface AdminDashboardCompleteData {
+  summary: AdminSummary;
+  distribucionUltimos12Meses: MonthlyDistribution[];
+  distribucionPorTipo: TypeDistribution[];
+  reclamosPorEmpresa: CompanyClaims[];
+  distribucionTiemposResolucion: ResolutionTimeRange[];
+}
+
+export interface AdminDashboardCompleteResponse {
+  success: boolean;
+  data: AdminDashboardCompleteData;
+  error?: string;
+}

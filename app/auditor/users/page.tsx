@@ -31,6 +31,7 @@ import {
   Phone,
   Lock as LockIcon,
   Shield as ShieldIcon,
+  Eye,
 } from "lucide-react";
 
 import { DataTable } from "@/components/data-table";
@@ -181,109 +182,6 @@ export default function UsersPage() {
     }
     onOpen();
   };
-
-  const handleSave = async () => {
-    if (!token) {
-      setSaveError("No hay token de autenticación");
-
-      return;
-    }
-
-    // Validaciones básicas
-    if (!editingUser && !formData.rut) {
-      setSaveError("El RUT es obligatorio para crear un usuario");
-
-      return;
-    }
-
-    if (!formData.nombre || !formData.apellido) {
-      setSaveError("El nombre y apellido son obligatorios");
-
-      return;
-    }
-
-    if (!formData.email) {
-      setSaveError("El email es obligatorio");
-
-      return;
-    }
-
-    if (!editingUser && !formData.password) {
-      setSaveError("La contraseña es obligatoria para crear un usuario");
-
-      return;
-    }
-
-    // Validar teléfono si está presente
-    if (formData.telefono && !validatePhoneNumber(formData.telefono)) {
-      setSaveError(
-        "Teléfono inválido. Debe contener solo números y +, con 9-15 dígitos",
-      );
-
-      return;
-    }
-
-    setIsSaving(true);
-    setSaveError(null);
-
-    try {
-      const nombre_completo = `${formData.nombre} ${formData.apellido}`;
-      const rol_ids = formData.roles.map((r) => parseInt(r));
-
-      if (editingUser) {
-        // Actualizar usuario existente
-        await actualizarUsuario(token, editingUser.id_usuario, {
-          nombre_completo,
-          email: formData.email,
-          telefono: formData.telefono || undefined,
-          activo: formData.activo ? 1 : 0,
-        });
-
-        // Comparar roles originales con nuevos roles
-        const rolesActuales = new Set(formData.roles);
-        const rolesOriginales = new Set(originalRoles);
-        const rolesChanged =
-          rolesActuales.size !== rolesOriginales.size ||
-          !Array.from(rolesActuales).every((r) => rolesOriginales.has(r));
-
-        // Asignar roles solo si cambiaron
-        if (rolesChanged) {
-          await asignarRolesUsuario(token, editingUser.id_usuario, rol_ids);
-        }
-
-        console.log("✅ Usuario actualizado exitosamente");
-      } else {
-        // Crear nuevo usuario
-        const nuevoUsuario = await crearUsuario(token, {
-          rut: formData.rut,
-          nombre_completo,
-          email: formData.email,
-          password: formData.password,
-          telefono: formData.telefono || undefined,
-          activo: formData.activo ? 1 : 0,
-        });
-
-        // Asignar roles si se seleccionaron
-        if (rol_ids.length > 0 && nuevoUsuario.id) {
-          await asignarRolesUsuario(token, nuevoUsuario.id, rol_ids);
-        }
-
-        console.log("✅ Usuario creado exitosamente");
-      }
-
-      // Recargar la lista de usuarios
-      refetch();
-
-      // Cerrar el modal
-      onClose();
-    } catch (err: any) {
-      console.error("❌ Error al guardar usuario:", err);
-      setSaveError(err.message || "Error al guardar el usuario");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleOpenDeleteModal = (user: UsuarioAPI) => {
     setDeletingUser(user);
     onDeleteOpen();
@@ -385,29 +283,7 @@ export default function UsersPage() {
               variant="light"
               onPress={() => handleOpenModal(user)}
             >
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button
-              isIconOnly
-              className={user.activo ? "text-warning" : "text-success"}
-              size="sm"
-              variant="light"
-              onPress={() => handleToggleActive(user)}
-            >
-              {user.activo ? (
-                <LockIcon className="h-4 w-4" />
-              ) : (
-                <ShieldIcon className="h-4 w-4" />
-              )}
-            </Button>
-            <Button
-              isIconOnly
-              color="danger"
-              size="sm"
-              variant="light"
-              onPress={() => handleOpenDeleteModal(user)}
-            >
-              <Trash2 className="h-4 w-4" />
+              <Eye className="h-4 w-4" />
             </Button>
           </div>
         );
@@ -426,13 +302,6 @@ export default function UsersPage() {
             Administra usuarios, roles y permisos del sistema
           </p>
         </div>
-        <Button
-          color="primary"
-          startContent={<Plus className="h-4 w-4" />}
-          onPress={() => handleOpenModal()}
-        >
-          Nuevo Usuario
-        </Button>
       </div>
 
       {/* Search */}
@@ -500,121 +369,51 @@ export default function UsersPage() {
       <Modal isOpen={isOpen} size="2xl" onClose={onClose}>
         <ModalContent>
           <ModalHeader>
-            {editingUser ? "Editar Usuario" : "Nuevo Usuario"}
+            Información del usuario
           </ModalHeader>
           <ModalBody>
-            <div className="space-y-4">
-              {saveError && (
-                <div className="p-3 bg-danger-50 border border-danger-200 rounded-lg">
-                  <p className="text-sm text-danger-700">{saveError}</p>
-                </div>
-              )}
-
-              {!editingUser && (
-                <FormInput
-                  isRequired
-                  id="rut"
-                  label="RUT"
-                  placeholder="12345678-9"
-                  value={formData.rut}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      rut: e.target.value,
-                    })
-                  }
-                />
-              )}
-
+            <div className="space-y-4 pb-4">
               <div className="grid grid-cols-2 gap-4">
                 <FormInput
-                  isRequired
                   id="nombre"
                   label="Nombre"
+                  isDisabled
                   placeholder="Ingrese el nombre"
                   value={formData.nombre}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      nombre: e.target.value,
-                    })
-                  }
                 />
                 <FormInput
-                  isRequired
                   id="apellido"
+                  isDisabled
                   label="Apellido"
                   placeholder="Ingrese el apellido"
                   value={formData.apellido}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      apellido: e.target.value,
-                    })
-                  }
                 />
               </div>
               <FormInput
-                isRequired
                 id="email"
+                isDisabled
                 label="Email"
                 placeholder="usuario@example.com"
                 startContent={<Mail className="h-4 w-4 text-default-400" />}
                 type="email"
                 value={formData.email}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    email: e.target.value,
-                  })
-                }
+                
               />
-              {!editingUser && (
-                <FormInput
-                  isRequired
-                  id="password"
-                  label="Contraseña"
-                  placeholder="********"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      password: e.target.value,
-                    })
-                  }
-                />
-              )}
               <FormInput
-                description="Formato: +56912345678 (9-15 dígitos)"
-                errorMessage={
-                  formData.telefono && !validatePhoneNumber(formData.telefono)
-                    ? "Teléfono inválido. Solo números y +, 9-15 dígitos"
-                    : ""
-                }
+                isDisabled
                 id="telefono"
-                isInvalid={
-                  formData.telefono
-                    ? !validatePhoneNumber(formData.telefono)
-                    : false
-                }
                 label="Teléfono"
                 placeholder="+56912345678"
                 startContent={<Phone className="h-4 w-4 text-default-400" />}
                 type="tel"
                 value={formData.telefono}
-                onChange={(e) => handlePhoneChange(e.target.value)}
               />
+              
               <Select
                 label="Rol"
+                isDisabled
                 placeholder="Seleccione un rol"
                 selectedKeys={formData.roles}
-                onSelectionChange={(keys) =>
-                  setFormData({
-                    ...formData,
-                    roles: Array.from(keys) as string[],
-                  })
-                }
               >
                 {rolesDisponibles.map((role) => (
                   <SelectItem key={role.id_rol.toString()}>
@@ -624,57 +423,12 @@ export default function UsersPage() {
               </Select>
               <Checkbox
                 isSelected={formData.activo}
-                onValueChange={(checked) =>
-                  setFormData({
-                    ...formData,
-                    activo: checked,
-                  })
-                }
+                isDisabled
               >
                 Usuario activo
               </Checkbox>
             </div>
           </ModalBody>
-          <ModalFooter>
-            <Button variant="bordered" onPress={onClose}>
-              Cancelar
-            </Button>
-            <Button color="primary" isLoading={isSaving} onPress={handleSave}>
-              {isSaving
-                ? "Guardando..."
-                : editingUser
-                  ? "Guardar Cambios"
-                  : "Crear Usuario"}
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      {/* Delete Confirmation Modal */}
-      <Modal isOpen={isDeleteOpen} onClose={onDeleteClose}>
-        <ModalContent>
-          <ModalHeader>Confirmar Eliminación</ModalHeader>
-          <ModalBody>
-            <p>
-              ¿Estás seguro de que deseas eliminar al usuario{" "}
-              <strong>
-                {deletingUser?.nombre} {deletingUser?.apellido}
-              </strong>
-              ?
-            </p>
-            <p className="text-sm text-danger mt-2">
-              Esta acción no se puede deshacer y se eliminarán todos los datos
-              asociados al usuario.
-            </p>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="bordered" onPress={onDeleteClose}>
-              Cancelar
-            </Button>
-            <Button color="danger" onPress={handleDelete}>
-              Eliminar
-            </Button>
-          </ModalFooter>
         </ModalContent>
       </Modal>
     </div>

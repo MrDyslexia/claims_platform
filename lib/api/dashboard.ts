@@ -1,4 +1,4 @@
-import type { DashboardResponse } from "@/lib/types/dashboard";
+import type { DashboardResponse, AdminDashboardCompleteResponse } from "@/lib/types/dashboard";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003/api";
 
@@ -31,6 +31,37 @@ export async function fetchDashboardData(): Promise<DashboardResponse> {
 
   return response.json();
 }
+
+/**
+ * Obtiene el dashboard completo para administradores
+ * @returns Datos completos del dashboard de administrador
+ */
+export async function fetchAdminDashboardComplete(): Promise<AdminDashboardCompleteResponse> {
+  const token = localStorage.getItem("auth_token");
+
+  if (!token) {
+    throw new Error("No hay token de autenticación");
+  }
+
+  const response = await fetch(`${API_URL}/dashboard/admin/complete`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+
+    throw new Error(
+      errorData.error || `Error ${response.status}: ${response.statusText}`,
+    );
+  }
+
+  return response.json();
+}
+
 
 export interface AnalystAnalyticsResponse {
   dailyPerformance: { fecha: string; recibidos: number; resueltos: number }[];

@@ -1,14 +1,10 @@
 /* eslint-disable no-console */
-"use client";
+"use client"
 
-import type React from "react";
-import type {
-  TipoDenuncia,
-  EstadoDenuncia,
-  CategoriaDenuncia,
-} from "@/lib/types/database";
+import type React from "react"
+import type { TipoDenuncia, EstadoDenuncia, CategoriaDenuncia } from "@/lib/types/database"
 
-import { useState, useEffect } from "react";
+import { useState, useEffect } from "react"
 import {
   Card,
   CardBody,
@@ -28,19 +24,14 @@ import {
   Accordion,
   AccordionItem,
   Spinner,
-} from "@heroui/react";
-import {
-  Plus,
-  Edit,
-  Trash2,
-  FileText,
-  Activity,
-  Palette,
-  Folder,
-} from "lucide-react";
-import * as LucideIcons from "lucide-react";
+  ScrollShadow,
+} from "@heroui/react"
+import { Plus, Edit, Trash2, FileText, Activity, Palette, Folder, Search } from "lucide-react"
+import * as LucideIcons from "lucide-react"
 
-import { DataTable } from "@/components/data-table";
+import { ICONS } from "@/config/icons"
+
+import { DataTable } from "@/components/data-table"
 import {
   getCategorias,
   crearCategoria,
@@ -50,7 +41,7 @@ import {
   crearTipo,
   actualizarTipo,
   eliminarTipo,
-} from "@/lib/api/settings";
+} from "@/lib/api/settings"
 
 // Mock data for statuses (keeping as is for now)
 const mockClaimStatuses: EstadoDenuncia[] = [
@@ -89,7 +80,7 @@ const mockClaimStatuses: EstadoDenuncia[] = [
     color: "#A1A1AA",
     orden: 5,
   },
-];
+]
 
 const typeColumns = [
   { key: "nombre", label: "NOMBRE" },
@@ -97,7 +88,7 @@ const typeColumns = [
   { key: "codigo", label: "CÓDIGO" },
   { key: "estado", label: "ESTADO" },
   { key: "acciones", label: "ACCIONES" },
-];
+]
 
 const statusColumns = [
   { key: "orden", label: "ORDEN" },
@@ -105,56 +96,45 @@ const statusColumns = [
   { key: "descripcion", label: "DESCRIPCIÓN" },
   { key: "color", label: "COLOR" },
   { key: "acciones", label: "ACCIONES" },
-];
+]
 
 const CategoryIcon = ({
   iconName,
   className,
 }: {
-  iconName: string;
-  className?: string;
+  iconName: string
+  className?: string
 }) => {
-  const Icon = (LucideIcons as any)[iconName] || Folder;
+  const Icon = (LucideIcons as any)[iconName] || Folder
 
-  return <Icon className={className} />;
-};
+  return <Icon className={className} />
+}
 
 export default function SettingsPage() {
   // Category Modal
-  const {
-    isOpen: isCategoryOpen,
-    onOpen: onCategoryOpen,
-    onClose: onCategoryClose,
-  } = useDisclosure();
+  const { isOpen: isCategoryOpen, onOpen: onCategoryOpen, onClose: onCategoryClose } = useDisclosure()
 
   // Type Modal
-  const {
-    isOpen: isTypeOpen,
-    onOpen: onTypeOpen,
-    onClose: onTypeClose,
-  } = useDisclosure();
+  const { isOpen: isTypeOpen, onOpen: onTypeOpen, onClose: onTypeClose } = useDisclosure()
 
   // Status Modal
-  const {
-    isOpen: isStatusOpen,
-    onOpen: onStatusOpen,
-    onClose: onStatusClose,
-  } = useDisclosure();
+  const { isOpen: isStatusOpen, onOpen: onStatusOpen, onClose: onStatusClose } = useDisclosure()
 
-  const [categories, setCategories] = useState<CategoriaDenuncia[]>([]);
-  const [types, setTypes] = useState<TipoDenuncia[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<CategoriaDenuncia[]>([])
+  const [types, setTypes] = useState<TipoDenuncia[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const [editingCategory, setEditingCategory] =
-    useState<CategoriaDenuncia | null>(null);
+  const [editingCategory, setEditingCategory] = useState<CategoriaDenuncia | null>(null)
   const [categoryFormData, setCategoryFormData] = useState({
     nombre: "",
     descripcion: "",
     activo: true,
     icono: "Settings",
-  });
+  })
 
-  const [editingType, setEditingType] = useState<TipoDenuncia | null>(null);
+  const [iconSearch, setIconSearch] = useState("")
+
+  const [editingType, setEditingType] = useState<TipoDenuncia | null>(null)
   // const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [typeFormData, setTypeFormData] = useState({
     nombre: "",
@@ -162,162 +142,160 @@ export default function SettingsPage() {
     descripcion: "",
     activo: true,
     categoria_id: 0,
-  });
+  })
 
-  const [editingStatus, setEditingStatus] = useState<EstadoDenuncia | null>(
-    null,
-  );
+  const [editingStatus, setEditingStatus] = useState<EstadoDenuncia | null>(null)
   const [statusFormData, setStatusFormData] = useState({
     nombre: "",
     descripcion: "",
     color: "#0070F3",
     orden: 1,
-  });
+  })
 
   const loadData = async () => {
     try {
-      setLoading(true);
-      const [cats, typs] = await Promise.all([getCategorias(), getTipos()]);
+      setLoading(true)
+      const [cats, typs] = await Promise.all([getCategorias(), getTipos()])
 
-      setCategories(cats);
-      setTypes(typs);
+      setCategories(cats)
+      setTypes(typs)
     } catch (error) {
-      console.error("Error loading settings data:", error);
+      console.error("Error loading settings data:", error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData()
+  }, [])
 
   // --- Category Handlers ---
 
   const handleOpenCategoryModal = (category?: CategoriaDenuncia) => {
     if (category) {
-      setEditingCategory(category);
+      setEditingCategory(category)
       setCategoryFormData({
         nombre: category.nombre,
         descripcion: category.descripcion || "",
         activo: category.activo,
         icono: category.icono || "Settings",
-      });
+      })
     } else {
-      setEditingCategory(null);
+      setEditingCategory(null)
       setCategoryFormData({
         nombre: "",
         descripcion: "",
         activo: true,
         icono: "Settings",
-      });
+      })
     }
-    onCategoryOpen();
-  };
+    onCategoryOpen()
+  }
 
   const handleSaveCategory = async () => {
     try {
       if (editingCategory) {
-        await actualizarCategoria(editingCategory.id, categoryFormData);
+        await actualizarCategoria(editingCategory.id, categoryFormData)
       } else {
-        await crearCategoria(categoryFormData);
+        await crearCategoria(categoryFormData)
       }
-      await loadData();
-      onCategoryClose();
+      await loadData()
+      onCategoryClose()
     } catch (error) {
-      console.error("Error saving category:", error);
+      console.error("Error saving category:", error)
     }
-  };
+  }
 
   const handleDeleteCategory = async (id: number) => {
     if (confirm("¿Estás seguro de eliminar esta categoría?")) {
       try {
-        await eliminarCategoria(id);
-        await loadData();
+        await eliminarCategoria(id)
+        await loadData()
       } catch (error) {
-        console.error("Error deleting category:", error);
+        console.error("Error deleting category:", error)
       }
     }
-  };
+  }
 
   // --- Type Handlers ---
 
   const handleOpenTypeModal = (categoryId: number, type?: TipoDenuncia) => {
     // setSelectedCategoryId(categoryId);
     if (type) {
-      setEditingType(type);
+      setEditingType(type)
       setTypeFormData({
         nombre: type.nombre,
         codigo: type.codigo,
         descripcion: type.descripcion || "",
         activo: type.activo,
         categoria_id: categoryId,
-      });
+      })
     } else {
-      setEditingType(null);
+      setEditingType(null)
       setTypeFormData({
         nombre: "",
         codigo: "",
         descripcion: "",
         activo: true,
         categoria_id: categoryId,
-      });
+      })
     }
-    onTypeOpen();
-  };
+    onTypeOpen()
+  }
 
   const handleSaveType = async () => {
     try {
       if (editingType) {
-        await actualizarTipo(editingType.id, typeFormData);
+        await actualizarTipo(editingType.id, typeFormData)
       } else {
-        await crearTipo(typeFormData);
+        await crearTipo(typeFormData)
       }
-      await loadData();
-      onTypeClose();
+      await loadData()
+      onTypeClose()
     } catch (error) {
-      console.error("Error saving type:", error);
+      console.error("Error saving type:", error)
     }
-  };
+  }
 
   const handleDeleteType = async (id: number) => {
     if (confirm("¿Estás seguro de eliminar este tipo?")) {
       try {
-        await eliminarTipo(id);
-        await loadData();
+        await eliminarTipo(id)
+        await loadData()
       } catch (error) {
-        console.error("Error deleting type:", error);
+        console.error("Error deleting type:", error)
       }
     }
-  };
+  }
 
   // --- Status Handlers (Mock) ---
 
   const handleOpenStatusModal = (status?: EstadoDenuncia | null) => {
     if (status) {
-      setEditingStatus(status);
+      setEditingStatus(status)
       setStatusFormData({
         nombre: status.nombre,
         descripcion: status.descripcion || "",
         color: status.color || "#0070F3",
         orden: status.orden,
-      });
+      })
     } else {
-      setEditingStatus(null);
+      setEditingStatus(null)
       setStatusFormData({
         nombre: "",
         descripcion: "",
         color: "#0070F3",
         orden: mockClaimStatuses.length + 1,
-      });
+      })
     }
-    onStatusOpen();
-  };
+    onStatusOpen()
+  }
 
   const handleSaveStatus = () => {
-    console.log("[v0] Saving claim status:", statusFormData);
-    onStatusClose();
-  };
+    console.log("[v0] Saving claim status:", statusFormData)
+    onStatusClose()
+  }
 
   // --- Renderers ---
 
@@ -329,51 +307,36 @@ export default function SettingsPage() {
             <FileText className="h-4 w-4 text-purple-600" />
             <span className="font-medium">{type.nombre}</span>
           </div>
-        );
+        )
       case "codigo":
         return (
           <Chip size="sm" variant="flat">
             {type.codigo}
           </Chip>
-        );
+        )
       case "descripcion":
-        return type.descripcion;
+        return type.descripcion
       case "estado":
         return (
-          <Chip
-            color={type.activo ? "success" : "default"}
-            size="sm"
-            variant="flat"
-          >
+          <Chip color={type.activo ? "success" : "default"} size="sm" variant="flat">
             {type.activo ? "Activo" : "Inactivo"}
           </Chip>
-        );
+        )
       case "acciones":
         return (
           <div className="flex items-center gap-2">
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              onPress={() => handleOpenTypeModal(type.categoria_id!, type)}
-            >
+            <Button isIconOnly size="sm" variant="light" onPress={() => handleOpenTypeModal(type.categoria_id!, type)}>
               <Edit className="h-4 w-4" />
             </Button>
-            <Button
-              isIconOnly
-              color="danger"
-              size="sm"
-              variant="light"
-              onPress={() => handleDeleteType(type.id)}
-            >
+            <Button isIconOnly color="danger" size="sm" variant="light" onPress={() => handleDeleteType(type.id)}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
-        );
+        )
       default:
-        return null;
+        return null
     }
-  };
+  }
 
   const renderStatusCell = (status: EstadoDenuncia, columnKey: React.Key) => {
     switch (columnKey) {
@@ -382,53 +345,47 @@ export default function SettingsPage() {
           <Chip size="sm" variant="flat">
             {status.orden}
           </Chip>
-        );
+        )
       case "nombre":
         return (
           <div className="flex items-center gap-2">
             <Activity className="h-4 w-4 text-purple-600" />
             <span className="font-medium">{status.nombre}</span>
           </div>
-        );
+        )
       case "descripcion":
-        return status.descripcion;
+        return status.descripcion
       case "color":
         return (
           <div className="flex items-center gap-2">
-            <div
-              className="w-6 h-6 rounded border border-divider"
-              style={{ backgroundColor: status.color }}
-            />
+            <div className="w-6 h-6 rounded border border-divider" style={{ backgroundColor: status.color }} />
             <span className="text-sm font-mono">{status.color}</span>
           </div>
-        );
+        )
       case "acciones":
         return (
           <div className="flex items-center gap-2">
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              onPress={() => handleOpenStatusModal(status)}
-            >
+            <Button isIconOnly size="sm" variant="light" onPress={() => handleOpenStatusModal(status)}>
               <Edit className="h-4 w-4" />
             </Button>
             <Button isIconOnly color="danger" size="sm" variant="light">
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
-        );
+        )
       default:
-        return null;
+        return null
     }
-  };
+  }
+
+  const filteredIcons = ICONS.filter((icon) => icon.toLowerCase().includes(iconSearch.toLowerCase()))
 
   if (loading) {
     return (
       <div className="flex justify-center p-8">
         <Spinner />
       </div>
-    );
+    )
   }
 
   return (
@@ -436,9 +393,7 @@ export default function SettingsPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">Configuración del Sistema</h1>
-        <p className="text-muted-foreground mt-1">
-          Gestiona tipos de reclamos, estados y otras configuraciones
-        </p>
+        <p className="text-muted-foreground mt-1">Gestiona tipos de reclamos, estados y otras configuraciones</p>
       </div>
 
       {/* Tabs */}
@@ -475,24 +430,13 @@ export default function SettingsPage() {
                     <AccordionItem
                       key={category.id}
                       aria-label={category.nombre}
-                      startContent={
-                        <CategoryIcon
-                          className="text-primary"
-                          iconName={category.icono || "Folder"}
-                        />
-                      }
+                      startContent={<CategoryIcon className="text-primary" iconName={category.icono || "Folder"} />}
                       subtitle={category.descripcion}
                       title={
                         <div className="flex items-center justify-between w-full pr-4">
                           <div className="flex items-center gap-3">
-                            <span className="font-semibold">
-                              {category.nombre}
-                            </span>
-                            <Chip
-                              color={category.activo ? "success" : "default"}
-                              size="sm"
-                              variant="flat"
-                            >
+                            <span className="font-semibold">{category.nombre}</span>
+                            <Chip color={category.activo ? "success" : "default"} size="sm" variant="flat">
                               {category.activo ? "Activo" : "Inactivo"}
                             </Chip>
                           </div>
@@ -530,14 +474,10 @@ export default function SettingsPage() {
                           </Button>
                         </div>
 
-                        <h4 className="text-sm font-semibold mb-2">
-                          Tipos asociados
-                        </h4>
+                        <h4 className="text-sm font-semibold mb-2">Tipos asociados</h4>
                         <DataTable
                           columns={typeColumns}
-                          data={types.filter(
-                            (t) => t.categoria_id === category.id,
-                          )}
+                          data={types.filter((t) => t.categoria_id === category.id)}
                           renderCell={renderTypeCell}
                         />
                       </div>
@@ -578,11 +518,7 @@ export default function SettingsPage() {
                   </Button>
                 </div>
 
-                <DataTable
-                  columns={statusColumns}
-                  data={mockClaimStatuses}
-                  renderCell={renderStatusCell}
-                />
+                <DataTable columns={statusColumns} data={mockClaimStatuses} renderCell={renderStatusCell} />
               </div>
             </Tab>
           </Tabs>
@@ -592,9 +528,7 @@ export default function SettingsPage() {
       {/* Category Modal */}
       <Modal isOpen={isCategoryOpen} onClose={onCategoryClose}>
         <ModalContent>
-          <ModalHeader>
-            {editingCategory ? "Editar Categoría" : "Nueva Categoría"}
-          </ModalHeader>
+          <ModalHeader>{editingCategory ? "Editar Categoría" : "Nueva Categoría"}</ModalHeader>
           <ModalBody>
             <div className="space-y-4">
               <Input
@@ -609,18 +543,75 @@ export default function SettingsPage() {
                   })
                 }
               />
-              <Input
-                description="Nombre del icono de Lucide React (ej: Settings, Users, Shield)"
-                label="Icono"
-                placeholder="Ej: Settings"
-                value={categoryFormData.icono}
-                onChange={(e) =>
-                  setCategoryFormData({
-                    ...categoryFormData,
-                    icono: e.target.value,
-                  })
-                }
-              />
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Icono</label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Seleccionado:</span>
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-primary/10 border border-primary/20">
+                      <CategoryIcon iconName={categoryFormData.icono} className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium text-primary">{categoryFormData.icono}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <Input
+                  placeholder="Buscar icono..."
+                  size="sm"
+                  startContent={<Search className="h-4 w-4 text-default-400" />}
+                  value={iconSearch}
+                  onChange={(e) => setIconSearch(e.target.value)}
+                />
+
+                <ScrollShadow className="h-64 border rounded-lg p-3">
+                  <div className="grid grid-cols-6 gap-2">
+                    {filteredIcons.map((iconName) => {
+                      const IconComponent = (LucideIcons as any)[iconName]
+                      const isSelected = categoryFormData.icono === iconName
+
+                      return (
+                        <button
+                          key={iconName}
+                          type="button"
+                          className={`
+                            flex flex-col items-center justify-center gap-1 p-3 rounded-lg
+                            transition-all hover:scale-105 border-2
+                            ${
+                              isSelected
+                                ? "bg-primary/20 border-primary shadow-sm"
+                                : "bg-default-50 border-transparent hover:border-default-200"
+                            }
+                          `}
+                          onClick={() => {
+                            setCategoryFormData({
+                              ...categoryFormData,
+                              icono: iconName,
+                            })
+                            setIconSearch("")
+                          }}
+                          title={iconName}
+                        >
+                          {IconComponent && (
+                            <IconComponent className={`h-5 w-5 ${isSelected ? "text-primary" : "text-default-600"}`} />
+                          )}
+                          <span className="text-[10px] text-center line-clamp-1">{iconName}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {filteredIcons.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No se encontraron iconos</p>
+                    </div>
+                  )}
+                </ScrollShadow>
+
+                <p className="text-xs text-muted-foreground">Selecciona un icono de la galería o busca por nombre</p>
+              </div>
+
               <Textarea
                 label="Descripción"
                 minRows={3}
@@ -635,9 +626,7 @@ export default function SettingsPage() {
               />
               <Checkbox
                 isSelected={categoryFormData.activo}
-                onValueChange={(checked) =>
-                  setCategoryFormData({ ...categoryFormData, activo: checked })
-                }
+                onValueChange={(checked) => setCategoryFormData({ ...categoryFormData, activo: checked })}
               >
                 Categoría activa
               </Checkbox>
@@ -657,9 +646,7 @@ export default function SettingsPage() {
       {/* Type Modal */}
       <Modal isOpen={isTypeOpen} onClose={onTypeClose}>
         <ModalContent>
-          <ModalHeader>
-            {editingType ? "Editar Tipo de Reclamo" : "Nuevo Tipo de Reclamo"}
-          </ModalHeader>
+          <ModalHeader>{editingType ? "Editar Tipo de Reclamo" : "Nuevo Tipo de Reclamo"}</ModalHeader>
           <ModalBody>
             <div className="space-y-4">
               <Input
@@ -667,18 +654,14 @@ export default function SettingsPage() {
                 label="Nombre"
                 placeholder="Ej: Acoso Laboral"
                 value={typeFormData.nombre}
-                onChange={(e) =>
-                  setTypeFormData({ ...typeFormData, nombre: e.target.value })
-                }
+                onChange={(e) => setTypeFormData({ ...typeFormData, nombre: e.target.value })}
               />
               <Input
                 isRequired
                 label="Código"
                 placeholder="Ej: AL-001"
                 value={typeFormData.codigo}
-                onChange={(e) =>
-                  setTypeFormData({ ...typeFormData, codigo: e.target.value })
-                }
+                onChange={(e) => setTypeFormData({ ...typeFormData, codigo: e.target.value })}
               />
               <Textarea
                 label="Descripción"
@@ -694,9 +677,7 @@ export default function SettingsPage() {
               />
               <Checkbox
                 isSelected={typeFormData.activo}
-                onValueChange={(checked) =>
-                  setTypeFormData({ ...typeFormData, activo: checked })
-                }
+                onValueChange={(checked) => setTypeFormData({ ...typeFormData, activo: checked })}
               >
                 Tipo activo
               </Checkbox>
@@ -716,9 +697,7 @@ export default function SettingsPage() {
       {/* Status Modal */}
       <Modal isOpen={isStatusOpen} size="lg" onClose={onStatusClose}>
         <ModalContent>
-          <ModalHeader>
-            {editingStatus ? "Editar Estado" : "Nuevo Estado"}
-          </ModalHeader>
+          <ModalHeader>{editingStatus ? "Editar Estado" : "Nuevo Estado"}</ModalHeader>
           <ModalBody>
             <div className="space-y-4">
               <Input
@@ -761,9 +740,7 @@ export default function SettingsPage() {
                 />
                 <Input
                   label="Color"
-                  startContent={
-                    <Palette className="h-4 w-4 text-default-400" />
-                  }
+                  startContent={<Palette className="h-4 w-4 text-default-400" />}
                   type="color"
                   value={statusFormData.color}
                   onChange={(e) =>
@@ -787,5 +764,5 @@ export default function SettingsPage() {
         </ModalContent>
       </Modal>
     </div>
-  );
+  )
 }
