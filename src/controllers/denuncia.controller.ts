@@ -965,20 +965,34 @@ export const actualizarEstado = async (
 ) => {
     const { id } = req.params;
     const { estado_id, motivo } = req.body;
+    const file = req.file as Express.Multer.File | undefined;
 
     if (!id || !estado_id) {
+        // Si hay archivo, eliminarlo
+        if (file?.path) {
+            const fsPromises = require('node:fs/promises');
+            await fsPromises.unlink(file.path).catch(() => {});
+        }
         return res.status(400).json({ error: 'missing fields: id and estado_id are required' });
     }
 
     try {
         const denuncia = await models.Denuncia.findByPk(id);
         if (!denuncia) {
+            if (file?.path) {
+                const fsPromises = require('node:fs/promises');
+                await fsPromises.unlink(file.path).catch(() => {});
+            }
             return res.status(404).json({ error: 'denuncia not found' });
         }
 
         // Verificar que el nuevo estado existe
         const nuevoEstado = await models.EstadoDenuncia.findByPk(estado_id);
         if (!nuevoEstado) {
+            if (file?.path) {
+                const fsPromises = require('node:fs/promises');
+                await fsPromises.unlink(file.path).catch(() => {});
+            }
             return res.status(400).json({ error: 'estado not found' });
         }
 
@@ -1000,6 +1014,10 @@ export const actualizarEstado = async (
             const esExcepcionPermitida = oldStateId === 3 && newStateId === 2;
 
             if (!esExcepcionPermitida) {
+                if (file?.path) {
+                    const fsPromises = require('node:fs/promises');
+                    await fsPromises.unlink(file.path).catch(() => {});
+                }
                 return res.status(400).json({ 
                     error: 'No se puede volver a un estado anterior (secuencia: 1->2->3->4/5)' 
                 });
@@ -1017,6 +1035,58 @@ export const actualizarEstado = async (
 
         // Actualizar el estado de la denuncia
         await denuncia.update({ estado_id });
+
+        // Si el nuevo estado es RESUELTO o CERRADO y hay archivo PDF, guardar informe de resolución
+        const nuevoEstadoCodigo = (nuevoEstado.get('codigo') as string)?.toUpperCase();
+        let resolucionInfo = null;
+
+        if (['RESUELTO', 'CERRADO'].includes(nuevoEstadoCodigo) && file) {
+            const pathModule = require('node:path');
+            const fsPromises = require('node:fs/promises');
+            const uploadDir = process.env.UPLOAD_DIR || pathModule.resolve(process.cwd(), 'uploads');
+            const relativePath = pathModule.relative(uploadDir, file.path);
+
+            // Buscar o crear registro de resolución
+            let resolucion = await models.Resolucion.findOne({
+                where: { denuncia_id: id },
+            });
+
+            if (resolucion) {
+                // Si ya existe una resolución con PDF, eliminar el archivo anterior
+                const oldPdfPath = resolucion.get('pdf_path') as string;
+                if (oldPdfPath) {
+                    const oldFullPath = pathModule.join(uploadDir, oldPdfPath);
+                    await fsPromises.unlink(oldFullPath).catch(() => {});
+                }
+
+                // Actualizar el registro existente
+                await resolucion.update({
+                    pdf_path: relativePath,
+                    resuelto_por: userId,
+                    resuelto_at: new Date(),
+                });
+            } else {
+                // Crear nuevo registro de resolución
+                resolucion = await models.Resolucion.create({
+                    denuncia_id: id,
+                    contenido: motivo || 'Informe de resolución adjunto',
+                    resuelto_por: userId,
+                    resuelto_at: new Date(),
+                    pdf_path: relativePath,
+                });
+            }
+
+            resolucionInfo = {
+                id: resolucion.get('id'),
+                pdf_path: relativePath,
+                filename: file.filename,
+                size: file.size,
+            };
+        } else if (file?.path) {
+            // Si hay archivo pero el estado no es RESUELTO/CERRADO, eliminarlo
+            const fsPromises = require('node:fs/promises');
+            await fsPromises.unlink(file.path).catch(() => {});
+        }
 
         // Obtener el reclamo actualizado con toda la información
         const denunciaActualizada = await models.Denuncia.findByPk(id);
@@ -1094,8 +1164,14 @@ export const actualizarEstado = async (
                       email: (asignacion.get('asignado') as any).email,
                   }
                 : null,
+            resolucion: resolucionInfo,
         });
     } catch (e: any) {
+        // Intentar eliminar el archivo si hubo error
+        if (file?.path) {
+            const fsPromises = require('node:fs/promises');
+            await fsPromises.unlink(file.path).catch(() => {});
+        }
         return res.status(400).json({ error: e.message });
     }
 };
@@ -1372,6 +1448,7 @@ export const obtenerTodosLosReclamos = async (
                     canal_origen: denuncia.get('canal_origen'),
                     fecha_creacion: denuncia.get('created_at'),
                     fecha_actualizacion: denuncia.get('updated_at'),
+                    dias: Math.floor((new Date().getTime() - new Date(denuncia.get('created_at') as string).getTime()) / (1000 * 60 * 60 * 24)),
                     estado: {
                         id: estado?.get('id'),
                         nombre: estado?.get('nombre') || 'Desconocido',
@@ -1671,6 +1748,7 @@ export const obtenerReclamosAsignados = async (
                     canal_origen: denuncia.get('canal_origen'),
                     fecha_creacion: denuncia.get('created_at'),
                     fecha_actualizacion: denuncia.get('updated_at'),
+                    dias: Math.floor((new Date().getTime() - new Date(denuncia.get('created_at') as string).getTime()) / (1000 * 60 * 60 * 24)),
                     estado: {
                         id: estado?.get('id'),
                         nombre: estado?.get('nombre') || 'Desconocido',
@@ -1778,3 +1856,221 @@ export const obtenerReclamosAsignados = async (
  * 2. Override forzado por usuario con permiso FORCE_REVEAL_EMAIL
  */
 // revealEmail fue eliminado - funcionalidad de revelación de identidad no es necesaria
+
+import multer from 'multer';
+import path from 'node:path';
+import fs from 'node:fs/promises';
+
+// Configurar multer para informe de resolución (solo PDF, sin límite de tamaño)
+const resolutionReportStorage = multer.diskStorage({
+    destination: async (req, file, cb) => {
+        const uploadDir = process.env.UPLOAD_DIR || path.resolve(process.cwd(), 'uploads');
+        const resolutionDir = path.join(uploadDir, 'resoluciones');
+        try {
+            await fs.mkdir(resolutionDir, { recursive: true });
+            cb(null, resolutionDir);
+        } catch (error) {
+            cb(error as Error, resolutionDir);
+        }
+    },
+    filename: (req, file, cb) => {
+        const denunciaId = req.params.id;
+        const timestamp = Date.now();
+        const filename = `resolucion_${denunciaId}_${timestamp}.pdf`;
+        cb(null, filename);
+    },
+});
+
+const resolutionReportUpload = multer({
+    storage: resolutionReportStorage,
+    fileFilter: (req, file, cb) => {
+        // Solo permitir PDF
+        if (file.mimetype !== 'application/pdf') {
+            cb(new Error('Solo se permiten archivos PDF'));
+            return;
+        }
+        cb(null, true);
+    },
+    // Sin límite de tamaño
+});
+
+export const uploadResolutionReportMiddleware = resolutionReportUpload.single('pdf');
+
+/**
+ * Subir informe de resolución para una denuncia resuelta/cerrada
+ * POST /api/denuncias/:id/informe-resolucion
+ * Content-Type: multipart/form-data
+ * 
+ * Solo supervisores asignados o admins pueden subir
+ * Solo cuando el estado es RESUELTO o CERRADO
+ * Solo 1 archivo PDF (reemplaza el anterior si existe)
+ */
+export const subirInformeResolucion = async (
+    req: Request & { user?: any },
+    res: Response
+) => {
+    try {
+        const { id } = req.params;
+        const file = req.file as Express.Multer.File;
+        const userId = req.user?.get?.('id');
+
+        if (!file) {
+            return res.status(400).json({
+                error: 'No se proporcionó ningún archivo PDF',
+            });
+        }
+
+        // Verificar que la denuncia existe
+        const denuncia = await models.Denuncia.findByPk(id);
+        if (!denuncia) {
+            // Eliminar archivo subido si la denuncia no existe
+            await fs.unlink(file.path).catch(() => {});
+            return res.status(404).json({ error: 'Denuncia no encontrada' });
+        }
+
+        // Verificar que el estado es RESUELTO o CERRADO
+        const estadoId = denuncia.get('estado_id');
+        const estado = await models.EstadoDenuncia.findByPk(Number(estadoId));
+        const estadoCodigo = (estado?.get('codigo') as string)?.toUpperCase();
+
+        // if (!['RESUELTO', 'CERRADO'].includes(estadoCodigo)) {
+        //     // Eliminar archivo subido si el estado no es válido
+        //     await fs.unlink(file.path).catch(() => {});
+        //     return res.status(400).json({
+        //         error: 'Solo se puede subir informe de resolución cuando la denuncia está en estado RESUELTO o CERRADO',
+        //     });
+        // }
+
+        // Verificar permisos: supervisor asignado o admin
+        const userRoles = req.user?.get('roles') || [];
+        const arquetiposCodigos = userRoles
+            .map((r: any) => r.get('arquetipo')?.get('codigo'))
+            .filter(Boolean);
+
+        const isAdmin = arquetiposCodigos.includes('ADMIN');
+        
+        if (!isAdmin) {
+            // Verificar si es supervisor asignado
+            const asignacion = await models.DenunciaAsignacion.findOne({
+                where: {
+                    denuncia_id: id,
+                    usuario_id: userId,
+                    activo: 1,
+                },
+            });
+
+            if (!asignacion) {
+                await fs.unlink(file.path).catch(() => {});
+                return res.status(403).json({
+                    error: 'Solo el supervisor asignado o un administrador puede subir el informe de resolución',
+                });
+            }
+        }
+
+        // Calcular ruta relativa para guardar en BD
+        const uploadDir = process.env.UPLOAD_DIR || path.resolve(process.cwd(), 'uploads');
+        const relativePath = path.relative(uploadDir, file.path);
+
+        // Buscar o crear registro de resolución
+        let resolucion = await models.Resolucion.findOne({
+            where: { denuncia_id: id },
+        });
+
+        if (resolucion) {
+            // Si ya existe una resolución con PDF, eliminar el archivo anterior
+            const oldPdfPath = resolucion.get('pdf_path') as string;
+            if (oldPdfPath) {
+                const oldFullPath = path.join(uploadDir, oldPdfPath);
+                await fs.unlink(oldFullPath).catch(() => {});
+            }
+
+            // Actualizar el registro existente
+            await resolucion.update({
+                pdf_path: relativePath,
+                resuelto_por: userId,
+                resuelto_at: new Date(),
+            });
+        } else {
+            // Crear nuevo registro de resolución
+            resolucion = await models.Resolucion.create({
+                denuncia_id: id,
+                contenido: 'Informe de resolución adjunto',
+                resuelto_por: userId,
+                resuelto_at: new Date(),
+                pdf_path: relativePath,
+            });
+        }
+
+        return res.status(201).json({
+            success: true,
+            message: 'Informe de resolución subido correctamente',
+            data: {
+                id: resolucion.get('id'),
+                denuncia_id: id,
+                pdf_path: relativePath,
+                filename: file.filename,
+                size: file.size,
+                uploaded_at: new Date().toISOString(),
+            },
+        });
+    } catch (e: any) {
+        // Intentar eliminar el archivo si hubo error
+        if (req.file?.path) {
+            await fs.unlink(req.file.path).catch(() => {});
+        }
+        console.error('[Upload Resolution Report Error]:', e);
+        return res.status(500).json({ error: e.message });
+    }
+};
+
+/**
+ * Descargar informe de resolución
+ * GET /api/denuncias/:id/informe-resolucion
+ */
+export const descargarInformeResolucion = async (
+    req: Request & { user?: any },
+    res: Response
+) => {
+    try {
+        const { id } = req.params;
+
+        // Verificar que la denuncia existe
+        const denuncia = await models.Denuncia.findByPk(id);
+        if (!denuncia) {
+            return res.status(404).json({ error: 'Denuncia no encontrada' });
+        }
+
+        // Buscar resolución
+        const resolucion = await models.Resolucion.findOne({
+            where: { denuncia_id: id },
+        });
+
+        if (!resolucion || !resolucion.get('pdf_path')) {
+            return res.status(404).json({ error: 'No hay informe de resolución para esta denuncia' });
+        }
+
+        const uploadDir = process.env.UPLOAD_DIR || path.resolve(process.cwd(), 'uploads');
+        const filePath = path.join(uploadDir, resolucion.get('pdf_path') as string);
+
+        // Verificar que el archivo existe
+        try {
+            await fs.access(filePath);
+        } catch {
+            return res.status(404).json({ error: 'Archivo de informe no encontrado en el sistema' });
+        }
+
+        // Configurar headers
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename="informe_resolucion_${denuncia.get('numero')}.pdf"`
+        );
+
+        // Enviar archivo
+        const fileBuffer = await fs.readFile(filePath);
+        return res.send(fileBuffer);
+    } catch (e: any) {
+        console.error('[Download Resolution Report Error]:', e);
+        return res.status(500).json({ error: e.message });
+    }
+};

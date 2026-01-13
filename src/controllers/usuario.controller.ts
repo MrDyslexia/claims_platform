@@ -440,18 +440,18 @@ export const obtenerListaCompletaUsuarios = async (
         });
 
         return res.json({
-            total: count,
+            total: usuariosFormateados.length,
             usuarios: usuariosFormateados,
             roles_disponibles: rolesFormateados,
             permisos_disponibles: permisosFormateados,
-            metadata: {
-                pagina_actual: page,
-                total_paginas: Math.ceil(count / limit),
-                registros_por_pagina: limit,
-                total_registros: count,
-                ordenado_por: 'fecha_creacion',
-                orden: 'desc',
-            },
+            // metadata: {
+            //     pagina_actual: page,
+            //     total_paginas: Math.ceil(count / limit),
+            //     registros_por_pagina: limit,
+            //     total_registros: count,
+            //     ordenado_por: 'fecha_creacion',
+            //     orden: 'desc',
+            // },
         });
     } catch (e: any) {
         console.error('Error en obtenerListaCompletaUsuarios:', e);

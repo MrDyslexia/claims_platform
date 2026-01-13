@@ -133,6 +133,16 @@ export const eliminarTipoDenuncia = async (req: Request, res: Response) => {
             return res.status(404).json({ error: 'tipo denuncia not found' });
         }
 
+        const denunciasCount = await models.Denuncia.count({
+            where: { tipo_denuncia_id: id },
+        });
+
+        if (denunciasCount > 0) {
+            return res.status(409).json({
+                error: 'no se puede eliminar el tipo con denuncias asociadas',
+            });
+        }
+
         await tipo.destroy();
 
         return res.json({ ok: true, message: 'tipo denuncia deleted' });

@@ -130,8 +130,8 @@ export const eliminarCategoriaDenuncia = async (req: Request, res: Response) => 
         });
 
         if (typesCount > 0) {
-            return res.status(400).json({
-                error: 'cannot delete category with associated types',
+            return res.status(409).json({
+                error: 'no se puede eliminar la categoría con tipos asociados',
             });
         }
 

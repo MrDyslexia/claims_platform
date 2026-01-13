@@ -11,11 +11,18 @@ router.get('/stats', authMiddleware, dashboardController.getDashboardStats);
 // Query param: period (weekly|monthly|quarterly|yearly)
 router.post('/reports', authMiddleware, dashboardController.generateReports);
 
+// Endpoint para analytics del dashboard (tendencias, distribuciones, métricas clave)
+router.get('/analytics', authMiddleware, dashboardController.getDashboardAnalytics);
+
 // Endpoint para dashboard de analista (filtrado por empresa del usuario)
 router.get('/analista', authMiddleware, dashboardController.getDashboardAnalista);
 
 // Endpoint para dashboard de supervisor
 router.get('/supervisor', authMiddleware, dashboardController.getDashboardSupervisor);
+
+// Endpoint para dashboard completo de administrador
+router.get('/admin/complete', authMiddleware, dashboardController.getAdminDashboardComplete);
+
 
 // Endpoint para obtener todas las denuncias del supervisor
 router.get('/supervisor/claims', authMiddleware, dashboardController.getAllSupervisorClaims);

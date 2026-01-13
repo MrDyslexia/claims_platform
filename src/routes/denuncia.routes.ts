@@ -9,6 +9,9 @@ import {
     actualizarPrioridad,
     actualizarEstado,
     guardarNotaSatisfaccion,
+    subirInformeResolucion,
+    descargarInformeResolucion,
+    uploadResolutionReportMiddleware  
 } from '../controllers/denuncia.controller';
 import {
     crearComentario,
@@ -99,6 +102,22 @@ router.put(
     authMiddleware,
     requireRoles('ADMIN', 'SUPERVISOR', 'ANALISTA'),
     actualizarEstado
+);
+
+// Subir informe de resolucion (requires auth + permission)
+router.post(
+    '/:id/informe-resolucion',
+    authMiddleware,
+    requireRoles('ADMIN', 'SUPERVISOR'),
+    uploadResolutionReportMiddleware,
+    subirInformeResolucion
+);
+
+// Descargar informe de resolucion (requires auth)
+router.get(
+    '/:id/informe-resolucion',
+    authMiddleware,
+    descargarInformeResolucion
 );
 
 export default router;

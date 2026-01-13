@@ -1630,20 +1630,21 @@ export const getAnalystAnalytics = async (req: Request, res: Response) => {
             new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
         );
 
-        // 2. Reclamos por Categoría
+        // 2. Reclamos por Categoría (usando joins correctos)
         const claimsByCategory = await models.Denuncia.findAll({
             attributes: [
-                [col('tipo_denuncia.categoria_id'), 'categoria_id'], // Ajustar según modelo real si es necesario
                 [fn('COUNT', col('denuncia.id')), 'cantidad'],
             ],
             include: [{
                 model: models.TipoDenuncia,
                 as: 'tipo_denuncia',
-                attributes: ['categoria_id'],
+                attributes: [],
+                required: true,
                 include: [{
-                    model: models.CategoriaDenuncia, // Asumiendo que existe este modelo y relación
-                    as: 'categoria', // Verificar nombre de la asociación
-                    attributes: ['nombre'],
+                    model: models.CategoriaDenuncia,
+                    as: 'categoria',
+                    attributes: ['id', 'nombre'],
+                    required: true,
                 }]
             }],
             where: {
@@ -1651,59 +1652,93 @@ export const getAnalystAnalytics = async (req: Request, res: Response) => {
                     [Op.between]: [startDate, endDate],
                 },
             },
-            group: ['tipo_denuncia.categoria_id', 'tipo_denuncia.categoria.id', 'tipo_denuncia.categoria.nombre'],
+            group: ['tipo_denuncia->categoria.id', 'tipo_denuncia->categoria.nombre'],
             raw: true,
         });
 
-        // Procesar resultado de categorías (puede requerir ajustes según la estructura exacta de la respuesta raw)
         const processedCategories = claimsByCategory.map((item: any) => ({
             categoria: item['tipo_denuncia.categoria.nombre'] || 'Sin Categoría',
             cantidad: parseInt(item.cantidad),
-        }));
-
+        })).sort((a, b) => b.cantidad - a.cantidad);
 
         // 3. Reclamos por Tipo
         const claimsByType = await models.Denuncia.findAll({
             attributes: [
-                [col('tipo_denuncia.nombre'), 'tipo'],
+                'tipo_id',
                 [fn('COUNT', col('denuncia.id')), 'cantidad'],
             ],
             include: [{
                 model: models.TipoDenuncia,
                 as: 'tipo_denuncia',
-                attributes: [],
+                attributes: ['nombre'],
+                required: false,
             }],
             where: {
                 created_at: {
                     [Op.between]: [startDate, endDate],
                 },
             },
-            group: ['tipo_denuncia.nombre'],
+            group: ['tipo_id', 'tipo_denuncia.id', 'tipo_denuncia.nombre'],
             raw: true,
         });
 
         const processedTypes = claimsByType.map((item: any) => ({
-            tipo: item.tipo || 'Sin Tipo',
+            tipo: item['tipo_denuncia.nombre'] || 'Sin Tipo',
             cantidad: parseInt(item.cantidad),
-        }));
+        })).sort((a, b) => b.cantidad - a.cantidad);
 
-        // 4. Tendencia de Satisfacción (Simulada)
-        // Generar datos simulados distribuidos en el rango de fechas
-        const satisfactionTrend = [];
-        const currentDate = new Date(startDate);
-        while (currentDate <= endDate) {
-            satisfactionTrend.push({
-                fecha: currentDate.toISOString().split('T')[0],
-                satisfaccion: parseFloat((3.5 + Math.random() * 1.5).toFixed(1)), // Random entre 3.5 y 5.0
-            });
-            currentDate.setDate(currentDate.getDate() + 1); // Avanzar un día
-            
-            // Si el rango es muy grande, podríamos agrupar por semana o mes, pero por ahora diario está bien para la simulación
-            if (satisfactionTrend.length > 30) break; // Limitar a 30 puntos para no saturar
-        }
+        // 4. Rendimiento Semanal (agrupando dailyPerformance por semana)
+        const getWeekNumber = (date: Date): string => {
+            const d = new Date(date);
+            const dayOfWeek = d.getDay();
+            const weekStart = new Date(d);
+            weekStart.setDate(d.getDate() - dayOfWeek);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            return `${weekStart.getDate().toString().padStart(2, '0')}/${(weekStart.getMonth() + 1).toString().padStart(2, '0')} - ${weekEnd.getDate().toString().padStart(2, '0')}/${(weekEnd.getMonth() + 1).toString().padStart(2, '0')}`;
+        };
+
+        const weeklyMap = new Map<string, { semana: string; recibidos: number; resueltos: number }>();
+        dailyPerformance.forEach((day: any) => {
+            const weekLabel = getWeekNumber(new Date(day.fecha));
+            if (weeklyMap.has(weekLabel)) {
+                const existing = weeklyMap.get(weekLabel)!;
+                existing.recibidos += day.recibidos;
+                existing.resueltos += day.resueltos;
+            } else {
+                weeklyMap.set(weekLabel, {
+                    semana: weekLabel,
+                    recibidos: day.recibidos,
+                    resueltos: day.resueltos,
+                });
+            }
+        });
+        const weeklyPerformance = Array.from(weeklyMap.values());
+
+        // 5. Tendencia de Satisfacción (datos reales de nota_satisfaccion)
+        const satisfactionData = await models.Denuncia.findAll({
+            attributes: [
+                [fn('DATE', col('created_at')), 'fecha'],
+                [fn('AVG', col('nota_satisfaccion')), 'satisfaccion'],
+            ],
+            where: {
+                created_at: { [Op.between]: [startDate, endDate] },
+                nota_satisfaccion: { [Op.ne]: null },
+            },
+            group: [fn('DATE', col('created_at'))],
+            raw: true,
+            order: [[fn('DATE', col('created_at')), 'ASC']],
+            limit: 30,
+        });
+
+        const satisfactionTrend = satisfactionData.map((item: any) => ({
+            fecha: item.fecha,
+            satisfaccion: parseFloat(parseFloat(item.satisfaccion).toFixed(1)) || 0,
+        }));
 
         res.json({
             dailyPerformance,
+            weeklyPerformance,
             claimsByCategory: processedCategories,
             claimsByType: processedTypes,
             satisfactionTrend,
@@ -1716,3 +1751,615 @@ export const getAnalystAnalytics = async (req: Request, res: Response) => {
         });
     }
 };
+
+/**
+ * Dashboard Analytics - Estadísticas generales del dashboard
+ * GET /api/dashboard/analytics
+ * Retorna: summary, monthly_trend (12 meses), category_distribution, status_distribution, key_metrics
+ */
+export const getDashboardAnalytics = async (req: Request & { user?: any }, res: Response) => {
+    try {
+        const now = new Date();
+        
+        // Fechas para comparación mensual
+        const startCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        const startPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const endPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+
+        // Obtener estados
+        const estados = await models.EstadoDenuncia.findAll({
+            attributes: ['id', 'codigo', 'nombre'],
+        });
+        const estadosMap = new Map<string, number>();
+        estados.forEach((estado: any) => {
+            estadosMap.set(estado.codigo.toUpperCase(), estado.id);
+        });
+
+        const estadoResueltoId = estadosMap.get('RESUELTO');
+        const estadoCerradoId = estadosMap.get('CERRADO');
+        const estadoProcesoId = estadosMap.get('EN_PROCESO') || estadosMap.get('PROCESO');
+        const estadosPendientesIds = [estadoResueltoId, estadoCerradoId].filter(Boolean);
+
+        // ===== SUMMARY =====
+        const totalClaims = await models.Denuncia.count();
+        
+        const claimsInProcess = await models.Denuncia.count({
+            where: estadoProcesoId ? { estado_id: estadoProcesoId } : {}
+        });
+
+        const claimsResolved = await models.Denuncia.count({
+            where: {
+                estado_id: { [Op.in]: estadosPendientesIds }
+            }
+        });
+
+        // Tasa de resolución mes actual
+        const totalCurrentMonth = await models.Denuncia.count({
+            where: { created_at: { [Op.between]: [startCurrentMonth, endCurrentMonth] } }
+        });
+        const resolvedCurrentMonth = await models.Denuncia.count({
+            where: {
+                created_at: { [Op.between]: [startCurrentMonth, endCurrentMonth] },
+                estado_id: { [Op.in]: estadosPendientesIds }
+            }
+        });
+        const resolutionRateCurrent = totalCurrentMonth > 0 
+            ? (resolvedCurrentMonth / totalCurrentMonth) * 100 
+            : 0;
+
+        // Tasa de resolución mes anterior
+        const totalPrevMonth = await models.Denuncia.count({
+            where: { created_at: { [Op.between]: [startPrevMonth, endPrevMonth] } }
+        });
+        const resolvedPrevMonth = await models.Denuncia.count({
+            where: {
+                created_at: { [Op.between]: [startPrevMonth, endPrevMonth] },
+                estado_id: { [Op.in]: estadosPendientesIds }
+            }
+        });
+        const resolutionRatePrev = totalPrevMonth > 0 
+            ? (resolvedPrevMonth / totalPrevMonth) * 100 
+            : 0;
+
+        const resolutionRateDiff = resolutionRateCurrent - resolutionRatePrev;
+
+        const summary = {
+            total_claims: totalClaims,
+            claims_in_process: claimsInProcess,
+            claims_resolved: claimsResolved,
+            resolution_rate: {
+                value: Math.round(resolutionRateCurrent * 10) / 10,
+                previous_month_value: Math.round(resolutionRatePrev * 10) / 10,
+                difference: Math.round(resolutionRateDiff * 10) / 10,
+                trend: resolutionRateDiff >= 0 ? 'up' : 'down' as 'up' | 'down'
+            }
+        };
+
+        // ===== MONTHLY TREND (12 meses) =====
+        const monthlyTrend: { mes: string; recibidos: number; resueltos: number }[] = [];
+        for (let i = 11; i >= 0; i--) {
+            const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+
+            const recibidos = await models.Denuncia.count({
+                where: { created_at: { [Op.between]: [monthStart, monthEnd] } }
+            });
+
+            const resueltos = await models.Denuncia.count({
+                where: {
+                    created_at: { [Op.between]: [monthStart, monthEnd] },
+                    estado_id: { [Op.in]: estadosPendientesIds }
+                }
+            });
+
+            monthlyTrend.push({
+                mes: getMonthName(monthStart),
+                recibidos,
+                resueltos
+            });
+        }
+
+        // ===== CATEGORY DISTRIBUTION =====
+        const categoryResult = await models.Denuncia.findAll({
+            attributes: [
+                [fn('COUNT', col('denuncia.id')), 'cantidad']
+            ],
+            include: [{
+                model: models.TipoDenuncia,
+                as: 'tipo_denuncia',
+                attributes: [],
+                required: true,
+                include: [{
+                    model: models.CategoriaDenuncia,
+                    as: 'categoria',
+                    attributes: ['nombre'],
+                    required: true
+                }]
+            }],
+            group: ['tipo_denuncia->categoria.id', 'tipo_denuncia->categoria.nombre'],
+            raw: true
+        });
+
+        const categoryDistribution = categoryResult.map((c: any) => ({
+            categoria: c['tipo_denuncia.categoria.nombre'] || 'Sin categoría',
+            cantidad: parseInt(c.cantidad)
+        })).sort((a, b) => b.cantidad - a.cantidad);
+
+        // ===== STATUS DISTRIBUTION =====
+        const statusResult = await models.Denuncia.findAll({
+            attributes: [
+                'estado_id',
+                [fn('COUNT', col('denuncia.id')), 'cantidad']
+            ],
+            group: ['estado_id', 'estado_denuncia.id', 'estado_denuncia.nombre'],
+            include: [{
+                model: models.EstadoDenuncia,
+                as: 'estado_denuncia',
+                attributes: ['nombre'],
+                required: false
+            }],
+            raw: true
+        });
+
+        const statusDistribution = statusResult.map((s: any) => ({
+            estado: s['estado_denuncia.nombre'] || 'Sin estado',
+            cantidad: parseInt(s.cantidad)
+        })).sort((a, b) => b.cantidad - a.cantidad);
+
+        // ===== KEY METRICS =====
+
+        // 1. Average Resolution Time
+        const getAvgResolutionTime = async (start: Date, end: Date): Promise<number> => {
+            const resolved = await models.Denuncia.findAll({
+                where: {
+                    estado_id: { [Op.in]: estadosPendientesIds },
+                    updated_at: { [Op.ne]: null },
+                    created_at: { [Op.between]: [start, end] }
+                },
+                attributes: ['created_at', 'updated_at'],
+                raw: true
+            });
+
+            if (resolved.length === 0) return 0;
+
+            const totalDays = resolved.reduce((sum: number, d: any) => {
+                const diff = new Date(d.updated_at).getTime() - new Date(d.created_at).getTime();
+                return sum + (diff / (1000 * 60 * 60 * 24));
+            }, 0);
+
+            return totalDays / resolved.length;
+        };
+
+        const avgTimeCurrent = await getAvgResolutionTime(startCurrentMonth, endCurrentMonth);
+        const avgTimePrev = await getAvgResolutionTime(startPrevMonth, endPrevMonth);
+        const avgTimeDiff = avgTimeCurrent - avgTimePrev;
+
+        // 2. Average Satisfaction (from nota_satisfaccion field)
+        const getAvgSatisfaction = async (start: Date, end: Date): Promise<number> => {
+            const result = await models.Denuncia.findAll({
+                where: {
+                    nota_satisfaccion: { [Op.ne]: null },
+                    created_at: { [Op.between]: [start, end] }
+                },
+                attributes: [[fn('AVG', col('nota_satisfaccion')), 'avg_satisfaction']],
+                raw: true
+            });
+            return result[0] ? parseFloat((result[0] as any).avg_satisfaction) || 0 : 0;
+        };
+
+        const avgSatisfactionCurrent = await getAvgSatisfaction(startCurrentMonth, endCurrentMonth);
+        const avgSatisfactionPrev = await getAvgSatisfaction(startPrevMonth, endPrevMonth);
+        const satisfactionDiff = avgSatisfactionCurrent - avgSatisfactionPrev;
+
+        // 3. Recurrence Rate (claimants with more than 1 claim)
+        const allClaimantsWithEmail = await models.Denuncia.count({
+            distinct: true,
+            col: 'denunciante_email',
+            where: {
+                denunciante_email: { [Op.ne]: null }
+            }
+        });
+
+        const recurrentClaimants = await models.Denuncia.findAll({
+            attributes: ['denunciante_email'],
+            where: {
+                denunciante_email: { [Op.ne]: null }
+            },
+            group: ['denunciante_email'],
+            having: literal('COUNT(id) > 1'),
+            raw: true
+        });
+
+        const recurrenceRate = allClaimantsWithEmail > 0 
+            ? (recurrentClaimants.length / allClaimantsWithEmail) * 100 
+            : 0;
+
+        // 4. Critical Claims
+        const criticalClaims = await models.Denuncia.count({
+            where: {
+                prioridad_id: 'CRITICA',
+                estado_id: { [Op.notIn]: estadosPendientesIds }
+            }
+        });
+
+        const keyMetrics = {
+            avg_resolution_time: {
+                value: Math.round(avgTimeCurrent * 10) / 10,
+                unit: 'días',
+                previous_month_value: Math.round(avgTimePrev * 10) / 10,
+                difference: Math.round(avgTimeDiff * 10) / 10,
+                trend: avgTimeDiff <= 0 ? 'down' : 'up' as 'up' | 'down'
+            },
+            avg_satisfaction: {
+                value: Math.round(avgSatisfactionCurrent * 10) / 10,
+                previous_month_value: Math.round(avgSatisfactionPrev * 10) / 10,
+                difference: Math.round(satisfactionDiff * 10) / 10,
+                trend: satisfactionDiff >= 0 ? 'up' : 'down' as 'up' | 'down'
+            },
+            recurrence_rate: {
+                value: Math.round(recurrenceRate * 10) / 10,
+                unit: 'percent',
+                total_claimants: allClaimantsWithEmail,
+                recurrent_claimants: recurrentClaimants.length,
+            },
+            critical_claims: {
+                value: criticalClaims,
+            }
+        };
+
+        // ===== RESPONSE =====
+        res.json({
+            success: true,
+            data: {
+                summary,
+                monthly_trend: monthlyTrend,
+                category_distribution: categoryDistribution,
+                status_distribution: statusDistribution,
+                key_metrics: keyMetrics
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Error en getDashboardAnalytics:', error);
+        res.status(500).json({
+            success: false,
+            error: error instanceof Error ? error.message : 'Error al obtener analíticas del dashboard',
+        });
+    }
+};
+
+// ==========================================
+// ADMIN DASHBOARD COMPLETE - TYPES
+// ==========================================
+
+interface TrendComparison {
+    actual: number;
+    mesAnterior: number;
+    variacion: number;
+    tendencia: 'up' | 'down' | 'neutral';
+}
+
+interface AdminSummary {
+    totalReclamos: number;
+    tasaResolucion: TrendComparison;
+    tiempoPromedioResolucion: TrendComparison;
+    empresasActivas: number;
+    reclamosCriticos: number;
+    satisfaccionPromedio: number;
+}
+
+interface MonthlyDistribution {
+    mes: string;
+    resueltos: number;
+    pendientes: number;
+}
+
+interface TypeDistribution {
+    tipo: string;
+    cantidad: number;
+    porcentaje: number;
+}
+
+interface CompanyClaims {
+    empresa: string;
+    cantidad: number;
+}
+
+interface ResolutionTimeRange {
+    rango: string;
+    cantidad: number;
+}
+
+interface AdminDashboardCompleteResponse {
+    success: boolean;
+    data: {
+        summary: AdminSummary;
+        distribucionUltimos12Meses: MonthlyDistribution[];
+        distribucionPorTipo: TypeDistribution[];
+        reclamosPorEmpresa: CompanyClaims[];
+        distribucionTiemposResolucion: ResolutionTimeRange[];
+    };
+}
+
+// ==========================================
+// ADMIN DASHBOARD COMPLETE - ENDPOINT
+// ==========================================
+
+/**
+ * Dashboard completo para administrador
+ * GET /api/dashboard/admin/complete
+ */
+export const getAdminDashboardComplete = async (
+    req: Request & { user?: any },
+    res: Response
+) => {
+    try {
+        const now = new Date();
+        
+        // Fechas del mes actual
+        const startCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        
+        // Fechas del mes anterior
+        const startPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const endPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+
+        // Obtener estados
+        const estados = await models.EstadoDenuncia.findAll({
+            attributes: ['id', 'codigo', 'nombre'],
+        });
+        const estadosMap = new Map<string, number>();
+        estados.forEach((estado: any) => {
+            estadosMap.set(estado.codigo.toUpperCase(), estado.id);
+        });
+
+        const estadoResueltoId = estadosMap.get('RESUELTO');
+        const estadoCerradoId = estadosMap.get('CERRADO');
+        const estadosFinalizados = [estadoResueltoId, estadoCerradoId].filter(Boolean) as number[];
+
+        // Helper para calcular tendencia
+        const getTrend = (current: number, previous: number): 'up' | 'down' | 'neutral' => {
+            if (current === previous) return 'neutral';
+            return current > previous ? 'up' : 'down';
+        };
+
+        const calculateVariationPercent = (current: number, previous: number): number => {
+            if (previous === 0) return current > 0 ? 100 : 0;
+            return Math.round(((current - previous) / previous) * 10000) / 100;
+        };
+
+        // ===== 1. TOTAL RECLAMOS =====
+        const totalReclamos = await models.Denuncia.count();
+
+        // ===== 2. TASA DE RESOLUCIÓN CON COMPARACIÓN =====
+        // Mes actual
+        const totalMesActual = await models.Denuncia.count({
+            where: { created_at: { [Op.between]: [startCurrentMonth, endCurrentMonth] } }
+        });
+        const resueltosMesActual = await models.Denuncia.count({
+            where: {
+                created_at: { [Op.between]: [startCurrentMonth, endCurrentMonth] },
+                estado_id: { [Op.in]: estadosFinalizados }
+            }
+        });
+        const tasaActual = totalMesActual > 0 ? Math.round((resueltosMesActual / totalMesActual) * 1000) / 10 : 0;
+
+        // Mes anterior
+        const totalMesAnterior = await models.Denuncia.count({
+            where: { created_at: { [Op.between]: [startPrevMonth, endPrevMonth] } }
+        });
+        const resueltosMesAnterior = await models.Denuncia.count({
+            where: {
+                created_at: { [Op.between]: [startPrevMonth, endPrevMonth] },
+                estado_id: { [Op.in]: estadosFinalizados }
+            }
+        });
+        const tasaAnterior = totalMesAnterior > 0 ? Math.round((resueltosMesAnterior / totalMesAnterior) * 1000) / 10 : 0;
+
+        const tasaResolucion: TrendComparison = {
+            actual: tasaActual,
+            mesAnterior: tasaAnterior,
+            variacion: calculateVariationPercent(tasaActual, tasaAnterior),
+            tendencia: getTrend(tasaActual, tasaAnterior)
+        };
+
+        // ===== 3. TIEMPO PROMEDIO DE RESOLUCIÓN =====
+        const getAvgResolutionDays = async (startDate: Date, endDate: Date): Promise<number> => {
+            const denunciasResueltas = await models.Denuncia.findAll({
+                where: {
+                    estado_id: { [Op.in]: estadosFinalizados },
+                    created_at: { [Op.between]: [startDate, endDate] },
+                    updated_at: { [Op.ne]: null }
+                },
+                attributes: ['created_at', 'updated_at'],
+                raw: true
+            });
+
+            if (denunciasResueltas.length === 0) return 0;
+
+            const totalDias = denunciasResueltas.reduce((sum: number, d: any) => {
+                const inicio = new Date(d.created_at).getTime();
+                const fin = new Date(d.updated_at).getTime();
+                return sum + (fin - inicio) / (1000 * 60 * 60 * 24);
+            }, 0);
+
+            return Math.round((totalDias / denunciasResueltas.length) * 10) / 10;
+        };
+
+        const tiempoActual = await getAvgResolutionDays(startCurrentMonth, endCurrentMonth);
+        const tiempoAnterior = await getAvgResolutionDays(startPrevMonth, endPrevMonth);
+
+        const tiempoPromedioResolucion: TrendComparison = {
+            actual: tiempoActual,
+            mesAnterior: tiempoAnterior,
+            variacion: calculateVariationPercent(tiempoActual, tiempoAnterior),
+            // Para tiempo, "down" es mejor (menos días)
+            tendencia: tiempoActual < tiempoAnterior ? 'down' : tiempoActual > tiempoAnterior ? 'up' : 'neutral'
+        };
+
+        // ===== 4. EMPRESAS ACTIVAS =====
+        const empresasActivas = await models.Empresa.count({
+            where: { estado: 1 }
+        });
+
+        // ===== 5. RECLAMOS CRÍTICOS (no resueltos) =====
+        const reclamosCriticos = await models.Denuncia.count({
+            where: {
+                prioridad_id: 'CRITICA',
+                estado_id: { [Op.notIn]: estadosFinalizados }
+            }
+        });
+
+        // ===== 6. SATISFACCIÓN PROMEDIO =====
+        const denunciasConSatisfaccion = await models.Denuncia.findAll({
+            where: {
+                nota_satisfaccion: { [Op.ne]: null }
+            },
+            attributes: ['nota_satisfaccion'],
+            raw: true
+        });
+        
+        let satisfaccionPromedio = 0;
+        if (denunciasConSatisfaccion.length > 0) {
+            const suma = denunciasConSatisfaccion.reduce((acc: number, d: any) => acc + (d.nota_satisfaccion || 0), 0);
+            satisfaccionPromedio = Math.round((suma / denunciasConSatisfaccion.length) * 10) / 10;
+        }
+
+
+        // ===== 7. DISTRIBUCIÓN ÚLTIMOS 12 MESES =====
+        const distribucionUltimos12Meses: MonthlyDistribution[] = [];
+        
+        for (let i = 11; i >= 0; i--) {
+            const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+            const monthName = getMonthName(monthStart);
+
+            const resueltos = await models.Denuncia.count({
+                where: {
+                    created_at: { [Op.between]: [monthStart, monthEnd] },
+                    estado_id: { [Op.in]: estadosFinalizados }
+                }
+            });
+
+            const totalMes = await models.Denuncia.count({
+                where: { created_at: { [Op.between]: [monthStart, monthEnd] } }
+            });
+
+            distribucionUltimos12Meses.push({
+                mes: monthName,
+                resueltos: resueltos,
+                pendientes: totalMes - resueltos
+            });
+        }
+
+        // ===== 8. DISTRIBUCIÓN POR TIPO =====
+        const tiposResult = await models.Denuncia.findAll({
+            attributes: [
+                'tipo_id',
+                [fn('COUNT', col('denuncia.id')), 'cantidad'],
+            ],
+            group: ['tipo_id', 'tipo_denuncia.id', 'tipo_denuncia.nombre'],
+            include: [{
+                model: models.TipoDenuncia,
+                as: 'tipo_denuncia',
+                attributes: ['nombre'],
+                required: false,
+            }],
+            raw: true,
+        });
+
+        const distribucionPorTipo: TypeDistribution[] = tiposResult.map((t: any) => {
+            const cantidad = parseInt(t.cantidad);
+            const porcentaje = totalReclamos > 0 ? Math.round((cantidad / totalReclamos) * 10000) / 100 : 0;
+            return {
+                tipo: t['tipo_denuncia.nombre'] || 'Sin tipo',
+                cantidad,
+                porcentaje
+            };
+        }).sort((a, b) => b.cantidad - a.cantidad);
+
+        // ===== 9. RECLAMOS POR EMPRESA (Top 10) =====
+        const empresasResult = await models.Denuncia.findAll({
+            attributes: [
+                'empresa_id',
+                [fn('COUNT', col('denuncia.id')), 'cantidad'],
+            ],
+            group: ['empresa_id', 'empresa.id', 'empresa.nombre'],
+            include: [{
+                model: models.Empresa,
+                as: 'empresa',
+                attributes: ['nombre'],
+                required: false,
+            }],
+            order: [[literal('cantidad'), 'DESC']],
+            limit: 10,
+            raw: true,
+        });
+
+        const reclamosPorEmpresa: CompanyClaims[] = empresasResult.map((e: any) => ({
+            empresa: e['empresa.nombre'] || 'Sin empresa',
+            cantidad: parseInt(e.cantidad)
+        }));
+
+        // ===== 10. DISTRIBUCIÓN TIEMPOS DE RESOLUCIÓN =====
+        const rangos = [
+            { label: '0-3 días', min: 0, max: 3 },
+            { label: '4-7 días', min: 4, max: 7 },
+            { label: '8-14 días', min: 8, max: 14 },
+            { label: '15-30 días', min: 15, max: 30 },
+            { label: '+30 días', min: 31, max: Infinity },
+        ];
+
+        // Obtener todas las denuncias resueltas con sus tiempos
+        const denunciasParaTiempos = await models.Denuncia.findAll({
+            where: {
+                estado_id: { [Op.in]: estadosFinalizados },
+                updated_at: { [Op.ne]: null }
+            },
+            attributes: ['created_at', 'updated_at'],
+            raw: true
+        });
+
+        const distribucionTiemposResolucion: ResolutionTimeRange[] = rangos.map(rango => {
+            const cantidad = denunciasParaTiempos.filter((d: any) => {
+                const dias = (new Date(d.updated_at).getTime() - new Date(d.created_at).getTime()) / (1000 * 60 * 60 * 24);
+                return dias >= rango.min && dias <= rango.max;
+            }).length;
+
+            return {
+                rango: rango.label,
+                cantidad
+            };
+        });
+
+        // ===== RESPONSE =====
+        const response: AdminDashboardCompleteResponse = {
+            success: true,
+            data: {
+                summary: {
+                    totalReclamos,
+                    tasaResolucion,
+                    tiempoPromedioResolucion,
+                    empresasActivas,
+                    reclamosCriticos,
+                    satisfaccionPromedio
+                },
+                distribucionUltimos12Meses,
+                distribucionPorTipo,
+                reclamosPorEmpresa,
+                distribucionTiemposResolucion
+            }
+        };
+
+        res.status(200).json(response);
+
+    } catch (error) {
+        console.error('❌ Error en getAdminDashboardComplete:', error);
+        res.status(500).json({
+            success: false,
+            error: error instanceof Error ? error.message : 'Error al obtener dashboard completo',
+        });
+    }
+};
+
