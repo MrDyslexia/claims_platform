@@ -936,23 +936,6 @@ Este es un correo automático, por favor no responda a este mensaje.
         }
     }
 
-    async queueEmail(emailData: {
-        to: string;
-        subject: string;
-        templateCode: string;
-        payload: any;
-    }) {
-        // Este método puede ser usado para agregar emails a la cola
-        // en lugar de enviarlos directamente
-        const { models } = await import('../db/sequelize');
-
-        await models.EmailQueue.create({
-            to_email: emailData.to,
-            subject: emailData.subject,
-            template_code: emailData.templateCode,
-            payload_json: JSON.stringify(emailData.payload),
-        });
-    }
 }
 
 export const emailService = new EmailService();

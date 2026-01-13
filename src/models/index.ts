@@ -5,7 +5,6 @@ import { defineEmpresa } from './empresa.model';
 import { defineTipoDenuncia } from './tipo-denuncia.model';
 import { defineCategoriaDenuncia } from './categoria-denuncia.model';
 import { defineEstadoDenuncia } from './estado-denuncia.model';
-import { defineCanalDenuncia } from './canal-denuncia.model';
 import { defineArquetipo } from './arquetipo.model';
 import { defineArquetipoPermiso } from './arquetipo-permiso.model';
 import { defineRol } from './rol.model';
@@ -17,14 +16,10 @@ import { defineUsuarioSesion } from './usuario-sesion.model';
 import { defineDenuncia } from './denuncia.model';
 import { defineDenunciaAsignacion } from './denuncia-asignacion.model';
 import { defineDenunciaHistorialEstado } from './denuncia-historial-estado.model';
-import { defineDenunciaRevealAudit } from './denuncia-reveal-audit.model';
 import { defineComentario } from './comentario.model';
 import { defineResolucion } from './resolucion.model';
 import { defineAdjunto } from './adjunto.model';
 import { defineReasignacion } from './reasignacion.model';
-import { defineExportAuditoria } from './export-auditoria.model';
-import { defineAuditoria } from './auditoria.model';
-import { defineEmailQueue } from './email-queue.model';
 import { defineAPIRequestLog } from './api-request-log.model';
 import { defineKPIDenunciasDiario } from './kpi-denuncias-diario.model';
 import { defineSeqDenuncia } from './seq-denuncia.model';
@@ -42,7 +37,6 @@ export const initModels = (sequelize: Sequelize) => {
     const TipoDenuncia = defineTipoDenuncia(sequelize);
     const CategoriaDenuncia = defineCategoriaDenuncia(sequelize);
     const EstadoDenuncia = defineEstadoDenuncia(sequelize);
-    const CanalDenuncia = defineCanalDenuncia(sequelize);
     const Arquetipo = defineArquetipo(sequelize);
     const ArquetipoPermiso = defineArquetipoPermiso(sequelize);
     const Rol = defineRol(sequelize);
@@ -54,14 +48,10 @@ export const initModels = (sequelize: Sequelize) => {
     const Denuncia = defineDenuncia(sequelize);
     const DenunciaAsignacion = defineDenunciaAsignacion(sequelize);
     const DenunciaHistorialEstado = defineDenunciaHistorialEstado(sequelize);
-    const DenunciaRevealAudit = defineDenunciaRevealAudit(sequelize);
     const Comentario = defineComentario(sequelize);
     const Resolucion = defineResolucion(sequelize);
     const Adjunto = defineAdjunto(sequelize);
     const Reasignacion = defineReasignacion(sequelize);
-    const ExportAuditoria = defineExportAuditoria(sequelize);
-    const Auditoria = defineAuditoria(sequelize);
-    const EmailQueue = defineEmailQueue(sequelize);
     const APIRequestLog = defineAPIRequestLog(sequelize);
     const KPIDenunciasDiario = defineKPIDenunciasDiario(sequelize);
     const SeqDenuncia = defineSeqDenuncia(sequelize);
@@ -83,10 +73,6 @@ export const initModels = (sequelize: Sequelize) => {
         foreignKey: 'estado_id',
         as: 'estado_denuncia',
     });
-    Denuncia.belongsTo(CanalDenuncia, {
-        foreignKey: 'canal_id',
-        as: 'canal',
-    });
     Denuncia.belongsTo(Usuario, { as: 'creador', foreignKey: 'created_by' });
 
     Empresa.hasMany(Denuncia, { foreignKey: 'empresa_id' });
@@ -96,10 +82,6 @@ export const initModels = (sequelize: Sequelize) => {
     CategoriaDenuncia.hasMany(TipoDenuncia, { foreignKey: 'categoria_id', as: 'tipos' });
     TipoDenuncia.belongsTo(CategoriaDenuncia, { foreignKey: 'categoria_id', as: 'categoria' });
     EstadoDenuncia.hasMany(Denuncia, { foreignKey: 'estado_id' });
-    CanalDenuncia.hasMany(Denuncia, {
-        foreignKey: 'canal_id',
-        as: 'denuncias',
-    });
 
     // Usuario <-> Rol (many-to-many)
     Usuario.belongsToMany(Rol, {
@@ -257,19 +239,7 @@ export const initModels = (sequelize: Sequelize) => {
     });
     Denuncia.hasMany(Reasignacion, { foreignKey: 'denuncia_id' });
 
-    // ExportAuditoria associations
-    ExportAuditoria.belongsTo(Usuario, { foreignKey: 'usuario_id' });
-    ExportAuditoria.belongsTo(Denuncia, { foreignKey: 'denuncia_id' });
 
-    // Auditoria associations
-    Auditoria.belongsTo(Usuario, {
-        foreignKey: 'actor_usuario_id',
-        as: 'actor',
-    });
-    Usuario.hasMany(Auditoria, {
-        foreignKey: 'actor_usuario_id',
-        as: 'auditoriasComoActor',
-    });
 
     // APIRequestLog associations
     APIRequestLog.belongsTo(Usuario, {
@@ -281,19 +251,7 @@ export const initModels = (sequelize: Sequelize) => {
         as: 'request_logs',
     });
 
-    // DenunciaRevealAudit associations
-    DenunciaRevealAudit.belongsTo(Denuncia, {
-        foreignKey: 'denuncia_id',
-        as: 'denuncia',
-    });
-    DenunciaRevealAudit.belongsTo(Usuario, {
-        foreignKey: 'requested_by',
-        as: 'usuario_solicitante',
-    });
-    Denuncia.hasMany(DenunciaRevealAudit, {
-        foreignKey: 'denuncia_id',
-        as: 'reveal_audits',
-    });
+
 
     // Retornar todos los modelos
     return {
@@ -301,7 +259,6 @@ export const initModels = (sequelize: Sequelize) => {
         TipoDenuncia,
         CategoriaDenuncia,
         EstadoDenuncia,
-        CanalDenuncia,
         Arquetipo,
         ArquetipoPermiso,
         Rol,
@@ -313,18 +270,12 @@ export const initModels = (sequelize: Sequelize) => {
         Denuncia,
         DenunciaAsignacion,
         DenunciaHistorialEstado,
-        DenunciaRevealAudit,
         Comentario,
         Resolucion,
         Adjunto,
         Reasignacion,
-        ExportAuditoria,
-        Auditoria,
-        EmailQueue,
         APIRequestLog,
-        KPIDenunciasDiario,
         SeqDenuncia,
-        VDenunciaLookup,
         UsuarioCategoria,
         RolCategoria,
     } as const;

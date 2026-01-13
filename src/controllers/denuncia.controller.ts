@@ -456,42 +456,8 @@ export const crearDenunciaPublica = async (req: Request, res: Response) => {
             .json({ error: 'description must be at least 20 characters' });
     }
 
-    // Validar canal si se proporciona
-    const canalId = payload.canal_id ? Number(payload.canal_id) : undefined;
-    let canal: any = null;
-
-    if (canalId) {
-        canal = await models.CanalDenuncia.findByPk(canalId);
-
-        if (!canal) {
-            return res.status(400).json({
-                error: 'Canal de denuncia inválido',
-            });
-        }
-
-        if (!canal.get('activo')) {
-            return res.status(400).json({
-                error: 'El canal seleccionado no está activo',
-            });
-        }
-
-        // Validar Ley Karim no permite anónimo
-        if (canal.get('requiere_identificacion') && payload.isAnonymous) {
-            return res.status(400).json({
-                error: 'El canal Ley Karim requiere identificación del denunciante',
-                canal: canal.get('nombre'),
-            });
-        }
-
-        // Validar que haya correo si el canal requiere identificación
-        const emailProvided = sanitizeString(payload.email);
-        if (canal.get('requiere_identificacion') && !emailProvided) {
-            return res.status(400).json({
-                error: 'Debe proporcionar un correo electrónico para este canal',
-                canal: canal.get('nombre'),
-            });
-        }
-    }
+    // Canal validation removed - CanalDenuncia model eliminated
+    // const canalId = payload.canal_id ? Number(payload.canal_id) : undefined;
 
     try {
         await ensureFormMetadataSeeded(models);
@@ -569,7 +535,6 @@ export const crearDenunciaPublica = async (req: Request, res: Response) => {
             asunto,
             descripcion: descripcionFinal,
             canalOrigen: 'WEB',
-            canalId,
             denuncianteNombre,
             denuncianteRut,
             denuncianteEmail: emailDenunciante,
