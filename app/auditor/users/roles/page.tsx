@@ -1,6 +1,8 @@
 /* eslint-disable no-console */
 "use client";
 
+import type { Rol, Arquetipo, Categoria } from "@/lib/api/usuarios";
+
 import React from "react";
 import {
   Card,
@@ -15,8 +17,6 @@ import {
   Input,
   Textarea,
   Checkbox,
-  Tabs,
-  Tab,
   Select,
   SelectItem,
   ModalFooter,
@@ -28,7 +28,6 @@ import {
   listarArquetipos,
   obtenerCategoriasDisponibles,
 } from "@/lib/api/usuarios";
-import type { Rol, Arquetipo, Categoria } from "@/lib/api/usuarios";
 
 interface Permiso {
   id_permiso: number;
@@ -113,7 +112,7 @@ export default function RolesPage() {
 
       return acc;
     },
-    {} as Record<string, Permiso[]>
+    {} as Record<string, Permiso[]>,
   );
 
   if (loading) {
@@ -222,18 +221,18 @@ export default function RolesPage() {
                 value={formData.nombre}
               />
               <Textarea
-                label="Descripción"
                 isDisabled
+                label="Descripción"
                 minRows={2}
                 placeholder="Describe las responsabilidades de este rol"
                 value={formData.descripcion}
               />
               <Select
+                isDisabled
                 description="Deja vacío para que el rol acceda a todas las categorías"
                 label="Categoría de Denuncia (Opcional)"
                 placeholder="Sin restricción de categoría"
                 selectedKeys={selectedCategoria ? [selectedCategoria] : []}
-                isDisabled
               >
                 {categoriasDisponibles.map((cat) => (
                   <SelectItem key={cat.id.toString()}>{cat.nombre}</SelectItem>
@@ -265,16 +264,16 @@ export default function RolesPage() {
                                 </p>
                               </div>
                               <Checkbox
-                                isSelected={formData.permisos.includes(
-                                  permiso.id_permiso
-                                )}
                                 isDisabled
+                                isSelected={formData.permisos.includes(
+                                  permiso.id_permiso,
+                                )}
                               />
                             </div>
                           ))}
                         </div>
                       </div>
-                    )
+                    ),
                   )}
                 </div>
               </div>

@@ -13,24 +13,16 @@ import {
   Card,
   CardBody,
   Chip,
-  useDisclosure,
   Tabs,
   Tab,
   Accordion,
   AccordionItem,
   Spinner,
 } from "@heroui/react";
-import {
-  FileText,
-  Activity,
-  Folder,
-} from "lucide-react";
+import { FileText, Activity, Folder } from "lucide-react";
 
 import { DataTable } from "@/components/data-table";
-import {
-  getCategorias,
-  getTipos,
-} from "@/lib/api/settings";
+import { getCategorias, getTipos } from "@/lib/api/settings";
 
 // Mock data for statuses (keeping as is for now)
 const mockClaimStatuses: EstadoDenuncia[] = [
@@ -241,7 +233,7 @@ export default function SettingsPage() {
                         <DataTable
                           columns={typeColumns}
                           data={types.filter(
-                            (t) => t.categoria_id === category.id
+                            (t) => t.categoria_id === category.id,
                           )}
                           renderCell={renderTypeCell}
                         />
@@ -284,7 +276,6 @@ export default function SettingsPage() {
           </Tabs>
         </CardBody>
       </Card>
-
     </div>
   );
 }

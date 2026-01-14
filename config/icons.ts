@@ -287,6 +287,6 @@ export const ICONS = [
   "Circle",
   "Triangle",
   "Hexagon",
-] as const
+] as const;
 
-export type IconName = (typeof ICONS)[number]
+export type IconName = (typeof ICONS)[number];

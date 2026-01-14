@@ -531,7 +531,11 @@ export async function asignarCategoriasRol(
 export async function obtenerCategoriasRol(
   token: string,
   id_rol: number,
-): Promise<{ rol_id: number; tiene_restriccion: boolean; categorias: Categoria[] }> {
+): Promise<{
+  rol_id: number;
+  tiene_restriccion: boolean;
+  categorias: Categoria[];
+}> {
   if (!token) {
     throw new Error("Token de autenticación requerido");
   }
@@ -546,6 +550,7 @@ export async function obtenerCategoriasRol(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+
     throw new Error(errorData.error || "Error al obtener categorías del rol");
   }
 
@@ -695,9 +700,11 @@ export async function obtenerCategoriasDisponibles(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+
     throw new Error(errorData.error || "Error al obtener categorías");
   }
 
   const data = await response.json();
+
   return { categorias: data.data || data };
 }

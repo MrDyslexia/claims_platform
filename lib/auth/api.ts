@@ -63,7 +63,22 @@ class AuthAPI {
         .json()
         .catch(() => ({ error: "Error al iniciar sesión" }));
 
-      throw new Error(error.error || "Credenciales inválidas");
+      switch (response.status) {
+        case 400:
+          throw new Error("Por favor ingrese email y contraseña.");
+        case 401:
+          throw new Error(
+            error.error === "User is inactive"
+              ? "Su cuenta está desactivada. Contacte al administrador."
+              : "Email o contraseña incorrectos.",
+          );
+        case 500:
+          throw new Error(
+            "Error interno del servidor. Por favor intente más tarde.",
+          );
+        default:
+          throw new Error(error.error || "Error al iniciar sesión");
+      }
     }
 
     return response.json();
@@ -98,7 +113,20 @@ class AuthAPI {
     });
 
     if (!response.ok) {
-      throw new Error("No se pudo obtener la información del usuario");
+      switch (response.status) {
+        case 401:
+          throw new Error(
+            "Su sesión ha expirado. Por favor inicie sesión nuevamente.",
+          );
+        case 404:
+          throw new Error("Usuario no encontrado.");
+        case 500:
+          throw new Error(
+            "Error interno del servidor. Por favor intente más tarde.",
+          );
+        default:
+          throw new Error("No se pudo obtener la información del usuario");
+      }
     }
 
     return response.json();
@@ -123,7 +151,21 @@ class AuthAPI {
         .json()
         .catch(() => ({ error: "Error al registrar usuario" }));
 
-      throw new Error(error.error || "Error al registrar usuario");
+      switch (response.status) {
+        case 400:
+          throw new Error(
+            error.error ||
+              "Datos inválidos. Verifique la información ingresada.",
+          );
+        case 409:
+          throw new Error("El email o RUT ya está registrado en el sistema.");
+        case 500:
+          throw new Error(
+            "Error interno del servidor. Por favor intente más tarde.",
+          );
+        default:
+          throw new Error(error.error || "Error al registrar usuario");
+      }
     }
 
     return response.json();

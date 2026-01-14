@@ -123,7 +123,6 @@ const validateStep = (step: number, formData: FormData): ValidationResult => {
 
       return { isValid: true, message: "" };
 
-
     case 6: // TimeStep
       if (!formData.timeframe) {
         return { isValid: false, message: "Selecciona el tiempo del problema" };

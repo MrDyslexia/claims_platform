@@ -15,32 +15,17 @@ import {
   ModalContent,
   ModalHeader,
   ModalBody,
-  ModalFooter,
   useDisclosure,
   Select,
   SelectItem,
   Checkbox,
 } from "@heroui/react";
-import {
-  Search,
-  Plus,
-  Edit,
-  Trash2,
-  Users,
-  Mail,
-  Phone,
-  Lock as LockIcon,
-  Shield as ShieldIcon,
-  Eye,
-} from "lucide-react";
+import { Search, Users, Mail, Phone, Eye } from "lucide-react";
 
 import { DataTable } from "@/components/data-table";
 import { FormInput } from "@/components/form-input";
 import {
   useGetListaCompletaUsuarios,
-  crearUsuario,
-  actualizarUsuario,
-  asignarRolesUsuario,
   eliminarUsuario,
   toggleUsuarioActivo,
 } from "@/lib/api/usuarios";
@@ -368,36 +353,33 @@ export default function UsersPage() {
       {/* User Modal */}
       <Modal isOpen={isOpen} size="2xl" onClose={onClose}>
         <ModalContent>
-          <ModalHeader>
-            Información del usuario
-          </ModalHeader>
+          <ModalHeader>Información del usuario</ModalHeader>
           <ModalBody>
             <div className="space-y-4 pb-4">
               <div className="grid grid-cols-2 gap-4">
                 <FormInput
+                  isDisabled
                   id="nombre"
                   label="Nombre"
-                  isDisabled
                   placeholder="Ingrese el nombre"
                   value={formData.nombre}
                 />
                 <FormInput
-                  id="apellido"
                   isDisabled
+                  id="apellido"
                   label="Apellido"
                   placeholder="Ingrese el apellido"
                   value={formData.apellido}
                 />
               </div>
               <FormInput
-                id="email"
                 isDisabled
+                id="email"
                 label="Email"
                 placeholder="usuario@example.com"
                 startContent={<Mail className="h-4 w-4 text-default-400" />}
                 type="email"
                 value={formData.email}
-                
               />
               <FormInput
                 isDisabled
@@ -408,10 +390,10 @@ export default function UsersPage() {
                 type="tel"
                 value={formData.telefono}
               />
-              
+
               <Select
-                label="Rol"
                 isDisabled
+                label="Rol"
                 placeholder="Seleccione un rol"
                 selectedKeys={formData.roles}
               >
@@ -421,10 +403,7 @@ export default function UsersPage() {
                   </SelectItem>
                 ))}
               </Select>
-              <Checkbox
-                isSelected={formData.activo}
-                isDisabled
-              >
+              <Checkbox isDisabled isSelected={formData.activo}>
                 Usuario activo
               </Checkbox>
             </div>

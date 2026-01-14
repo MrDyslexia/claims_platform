@@ -1,7 +1,14 @@
-"use client"
+"use client";
 
-import { Card, CardBody, CardHeader, Divider } from "@heroui/react"
-import { TrendingUp, TrendingDown, Clock, CheckCircle2, AlertCircle, FileText } from "lucide-react"
+import { Card, CardBody, CardHeader, Divider } from "@heroui/react";
+import {
+  TrendingUp,
+  TrendingDown,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  FileText,
+} from "lucide-react";
 import {
   LineChart,
   Line,
@@ -16,10 +23,10 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-} from "recharts"
+} from "recharts";
 
-import { useAuth } from "@/lib/auth/auth-context"
-import { mockClaims } from "@/lib/data"
+import { useAuth } from "@/lib/auth/auth-context";
+import { mockClaims } from "@/lib/data";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -27,18 +34,26 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       <div className="bg-popover border border-border rounded-lg shadow-lg p-3">
         <p className="text-popover-foreground font-semibold mb-2">{label}</p>
         {payload.map((entry: any, index: number) => (
-          <p key={`item-${index}`} className="text-sm flex items-center gap-2" style={{ color: entry.color }}>
-            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
+          <p
+            key={`item-${index}`}
+            className="text-sm flex items-center gap-2"
+            style={{ color: entry.color }}
+          >
+            <span
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: entry.color }}
+            />
             <span className="text-popover-foreground">
               {entry.name}: <strong>{entry.value}</strong>
             </span>
           </p>
         ))}
       </div>
-    )
+    );
   }
-  return null
-}
+
+  return null;
+};
 
 const chartColors = {
   blue: "hsl(217, 91%, 60%)",
@@ -49,20 +64,28 @@ const chartColors = {
   cyan: "hsl(189, 94%, 43%)",
   red: "hsl(0, 84%, 60%)",
   yellow: "hsl(48, 96%, 53%)",
-}
+};
 
 export default function AnalystDashboard() {
-  const { user } = useAuth()
+  const { user } = useAuth();
 
-  const companyClaims = mockClaims.filter((c) => c.empresa_id === user?.empresa_id)
+  const companyClaims = mockClaims.filter(
+    (c) => c.empresa_id === user?.empresa_id,
+  );
 
-  const totalClaims = companyClaims.length
-  const pendingClaims = companyClaims.filter((c) => c.estado === "pendiente").length
-  const resolvedClaims = companyClaims.filter((c) => c.estado === "resuelto").length
-  const inProgressClaims = companyClaims.filter((c) => c.estado === "en_revision").length
+  const totalClaims = companyClaims.length;
+  const pendingClaims = companyClaims.filter(
+    (c) => c.estado === "pendiente",
+  ).length;
+  const resolvedClaims = companyClaims.filter(
+    (c) => c.estado === "resuelto",
+  ).length;
+  const inProgressClaims = companyClaims.filter(
+    (c) => c.estado === "en_revision",
+  ).length;
 
-  const avgResolutionTime = 4.2 // días promedio
-  const resolutionRate = ((resolvedClaims / totalClaims) * 100).toFixed(1)
+  const avgResolutionTime = 4.2; // días promedio
+  const resolutionRate = ((resolvedClaims / totalClaims) * 100).toFixed(1);
 
   const monthlyData = [
     { mes: "Ene", reclamos: 12, resueltos: 10 },
@@ -71,20 +94,24 @@ export default function AnalystDashboard() {
     { mes: "Abr", reclamos: 22, resueltos: 18 },
     { mes: "May", reclamos: 18, resueltos: 16 },
     { mes: "Jun", reclamos: 25, resueltos: 20 },
-  ]
+  ];
 
   const claimsByType = [
     { tipo: "Producto", cantidad: 45, color: chartColors.blue },
     { tipo: "Servicio", cantidad: 32, color: chartColors.purple },
     { tipo: "Facturación", cantidad: 28, color: chartColors.pink },
     { tipo: "Entrega", cantidad: 20, color: chartColors.orange },
-  ]
+  ];
 
   const claimsByStatus = [
     { estado: "Pendiente", cantidad: pendingClaims, color: chartColors.orange },
-    { estado: "En Revisión", cantidad: inProgressClaims, color: chartColors.blue },
+    {
+      estado: "En Revisión",
+      cantidad: inProgressClaims,
+      color: chartColors.blue,
+    },
     { estado: "Resuelto", cantidad: resolvedClaims, color: chartColors.green },
-  ]
+  ];
 
   const kpiCards = [
     {
@@ -123,21 +150,25 @@ export default function AnalystDashboard() {
       color: "text-purple-500",
       bgColor: "bg-purple-500/10",
     },
-  ]
+  ];
 
   return (
     <div className="p-8 space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard de Análisis</h1>
-        <p className="text-default-500">Métricas y KPIs de {user?.empresa?.nombre}</p>
+        <h1 className="text-3xl font-bold text-foreground mb-2">
+          Dashboard de Análisis
+        </h1>
+        <p className="text-default-500">
+          Métricas y KPIs de {user?.empresa?.nombre}
+        </p>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {kpiCards.map((kpi) => {
-          const Icon = kpi.icon
-          const TrendIcon = kpi.trend === "up" ? TrendingUp : TrendingDown
+          const Icon = kpi.icon;
+          const TrendIcon = kpi.trend === "up" ? TrendingUp : TrendingDown;
 
           return (
             <Card key={kpi.title} className="border-none shadow-sm">
@@ -155,11 +186,13 @@ export default function AnalystDashboard() {
                 </div>
                 <div>
                   <p className="text-default-500 text-sm mb-1">{kpi.title}</p>
-                  <p className="text-3xl font-bold text-foreground">{kpi.value}</p>
+                  <p className="text-3xl font-bold text-foreground">
+                    {kpi.value}
+                  </p>
                 </div>
               </CardBody>
             </Card>
-          )
+          );
         })}
       </div>
 
@@ -169,34 +202,47 @@ export default function AnalystDashboard() {
         <Card className="border-none shadow-sm">
           <CardHeader className="pb-0 flex flex-col gap-1 items-start">
             <h3 className="text-lg font-semibold">Tendencia Mensual</h3>
-            <p className="text-sm text-default-500">Reclamos recibidos vs resueltos</p>
+            <p className="text-sm text-default-500">
+              Reclamos recibidos vs resueltos
+            </p>
             <Divider className="w-full mt-2" />
           </CardHeader>
           <CardBody>
             <ResponsiveContainer height={300} width="100%">
               <LineChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" opacity={0.3} />
-                <XAxis dataKey="mes" className="text-muted-foreground" stroke="currentColor" />
-                <YAxis className="text-muted-foreground" stroke="currentColor" />
+                <CartesianGrid
+                  className="stroke-border"
+                  opacity={0.3}
+                  strokeDasharray="3 3"
+                />
+                <XAxis
+                  className="text-muted-foreground"
+                  dataKey="mes"
+                  stroke="currentColor"
+                />
+                <YAxis
+                  className="text-muted-foreground"
+                  stroke="currentColor"
+                />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend wrapperStyle={{ color: "hsl(var(--foreground))" }} />
                 <Line
+                  activeDot={{ r: 6 }}
                   dataKey="reclamos"
+                  dot={{ fill: chartColors.blue, r: 4 }}
                   name="Recibidos"
                   stroke={chartColors.blue}
                   strokeWidth={3}
                   type="monotone"
-                  dot={{ fill: chartColors.blue, r: 4 }}
-                  activeDot={{ r: 6 }}
                 />
                 <Line
+                  activeDot={{ r: 6 }}
                   dataKey="resueltos"
+                  dot={{ fill: chartColors.green, r: 4 }}
                   name="Resueltos"
                   stroke={chartColors.green}
                   strokeWidth={3}
                   type="monotone"
-                  dot={{ fill: chartColors.green, r: 4 }}
-                  activeDot={{ r: 6 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -207,15 +253,28 @@ export default function AnalystDashboard() {
         <Card className="border-none shadow-sm">
           <CardHeader className="pb-0 flex flex-col gap-1 items-start">
             <h3 className="text-lg font-semibold">Reclamos por Tipo</h3>
-            <p className="text-sm text-default-500">Distribución de categorías</p>
+            <p className="text-sm text-default-500">
+              Distribución de categorías
+            </p>
             <Divider className="w-full mt-2" />
           </CardHeader>
           <CardBody>
             <ResponsiveContainer height={300} width="100%">
               <BarChart data={claimsByType}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" opacity={0.3} />
-                <XAxis dataKey="tipo" className="text-muted-foreground" stroke="currentColor" />
-                <YAxis className="text-muted-foreground" stroke="currentColor" />
+                <CartesianGrid
+                  className="stroke-border"
+                  opacity={0.3}
+                  strokeDasharray="3 3"
+                />
+                <XAxis
+                  className="text-muted-foreground"
+                  dataKey="tipo"
+                  stroke="currentColor"
+                />
+                <YAxis
+                  className="text-muted-foreground"
+                  stroke="currentColor"
+                />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="cantidad" name="Cantidad" radius={[8, 8, 0, 0]}>
                   {claimsByType.map((entry, index) => (
@@ -266,22 +325,30 @@ export default function AnalystDashboard() {
         <Card className="border-none shadow-sm lg:col-span-2">
           <CardHeader className="pb-0 flex flex-col gap-1 items-start">
             <h3 className="text-lg font-semibold">Métricas Clave</h3>
-            <p className="text-sm text-default-500">Indicadores de rendimiento</p>
+            <p className="text-sm text-default-500">
+              Indicadores de rendimiento
+            </p>
             <Divider className="w-full mt-2" />
           </CardHeader>
           <CardBody>
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm text-default-500 mb-1">Tiempo Promedio de Resolución</p>
-                  <p className="text-2xl font-bold text-foreground">{avgResolutionTime} días</p>
+                  <p className="text-sm text-default-500 mb-1">
+                    Tiempo Promedio de Resolución
+                  </p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {avgResolutionTime} días
+                  </p>
                   <div className="flex items-center gap-1 text-sm text-success mt-1">
                     <TrendingDown className="w-4 h-4" />
                     <span>-0.8 días vs mes anterior</span>
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm text-default-500 mb-1">Satisfacción del Cliente</p>
+                  <p className="text-sm text-default-500 mb-1">
+                    Satisfacción del Cliente
+                  </p>
                   <p className="text-2xl font-bold text-foreground">4.6/5.0</p>
                   <div className="flex items-center gap-1 text-sm text-success mt-1">
                     <TrendingUp className="w-4 h-4" />
@@ -291,7 +358,9 @@ export default function AnalystDashboard() {
               </div>
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm text-default-500 mb-1">Reclamos Críticos</p>
+                  <p className="text-sm text-default-500 mb-1">
+                    Reclamos Críticos
+                  </p>
                   <p className="text-2xl font-bold text-danger">3</p>
                   <div className="flex items-center gap-1 text-sm text-default-500 mt-1">
                     <AlertCircle className="w-4 h-4" />
@@ -299,7 +368,9 @@ export default function AnalystDashboard() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm text-default-500 mb-1">Tasa de Reincidencia</p>
+                  <p className="text-sm text-default-500 mb-1">
+                    Tasa de Reincidencia
+                  </p>
                   <p className="text-2xl font-bold text-foreground">8.2%</p>
                   <div className="flex items-center gap-1 text-sm text-success mt-1">
                     <TrendingDown className="w-4 h-4" />
@@ -312,5 +383,5 @@ export default function AnalystDashboard() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

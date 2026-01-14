@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { CommentTypeSwitch } from "@/components/comment-type-switch";
 import {
   Avatar,
   Button,
@@ -44,7 +43,6 @@ import {
   Paperclip,
   RefreshCw,
   Search,
-  Send,
   User,
 } from "lucide-react";
 
@@ -467,13 +465,9 @@ export default function ClaimsPage() {
                     {selectedClaim?.prioridad}
                   </Chip>
                   <Tooltip content="Días desde creación">
-                    <Chip
-                    color='warning'
-                    size="lg"
-                    variant="flat"
-                  >
-                    {selectedClaim?.dias}
-                  </Chip>
+                    <Chip color="warning" size="lg" variant="flat">
+                      {selectedClaim?.dias}
+                    </Chip>
                   </Tooltip>
                 </div>
                 <p className="text-sm text-muted-foreground font-normal">
@@ -482,309 +476,306 @@ export default function ClaimsPage() {
               </ModalHeader>
               <ModalBody className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-4">
                 <div className="lg:col-span-2">
-                    {/* Description */}
-                    <Card>
-                      <CardBody>
-                        <div className="flex items-center gap-2 mb-3">
-                          <FileText className="h-5 w-5 text-purple-600" />
-                          <h3 className="text-lg font-semibold">
-                            Descripción del Reclamo
-                          </h3>
-                        </div>
-                        <p className="text-foreground leading-relaxed">
-                          {selectedClaim?.asunto}
-                        </p>
-                        <p className="text-foreground leading-relaxed mt-2">
-                          {selectedClaim?.descripcion}
-                        </p>
-                      </CardBody>
-                    </Card>
-
-                    {/* Tabs */}
-                    <Tabs aria-label="Options" />
-                    <Card>
-                      <CardBody className="p-0">
-                        <Tabs
-                          aria-label="Claim details tabs"
-                          className="w-full"
-                          variant="underlined"
-                        >
-                          <Tab
-                            key="comments"
-                            title={
-                              <div className="flex items-center gap-2">
-                                <MessageSquare className="h-4 w-4" />
-                                <span>
-                                  Comentarios (
-                                  {selectedClaim?.comentarios.length || 0})
-                                </span>
-                              </div>
-                            }
-                          >
-                            <div className="p-4 space-y-4">
-                              <div className="space-y-3">
-                                {selectedClaim?.comentarios.map((comment) => (
-                                  <div
-                                    key={comment.id}
-                                    className="flex gap-3 p-3 bg-default-50 dark:bg-default-100/50 rounded-lg"
-                                  >
-                                    <Avatar
-                                      className="flex-shrink-0"
-                                      name={comment.autor.nombre}
-                                      size="sm"
-                                    />
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <span className="font-medium text-sm">
-                                          {comment.autor.nombre}
-                                        </span>
-                                        {comment.es_interno && (
-                                          <Chip
-                                            color="warning"
-                                            size="sm"
-                                            variant="flat"
-                                          >
-                                            Interno
-                                          </Chip>
-                                        )}
-                                        <span className="text-xs text-muted-foreground">
-                                          {formatDate(comment.fecha_creacion)}
-                                        </span>
-                                      </div>
-                                      <p className="text-sm text-foreground">
-                                        {comment.contenido}
-                                      </p>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>                              
-                            </div>
-                          </Tab>
-                          <Tab
-                            key="attachments"
-                            title={
-                              <div className="flex items-center gap-2">
-                                <Paperclip className="h-4 w-4" />
-                                <span>
-                                  Adjuntos (
-                                  {selectedClaim?.adjuntos.length || 0})
-                                </span>
-                              </div>
-                            }
-                          >
-                            <div className="p-4 space-y-3">
-                              {(selectedClaim?.adjuntos.length || 0) > 0 ? (
-                                selectedClaim?.adjuntos.map((adjunto) => (
-                                  <Card
-                                    key={adjunto.id}
-                                    className="bg-default-50"
-                                  >
-                                    <CardBody className="flex flex-row items-center justify-between">
-                                      <div className="flex items-center gap-3">
-                                        <Paperclip className="h-4 w-4 text-muted-foreground" />
-                                        <div className="flex-1">
-                                          <p className="font-medium text-sm">
-                                            {adjunto.nombre}
-                                          </p>
-                                          <p className="text-xs text-muted-foreground">
-                                            {(adjunto.tamano / 1024).toFixed(2)}{" "}
-                                            KB • {adjunto.mime_type}
-                                          </p>
-                                        </div>
-                                      </div>
-                                      <Button
-                                        isIconOnly
-                                        size="sm"
-                                        variant="light"
-                                      >
-                                        <Download className="h-4 w-4" />
-                                      </Button>
-                                    </CardBody>
-                                  </Card>
-                                ))
-                              ) : (
-                                <p className="text-sm text-muted-foreground">
-                                  No hay adjuntos disponibles
-                                </p>
-                              )}
-                            </div>
-                          </Tab>
-                          <Tab
-                            key="history"
-                            title={
-                              <div className="flex items-center gap-2">
-                                <Clock className="h-4 w-4" />
-                                <span>
-                                  Historial (
-                                  {selectedClaim?.historial_estado.length || 0})
-                                </span>
-                              </div>
-                            }
-                          >
-                            <div className="p-4">
-                              <div className="space-y-4">
-                                {selectedClaim?.historial_estado.map((item) => (
-                                  <div key={item.id} className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                      <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-full">
-                                        <CheckCircle2 className="h-4 w-4 text-purple-600" />
-                                      </div>
-                                    </div>
-                                    <div className="flex-1">
-                                      <p className="font-medium text-sm">
-                                        {item.estado_anterior?.nombre} →{" "}
-                                        {item.estado_nuevo.nombre}
-                                      </p>
-                                      {item.motivo && (
-                                        <p className="text-xs text-muted-foreground">
-                                          Motivo: {item.motivo}
-                                        </p>
-                                      )}
-                                      <p className="text-xs text-muted-foreground">
-                                        {formatDate(item.fecha_cambio)}{" "}
-                                        {item.usuario &&
-                                          `- ${item.usuario.nombre}`}
-                                      </p>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </Tab>
-                        </Tabs>
-                      </CardBody>
-                    </Card>
-                  </div>
-                  <div className="space-y-4">
-                    {/* Claim Info */}
-                    <Card>
-                      <CardBody className="space-y-3">
-                        <h3 className="font-semibold mb-2">
-                          Información del Reclamo
+                  {/* Description */}
+                  <Card>
+                    <CardBody>
+                      <div className="flex items-center gap-2 mb-3">
+                        <FileText className="h-5 w-5 text-purple-600" />
+                        <h3 className="text-lg font-semibold">
+                          Descripción del Reclamo
                         </h3>
-                        <div className="flex items-start gap-2">
-                          <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
-                          <div className="flex-1">
-                            <p className="text-xs text-muted-foreground">
-                              Empresa
-                            </p>
-                            <p className="text-sm font-medium">
-                              {selectedClaim?.empresa.nombre}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
-                          <div className="flex-1">
-                            <p className="text-xs text-muted-foreground">
-                              Fecha de Creación
-                            </p>
-                            <p className="text-sm font-medium">
-                              {formatDateOnly(selectedClaim?.fecha_creacion)}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                          <div className="flex-1">
-                            <p className="text-xs text-muted-foreground">
-                              País
-                            </p>
-                            <p className="text-sm font-medium">
-                              {selectedClaim?.pais || "N/A"}
-                            </p>
-                          </div>
-                        </div>
-                      </CardBody>
-                    </Card>
+                      </div>
+                      <p className="text-foreground leading-relaxed">
+                        {selectedClaim?.asunto}
+                      </p>
+                      <p className="text-foreground leading-relaxed mt-2">
+                        {selectedClaim?.descripcion}
+                      </p>
+                    </CardBody>
+                  </Card>
 
-                    {/* Complainant Info */}
-                    {!selectedClaim?.denunciante.anonimo && (
-                      <Card>
-                        <CardBody className="space-y-3">
-                          <h3 className="font-semibold mb-2">
-                            Información del Denunciante
-                          </h3>
-                          <div className="flex items-start gap-2">
-                            <User className="h-4 w-4 text-muted-foreground mt-0.5" />
-                            <div className="flex-1">
-                              <p className="text-xs text-muted-foreground">
-                                Nombre
-                              </p>
-                              <p className="text-sm font-medium">
-                                {selectedClaim?.denunciante.nombre || "N/A"}
-                              </p>
+                  {/* Tabs */}
+                  <Tabs aria-label="Options" />
+                  <Card>
+                    <CardBody className="p-0">
+                      <Tabs
+                        aria-label="Claim details tabs"
+                        className="w-full"
+                        variant="underlined"
+                      >
+                        <Tab
+                          key="comments"
+                          title={
+                            <div className="flex items-center gap-2">
+                              <MessageSquare className="h-4 w-4" />
+                              <span>
+                                Comentarios (
+                                {selectedClaim?.comentarios.length || 0})
+                              </span>
                             </div>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <User className="h-4 w-4 text-muted-foreground mt-0.5" />
-                            <div className="flex-1">
-                              <p className="text-xs text-muted-foreground">
-                                Email
-                              </p>
-                              <p className="text-sm font-medium">
-                                {selectedClaim?.denunciante.email || "N/A"}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <User className="h-4 w-4 text-muted-foreground mt-0.5" />
-                            <div className="flex-1">
-                              <p className="text-xs text-muted-foreground">
-                                Teléfono
-                              </p>
-                              <p className="text-sm font-medium">
-                                {selectedClaim?.denunciante.telefono || "N/A"}
-                              </p>
-                            </div>
-                          </div>
-                        </CardBody>
-                      </Card>
-                    )}
-                    {selectedClaim?.denunciante.anonimo && (
-                      <Card className="bg-blue-50 border border-blue-200">
-                        <CardBody>
-                          <p className="text-sm text-blue-800">
-                            ℹ️ Este reclamo fue presentado de manera anónima
-                          </p>
-                        </CardBody>
-                      </Card>
-                    )}
-
-                    {/* Actions Card */}
-                    <Card>
-                      <CardBody className="space-y-4">
-                        <h3 className="font-semibold">Gestión</h3>
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1.5">
-                            Asignar Supervisor:
-                          </p>
-                          <div className="flex items-center gap-2">
-                            {selectedClaim?.supervisor ? (
-                              <>
-                                <Avatar
-                                  name={selectedClaim.supervisor.nombre}
-                                  size="sm"
-                                />
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium">
-                                    {selectedClaim.supervisor.nombre}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {selectedClaim.supervisor.email}
-                                  </p>
+                          }
+                        >
+                          <div className="p-4 space-y-4">
+                            <div className="space-y-3">
+                              {selectedClaim?.comentarios.map((comment) => (
+                                <div
+                                  key={comment.id}
+                                  className="flex gap-3 p-3 bg-default-50 dark:bg-default-100/50 rounded-lg"
+                                >
+                                  <Avatar
+                                    className="flex-shrink-0"
+                                    name={comment.autor.nombre}
+                                    size="sm"
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="font-medium text-sm">
+                                        {comment.autor.nombre}
+                                      </span>
+                                      {comment.es_interno && (
+                                        <Chip
+                                          color="warning"
+                                          size="sm"
+                                          variant="flat"
+                                        >
+                                          Interno
+                                        </Chip>
+                                      )}
+                                      <span className="text-xs text-muted-foreground">
+                                        {formatDate(comment.fecha_creacion)}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm text-foreground">
+                                      {comment.contenido}
+                                    </p>
+                                  </div>
                                 </div>
-                              </>
+                              ))}
+                            </div>
+                          </div>
+                        </Tab>
+                        <Tab
+                          key="attachments"
+                          title={
+                            <div className="flex items-center gap-2">
+                              <Paperclip className="h-4 w-4" />
+                              <span>
+                                Adjuntos ({selectedClaim?.adjuntos.length || 0})
+                              </span>
+                            </div>
+                          }
+                        >
+                          <div className="p-4 space-y-3">
+                            {(selectedClaim?.adjuntos.length || 0) > 0 ? (
+                              selectedClaim?.adjuntos.map((adjunto) => (
+                                <Card
+                                  key={adjunto.id}
+                                  className="bg-default-50"
+                                >
+                                  <CardBody className="flex flex-row items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <Paperclip className="h-4 w-4 text-muted-foreground" />
+                                      <div className="flex-1">
+                                        <p className="font-medium text-sm">
+                                          {adjunto.nombre}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {(adjunto.tamano / 1024).toFixed(2)}{" "}
+                                          KB • {adjunto.mime_type}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <Button
+                                      isIconOnly
+                                      size="sm"
+                                      variant="light"
+                                    >
+                                      <Download className="h-4 w-4" />
+                                    </Button>
+                                  </CardBody>
+                                </Card>
+                              ))
                             ) : (
                               <p className="text-sm text-muted-foreground">
-                                Sin asignar
+                                No hay adjuntos disponibles
                               </p>
                             )}
                           </div>
+                        </Tab>
+                        <Tab
+                          key="history"
+                          title={
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4" />
+                              <span>
+                                Historial (
+                                {selectedClaim?.historial_estado.length || 0})
+                              </span>
+                            </div>
+                          }
+                        >
+                          <div className="p-4">
+                            <div className="space-y-4">
+                              {selectedClaim?.historial_estado.map((item) => (
+                                <div key={item.id} className="flex gap-3">
+                                  <div className="flex flex-col items-center">
+                                    <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-full">
+                                      <CheckCircle2 className="h-4 w-4 text-purple-600" />
+                                    </div>
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="font-medium text-sm">
+                                      {item.estado_anterior?.nombre} →{" "}
+                                      {item.estado_nuevo.nombre}
+                                    </p>
+                                    {item.motivo && (
+                                      <p className="text-xs text-muted-foreground">
+                                        Motivo: {item.motivo}
+                                      </p>
+                                    )}
+                                    <p className="text-xs text-muted-foreground">
+                                      {formatDate(item.fecha_cambio)}{" "}
+                                      {item.usuario &&
+                                        `- ${item.usuario.nombre}`}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </Tab>
+                      </Tabs>
+                    </CardBody>
+                  </Card>
+                </div>
+                <div className="space-y-4">
+                  {/* Claim Info */}
+                  <Card>
+                    <CardBody className="space-y-3">
+                      <h3 className="font-semibold mb-2">
+                        Información del Reclamo
+                      </h3>
+                      <div className="flex items-start gap-2">
+                        <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-xs text-muted-foreground">
+                            Empresa
+                          </p>
+                          <p className="text-sm font-medium">
+                            {selectedClaim?.empresa.nombre}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-xs text-muted-foreground">
+                            Fecha de Creación
+                          </p>
+                          <p className="text-sm font-medium">
+                            {formatDateOnly(selectedClaim?.fecha_creacion)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-xs text-muted-foreground">País</p>
+                          <p className="text-sm font-medium">
+                            {selectedClaim?.pais || "N/A"}
+                          </p>
+                        </div>
+                      </div>
+                    </CardBody>
+                  </Card>
+
+                  {/* Complainant Info */}
+                  {!selectedClaim?.denunciante.anonimo && (
+                    <Card>
+                      <CardBody className="space-y-3">
+                        <h3 className="font-semibold mb-2">
+                          Información del Denunciante
+                        </h3>
+                        <div className="flex items-start gap-2">
+                          <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-xs text-muted-foreground">
+                              Nombre
+                            </p>
+                            <p className="text-sm font-medium">
+                              {selectedClaim?.denunciante.nombre || "N/A"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-xs text-muted-foreground">
+                              Email
+                            </p>
+                            <p className="text-sm font-medium">
+                              {selectedClaim?.denunciante.email || "N/A"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-xs text-muted-foreground">
+                              Teléfono
+                            </p>
+                            <p className="text-sm font-medium">
+                              {selectedClaim?.denunciante.telefono || "N/A"}
+                            </p>
+                          </div>
                         </div>
                       </CardBody>
                     </Card>
-                  </div>
+                  )}
+                  {selectedClaim?.denunciante.anonimo && (
+                    <Card className="bg-blue-50 border border-blue-200">
+                      <CardBody>
+                        <p className="text-sm text-blue-800">
+                          ℹ️ Este reclamo fue presentado de manera anónima
+                        </p>
+                      </CardBody>
+                    </Card>
+                  )}
+
+                  {/* Actions Card */}
+                  <Card>
+                    <CardBody className="space-y-4">
+                      <h3 className="font-semibold">Gestión</h3>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1.5">
+                          Asignar Supervisor:
+                        </p>
+                        <div className="flex items-center gap-2">
+                          {selectedClaim?.supervisor ? (
+                            <>
+                              <Avatar
+                                name={selectedClaim.supervisor.nombre}
+                                size="sm"
+                              />
+                              <div className="flex-1">
+                                <p className="text-sm font-medium">
+                                  {selectedClaim.supervisor.nombre}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {selectedClaim.supervisor.email}
+                                </p>
+                              </div>
+                            </>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              Sin asignar
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </CardBody>
+                  </Card>
+                </div>
               </ModalBody>
             </>
           )}

@@ -2,14 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { Button, Divider, Avatar, Chip, Image } from "@heroui/react";
-import {
-  LayoutDashboard,
-  FileText,
-  CheckCircle2,
-  Clock,
-  LogOut,
-  ChevronRight,
-} from "lucide-react";
+import { LayoutDashboard, FileText, LogOut, ChevronRight } from "lucide-react";
 
 import { useAuth } from "@/lib/auth/auth-context";
 
@@ -28,7 +21,7 @@ export function SupervisorSidebar() {
       label: "Mis Reclamos",
       href: "/supervisor/claims",
       icon: FileText,
-    }
+    },
   ];
 
   const handleLogout = async () => {

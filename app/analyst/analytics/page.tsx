@@ -149,7 +149,12 @@ export default function AnalystAnalytics() {
               setDateRange((prev) => ({ ...prev, end: e.target.value }))
             }
           />
-          <Button color="primary" isLoading={loading} onPress={handleSearch} startContent={<RefreshCw className="w-4 h-4" />}>
+          <Button
+            color="primary"
+            isLoading={loading}
+            startContent={<RefreshCw className="w-4 h-4" />}
+            onPress={handleSearch}
+          >
             Actualizar
           </Button>
           <Button

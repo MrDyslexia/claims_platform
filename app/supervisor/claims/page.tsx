@@ -2,8 +2,6 @@
 
 import type { Reclamo } from "@/lib/api/claims";
 
-import { CommentTypeSwitch } from "@/components/comment-type-switch";
-
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Avatar,
@@ -57,6 +55,8 @@ import {
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
+import { CommentTypeSwitch } from "@/components/comment-type-switch";
+
 const priorityColors = {
   baja: "default",
   media: "warning",
@@ -92,13 +92,13 @@ export default function SupervisorClaims() {
 
   const [selectedClaim, setSelectedClaim] = useState<Reclamo | null>(null);
   const [searchQuery, setSearchQuery] = useState(
-    searchParams.get("search") || ""
+    searchParams.get("search") || "",
   );
   const [filterStatus, setFilterStatus] = useState<string>(
-    searchParams.get("status") || "all"
+    searchParams.get("status") || "all",
   );
   const [filterPriority, setFilterPriority] = useState<string>(
-    searchParams.get("priority") || "all"
+    searchParams.get("priority") || "all",
   );
   const [page, setPage] = useState(1);
   const [newComment, setNewComment] = useState("");
@@ -109,12 +109,12 @@ export default function SupervisorClaims() {
   const [statusChangeReason, setStatusChangeReason] = useState("");
   const [isChangingStatus, setIsChangingStatus] = useState(false);
   const [statusChangeError, setStatusChangeError] = useState<string | null>(
-    null
+    null,
   );
   const [reportFile, setReportFile] = useState<File | null>(null);
   const [isUploadingReport, setIsUploadingReport] = useState(false);
   const [reportUploadError, setReportUploadError] = useState<string | null>(
-    null
+    null,
   );
   const [reportUploadSuccess, setReportUploadSuccess] = useState(false);
   const rowsPerPage = 10;
@@ -157,7 +157,7 @@ export default function SupervisorClaims() {
 
   // Helper para formatear solo fecha (sin hora)
   const formatDateOnly = (
-    dateString: string | Date | null | undefined
+    dateString: string | Date | null | undefined,
   ): string => {
     try {
       const date = dateString ? new Date(dateString) : new Date();
@@ -255,7 +255,7 @@ export default function SupervisorClaims() {
             contenido: newComment,
             es_interno: isCommentInternal,
           }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -274,7 +274,7 @@ export default function SupervisorClaims() {
         const data = await claimsResponse.json();
         const allClaims = data.reclamos || [];
         const refreshedClaim = allClaims.find(
-          (c: any) => c.id === selectedClaim.id
+          (c: any) => c.id === selectedClaim.id,
         );
 
         if (refreshedClaim) {
@@ -284,7 +284,7 @@ export default function SupervisorClaims() {
       }
     } catch (err) {
       setCommentError(
-        err instanceof Error ? err.message : "Error al enviar comentario"
+        err instanceof Error ? err.message : "Error al enviar comentario",
       );
     } finally {
       setIsSubmittingComment(false);
@@ -293,7 +293,7 @@ export default function SupervisorClaims() {
 
   const handleDownloadAttachment = async (
     adjuntoId: number,
-    nombre: string
+    nombre: string,
   ) => {
     if (!token) return;
 
@@ -304,7 +304,7 @@ export default function SupervisorClaims() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -330,10 +330,12 @@ export default function SupervisorClaims() {
     if (!token || !selectedClaim || !selectedStatus) return;
 
     const selectedState = availableStates.find((s) => s.id === selectedStatus);
+
     if (selectedState?.codigo === "CERRADO" && !reportFile) {
       setStatusChangeError(
-        "Debe adjuntar un informe PDF antes de cambiar el estado a 'Reclamo desestimado'"
+        "Debe adjuntar un informe PDF antes de cambiar el estado a 'Reclamo desestimado'",
       );
+
       return;
     }
 
@@ -343,6 +345,7 @@ export default function SupervisorClaims() {
     try {
       if (reportFile && selectedState?.codigo === "CERRADO") {
         const formData = new FormData();
+
         formData.append("pdf", reportFile);
 
         const uploadResponse = await fetch(
@@ -353,20 +356,22 @@ export default function SupervisorClaims() {
               Authorization: `Bearer ${token}`,
             },
             body: formData,
-          }
+          },
         );
 
         if (!uploadResponse.ok) {
           const errorData = await uploadResponse.json();
+
           throw new Error(
             errorData.error ||
-              "Error al subir el informe antes de cambiar el estado"
+              "Error al subir el informe antes de cambiar el estado",
           );
         }
       }
 
       if (reportFile && selectedState?.codigo === "RESUELTO") {
         const formData = new FormData();
+
         formData.append("pdf", reportFile);
 
         const uploadResponse = await fetch(
@@ -377,11 +382,12 @@ export default function SupervisorClaims() {
               Authorization: `Bearer ${token}`,
             },
             body: formData,
-          }
+          },
         );
 
         if (!uploadResponse.ok) {
           const errorData = await uploadResponse.json();
+
           throw new Error(errorData.error || "Error al subir el informe");
         }
       }
@@ -398,7 +404,7 @@ export default function SupervisorClaims() {
             estado_id: selectedStatus,
             motivo: statusChangeReason.trim() || undefined,
           }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -421,7 +427,7 @@ export default function SupervisorClaims() {
 
         // Buscar y actualizar el reclamo seleccionado con datos completos
         const refreshedClaim = allClaims.find(
-          (c: any) => c.id === selectedClaim.id
+          (c: any) => c.id === selectedClaim.id,
         );
 
         if (refreshedClaim) {
@@ -431,18 +437,19 @@ export default function SupervisorClaims() {
       }
 
       alert(
-        `Estado del reclamo cambiado exitosamente a: ${selectedState?.nombre || "nuevo estado"}`
+        `Estado del reclamo cambiado exitosamente a: ${selectedState?.nombre || "nuevo estado"}`,
       );
 
       setStatusChangeReason("");
       setReportFile(null);
       const fileInput = document.getElementById(
-        "report-file-upload"
+        "report-file-upload",
       ) as HTMLInputElement;
+
       if (fileInput) fileInput.value = "";
     } catch (error) {
       setStatusChangeError(
-        error instanceof Error ? error.message : "Error desconocido"
+        error instanceof Error ? error.message : "Error desconocido",
       );
     } finally {
       setIsChangingStatus(false);
@@ -459,6 +466,7 @@ export default function SupervisorClaims() {
       const token = localStorage.getItem("auth_token");
 
       const formData = new FormData();
+
       formData.append("pdf", reportFile);
 
       const response = await fetch(
@@ -469,11 +477,12 @@ export default function SupervisorClaims() {
             Authorization: `Bearer ${token}`,
           },
           body: formData,
-        }
+        },
       );
 
       if (!response.ok) {
         const errorData = await response.json();
+
         throw new Error(errorData.error || "Error al subir el informe");
       }
 
@@ -482,8 +491,9 @@ export default function SupervisorClaims() {
 
       // Reset file input
       const fileInput = document.getElementById(
-        "file-resuelto"
+        "file-resuelto",
       ) as HTMLInputElement;
+
       if (fileInput) fileInput.value = "";
 
       // Fetch claims first to ensure we have the latest list
@@ -493,7 +503,7 @@ export default function SupervisorClaims() {
       setTimeout(() => setReportUploadSuccess(false), 3000);
     } catch (error) {
       setReportUploadError(
-        error instanceof Error ? error.message : "Error al subir el informe"
+        error instanceof Error ? error.message : "Error al subir el informe",
       );
     } finally {
       setIsUploadingReport(false);
@@ -519,7 +529,7 @@ export default function SupervisorClaims() {
   const pages = Math.ceil(filteredClaims.length / rowsPerPage);
   const items = filteredClaims.slice(
     (page - 1) * rowsPerPage,
-    page * rowsPerPage
+    page * rowsPerPage,
   );
 
   const handleViewClaim = (claim: Reclamo) => {
@@ -867,9 +877,9 @@ export default function SupervisorClaims() {
                                 />
                                 <div className="flex items-center justify-between gap-2">
                                   <CommentTypeSwitch
+                                    isDisabled={isSubmittingComment}
                                     isInternal={isCommentInternal}
                                     onValueChange={setIsCommentInternal}
-                                    isDisabled={isSubmittingComment}
                                   />
                                   <Button
                                     color="primary"
@@ -928,7 +938,7 @@ export default function SupervisorClaims() {
                                         onPress={() => {
                                           handleDownloadAttachment(
                                             adjunto.id,
-                                            adjunto.nombre
+                                            adjunto.nombre,
                                           );
                                         }}
                                       >
@@ -984,7 +994,7 @@ export default function SupervisorClaims() {
                                         </p>
                                       </div>
                                     </div>
-                                  )
+                                  ),
                                 )}
                               </div>
                             </div>
@@ -1109,7 +1119,7 @@ export default function SupervisorClaims() {
                               >
                                 {selectedStatus
                                   ? availableStates.find(
-                                      (s) => s.id === selectedStatus
+                                      (s) => s.id === selectedStatus,
                                     )?.nombre
                                   : "Seleccionar estado..."}
                               </Button>
@@ -1118,19 +1128,21 @@ export default function SupervisorClaims() {
                               aria-label="Estado del reclamo"
                               onAction={(key) => {
                                 const newStateId = Number(key);
+
                                 setSelectedStatus(newStateId);
                                 // Si se selecciona un estado que no es CERRADO, limpiar el reporte
                                 if (
                                   availableStates.find(
-                                    (s) => s.id === newStateId
+                                    (s) => s.id === newStateId,
                                   )?.codigo !== "CERRADO"
                                 ) {
                                   setReportFile(null);
                                   setReportUploadError(null);
                                   setReportUploadSuccess(false);
                                   const fileInput = document.getElementById(
-                                    "file"
+                                    "file",
                                   ) as HTMLInputElement; // Changed ID to 'file' for consistency with JSX
+
                                   if (fileInput) fileInput.value = "";
                                 }
                                 setStatusChangeReason(""); // Limpiar el motivo al cambiar de estado
@@ -1194,8 +1206,9 @@ export default function SupervisorClaims() {
                                       // Reset report file if cancellation occurs
                                       setReportFile(null);
                                       const fileInput = document.getElementById(
-                                        "file"
+                                        "file",
                                       ) as HTMLInputElement; // Changed ID to 'file' for consistency with JSX
+
                                       if (fileInput) fileInput.value = "";
                                     }}
                                   >
@@ -1235,6 +1248,7 @@ export default function SupervisorClaims() {
                                       type="file"
                                       onChange={(e) => {
                                         const file = e.target.files?.[0];
+
                                         if (
                                           file &&
                                           file.type === "application/pdf"
@@ -1244,10 +1258,10 @@ export default function SupervisorClaims() {
                                           setStatusChangeError(null);
                                         } else if (file) {
                                           setReportUploadError(
-                                            "Solo se permiten archivos PDF"
+                                            "Solo se permiten archivos PDF",
                                           );
                                           setStatusChangeError(
-                                            "Solo se permiten archivos PDF"
+                                            "Solo se permiten archivos PDF",
                                           );
                                           e.target.value = "";
                                         }
@@ -1255,8 +1269,8 @@ export default function SupervisorClaims() {
                                     />
 
                                     <label
-                                      htmlFor="file"
                                       className="cursor-pointer flex flex-col items-center gap-2 py-4"
+                                      htmlFor="file"
                                     >
                                       <Upload className="w-8 h-8 text-amber-400" />
                                       <span className="text-sm text-amber-900 text-center font-medium">
@@ -1329,6 +1343,7 @@ export default function SupervisorClaims() {
                                       type="file"
                                       onChange={(e) => {
                                         const file = e.target.files?.[0];
+
                                         if (
                                           file &&
                                           file.type === "application/pdf"
@@ -1338,7 +1353,7 @@ export default function SupervisorClaims() {
                                           setStatusChangeError(null);
                                         } else if (file) {
                                           setReportUploadError(
-                                            "Solo se permiten archivos PDF"
+                                            "Solo se permiten archivos PDF",
                                           );
                                           e.target.value = "";
                                         }
@@ -1346,8 +1361,8 @@ export default function SupervisorClaims() {
                                     />
 
                                     <label
-                                      htmlFor="file-resuelto"
                                       className="cursor-pointer flex flex-col items-center gap-2 py-4"
+                                      htmlFor="file-resuelto"
                                     >
                                       <Upload className="w-8 h-8 text-green-400" />
                                       <span className="text-sm text-green-900 text-center font-medium">
@@ -1387,15 +1402,15 @@ export default function SupervisorClaims() {
                                   )}
 
                                   <Button
+                                    className="w-full"
                                     color="success"
+                                    isDisabled={!reportFile}
                                     isLoading={isUploadingReport}
                                     size="sm"
                                     startContent={
                                       <Upload className="w-4 h-4" />
                                     }
                                     onPress={handleUploadReport}
-                                    isDisabled={!reportFile}
-                                    className="w-full"
                                   >
                                     Subir Informe
                                   </Button>
@@ -1441,6 +1456,7 @@ export default function SupervisorClaims() {
                                       type="file"
                                       onChange={(e) => {
                                         const file = e.target.files?.[0];
+
                                         if (
                                           file &&
                                           file.type === "application/pdf"
@@ -1450,7 +1466,7 @@ export default function SupervisorClaims() {
                                           setStatusChangeError(null);
                                         } else if (file) {
                                           setReportUploadError(
-                                            "Solo se permiten archivos PDF"
+                                            "Solo se permiten archivos PDF",
                                           );
                                           e.target.value = "";
                                         }
@@ -1458,8 +1474,8 @@ export default function SupervisorClaims() {
                                     />
 
                                     <label
-                                      htmlFor="file-resuelto-change"
                                       className="cursor-pointer flex flex-col items-center gap-2 py-4"
+                                      htmlFor="file-resuelto-change"
                                     >
                                       <Upload className="w-8 h-8 text-green-400" />
                                       <span className="text-sm text-green-900 text-center font-medium">
@@ -1539,18 +1555,19 @@ export default function SupervisorClaims() {
                                               Authorization: `Bearer ${token}`,
                                             },
                                             method: "GET",
-                                          }
+                                          },
                                         );
 
                                         if (!response.ok)
                                           throw new Error(
-                                            "Error al descargar el informe"
+                                            "Error al descargar el informe",
                                           );
 
                                         const blob = await response.blob();
                                         const url =
                                           window.URL.createObjectURL(blob);
                                         const a = document.createElement("a");
+
                                         a.href = url;
                                         a.download = `informe-resolucion-${selectedClaim.id}.pdf`;
                                         document.body.appendChild(a);
@@ -1560,7 +1577,7 @@ export default function SupervisorClaims() {
                                       } catch (error) {
                                         console.error(
                                           "Error al descargar el informe:",
-                                          error
+                                          error,
                                         );
                                         alert("Error al descargar el informe");
                                       }

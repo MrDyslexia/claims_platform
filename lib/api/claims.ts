@@ -146,6 +146,14 @@ export async function getAllClaims(token: string): Promise<ReclamosResponse> {
         "No tiene permisos para ver los reclamos. Requiere rol ADMIN o ANALISTA.",
       );
     }
+    if (response.status === 404) {
+      throw new Error("No se encontraron reclamos.");
+    }
+    if (response.status === 500) {
+      throw new Error(
+        "Error interno del servidor. Por favor intente más tarde.",
+      );
+    }
     throw new Error("Error al obtener los reclamos");
   }
 
@@ -182,9 +190,31 @@ export async function createComment(
   );
 
   if (!response.ok) {
-    const errorData = await response.json();
+    const errorData = await response.json().catch(() => ({}));
 
-    throw new Error(errorData.error || "Error al crear comentario");
+    switch (response.status) {
+      case 400:
+        throw new Error(
+          errorData.error ||
+            "Datos inválidos. Verifique el contenido del comentario.",
+        );
+      case 401:
+        throw new Error(
+          "Su sesión ha expirado. Por favor inicie sesión nuevamente.",
+        );
+      case 403:
+        throw new Error(
+          "No tiene permisos para agregar comentarios a este reclamo.",
+        );
+      case 404:
+        throw new Error("El reclamo no fue encontrado.");
+      case 500:
+        throw new Error(
+          "Error interno del servidor. Por favor intente más tarde.",
+        );
+      default:
+        throw new Error(errorData.error || "Error al crear comentario");
+    }
   }
 
   return response.json();

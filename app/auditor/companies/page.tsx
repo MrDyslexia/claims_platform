@@ -4,22 +4,8 @@ import type React from "react";
 import type { Empresa } from "@/lib/api/empresas";
 
 import { useState, useEffect } from "react";
-import {
-  Card,
-  CardBody,
-  Input,
-  Button,
-  Chip,
-  Pagination,
-} from "@heroui/react";
-import {
-  Search,
-  Plus,
-  Building2,
-  Mail,
-  Phone,
-  MapPin,
-} from "lucide-react";
+import { Card, CardBody, Input, Chip, Pagination } from "@heroui/react";
+import { Search, Building2, Mail, Phone, MapPin } from "lucide-react";
 
 import { DataTable } from "@/components/data-table";
 import { useAuth } from "@/lib/auth/auth-context";

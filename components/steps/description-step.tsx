@@ -67,11 +67,11 @@ export function DescriptionStep({ formData, onUpdate }: DescriptionStepProps) {
         <CardBody className="space-y-2">
           <div className="relative">
             <Textarea
+              maxLength={4800}
               placeholder="Describe detalladamente lo ocurrido. "
               size="lg"
               value={description}
               onChange={(e) => handleDescriptionChange(e.target.value)}
-              maxLength={4800}
             />
           </div>
 

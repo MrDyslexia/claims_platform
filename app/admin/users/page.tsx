@@ -143,7 +143,7 @@ export default function UsersPage() {
       user.apellido.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase()),
   );
-  const pages = Math.ceil((data?.usuarios.length ?? 0)/7);
+  const pages = Math.ceil((data?.usuarios.length ?? 0) / 7);
   const items = filteredUsers;
 
   const handleOpenModal = (user?: UsuarioAPI | null) => {

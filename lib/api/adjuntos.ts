@@ -35,8 +35,37 @@ export async function uploadEvidence(
 
   if (!response.ok) {
     const errorText = await response.text();
+    let errorMessage = errorText || `Error uploading file: ${response.status}`;
 
-    throw new Error(errorText || `Error uploading file: ${response.status}`);
+    switch (response.status) {
+      case 400:
+        errorMessage =
+          "Archivo inválido. Verifique el formato y tamaño del archivo.";
+        break;
+      case 401:
+        errorMessage =
+          "Su sesión ha expirado. Por favor inicie sesión nuevamente.";
+        break;
+      case 403:
+        errorMessage = "No tiene permisos para subir archivos a este reclamo.";
+        break;
+      case 404:
+        errorMessage = "El reclamo no fue encontrado.";
+        break;
+      case 413:
+        errorMessage =
+          "El archivo es demasiado grande. El tamaño máximo es 10MB.";
+        break;
+      case 415:
+        errorMessage = "Tipo de archivo no soportado.";
+        break;
+      case 500:
+        errorMessage =
+          "Error interno del servidor. Por favor intente más tarde.";
+        break;
+    }
+
+    throw new Error(errorMessage);
   }
 
   return response.json();

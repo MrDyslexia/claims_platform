@@ -3,17 +3,8 @@
 import { Button } from "@heroui/button";
 import { Card, CardBody, Image } from "@heroui/react";
 import Link from "next/link";
-import {
-  Search,
-  Shield,
-  Lock,
-  Clock,
-  CheckCircle,
-  Mail,
-  Phone,
-  MapPin,
-  ExternalLink,
-} from "lucide-react";
+import { Search, Shield, Lock, Clock, CheckCircle } from "lucide-react";
+
 import { ClaimsWizard } from "@/components/claims-wizard";
 import { useAuth } from "@/lib/auth/auth-context";
 import LogoCarousel from "@/components/LogoCarousel";
@@ -132,8 +123,8 @@ export default function HomePage() {
                     </h3>
                   </div>
                   <p className="text-slate-600 mb-6 text-base leading-relaxed">
-                    Consulta el estado de tu denuncia o reclamo ingresando el código único
-                    que recibiste al momento de enviarla.
+                    Consulta el estado de tu denuncia o reclamo ingresando el
+                    código único que recibiste al momento de enviarla.
                   </p>
                 </div>
                 <Button

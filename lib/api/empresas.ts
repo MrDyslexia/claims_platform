@@ -82,7 +82,20 @@ class EmpresasAPI {
         .json()
         .catch(() => ({ error: "Error al obtener empresas" }));
 
-      throw new Error(error.error || "No se pudieron obtener las empresas");
+      switch (response.status) {
+        case 401:
+          throw new Error(
+            "Su sesión ha expirado. Por favor inicie sesión nuevamente.",
+          );
+        case 403:
+          throw new Error("No tiene permisos para ver la lista de empresas.");
+        case 500:
+          throw new Error(
+            "Error interno del servidor. Por favor intente más tarde.",
+          );
+        default:
+          throw new Error(error.error || "No se pudieron obtener las empresas");
+      }
     }
 
     return response.json();
@@ -112,7 +125,20 @@ class EmpresasAPI {
         .json()
         .catch(() => ({ error: "Error al crear empresa" }));
 
-      throw new Error(error.error || "No se pudo crear la empresa");
+      switch (response.status) {
+        case 400:
+          throw new Error(
+            error.error || "Datos inválidos. Verifique RUT y nombre.",
+          );
+        case 401:
+          throw new Error(
+            "Su sesión ha expirado. Por favor inicie sesión nuevamente.",
+          );
+        case 403:
+          throw new Error("No tiene permisos para crear empresas.");
+        default:
+          throw new Error(error.error || "No se pudo crear la empresa");
+      }
     }
 
     return response.json();
@@ -144,7 +170,24 @@ class EmpresasAPI {
         .json()
         .catch(() => ({ error: "Error al actualizar empresa" }));
 
-      throw new Error(error.error || "No se pudo actualizar la empresa");
+      switch (response.status) {
+        case 400:
+          throw new Error(
+            error.error || "Datos inválidos. Verifique la información.",
+          );
+        case 401:
+          throw new Error(
+            "Su sesión ha expirado. Por favor inicie sesión nuevamente.",
+          );
+        case 403:
+          throw new Error("No tiene permisos para actualizar empresas.");
+        case 404:
+          throw new Error(
+            "Empresa no encontrada. Es posible que haya sido eliminada.",
+          );
+        default:
+          throw new Error(error.error || "No se pudo actualizar la empresa");
+      }
     }
 
     return response.json();
@@ -164,7 +207,24 @@ class EmpresasAPI {
         .json()
         .catch(() => ({ error: "Error al eliminar empresa" }));
 
-      throw new Error(error.error || "No se pudo eliminar la empresa");
+      switch (response.status) {
+        case 401:
+          throw new Error(
+            "Su sesión ha expirado. Por favor inicie sesión nuevamente.",
+          );
+        case 403:
+          throw new Error("No tiene permisos para eliminar empresas.");
+        case 404:
+          throw new Error(
+            "Empresa no encontrada. Es posible que ya haya sido eliminada.",
+          );
+        case 409:
+          throw new Error(
+            "No se puede eliminar la empresa porque tiene denuncias asociadas.",
+          );
+        default:
+          throw new Error(error.error || "No se pudo eliminar la empresa");
+      }
     }
 
     return response.json();

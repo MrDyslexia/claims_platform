@@ -11,8 +11,10 @@ import {
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Alert, Button } from "@heroui/react";
-import LoginDrawer from "@/components/login-drawer";
+
 import { authAPI } from "./api";
+
+import LoginDrawer from "@/components/login-drawer";
 
 interface AuthUser extends Usuario {
   roles: Rol[];
@@ -142,11 +144,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         nombre: rol.nombre,
         activo: rol.activo !== false,
         arquetipo_id: rol.arquetipo_id,
-        arquetipo: rol.arquetipo ? {
-          id: rol.arquetipo.id,
-          codigo: rol.arquetipo.codigo,
-          nombre: rol.arquetipo.nombre,
-        } : null,
+        arquetipo: rol.arquetipo
+          ? {
+              id: rol.arquetipo.id,
+              codigo: rol.arquetipo.codigo,
+              nombre: rol.arquetipo.nombre,
+            }
+          : null,
       })),
       permissions: userData.permisos || userData.permissions || [],
     };
@@ -179,6 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     for (const role of roles) {
       if (role.arquetipo?.codigo) {
         const route = arquetipoRoutes[role.arquetipo.codigo.toUpperCase()];
+
         if (route) {
           return route;
         }
@@ -307,6 +312,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (role.arquetipo?.nombre?.toLowerCase().trim() === normalizedRoleName) {
         return true;
       }
+
       return false;
     });
   };

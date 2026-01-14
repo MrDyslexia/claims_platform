@@ -126,11 +126,7 @@ export function SummaryStep({
       </SummarySection>
 
       {/* Paso 3 - Descripción */}
-      <SummarySection
-        icon={MessageSquare}
-        step={3}
-        title="Relato del Hecho"
-      >
+      <SummarySection icon={MessageSquare} step={3} title="Relato del Hecho">
         <p className="whitespace-pre-wrap line-clamp-6">
           {formData.description || "No especificada"}
         </p>

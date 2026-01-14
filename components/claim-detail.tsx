@@ -412,7 +412,9 @@ export function ClaimDetail({
                 {/* Mostrar comentario existente si ya calificó */}
                 {hasExistingRating && claim?.comentario_satisfaccion && (
                   <div className="w-full mt-4 bg-slate-50 border border-slate-200 rounded-lg p-4">
-                    <p className="text-xs text-slate-500 font-medium mb-2">Tu comentario:</p>
+                    <p className="text-xs text-slate-500 font-medium mb-2">
+                      Tu comentario:
+                    </p>
                     <p className="text-sm text-slate-700 italic">
                       "{claim.comentario_satisfaccion}"
                     </p>
@@ -438,7 +440,9 @@ export function ClaimDetail({
 
                     <Button
                       className="mt-4 px-8 py-6 text-lg font-bold shadow-lg hover:shadow-xl transition-all hover:scale-105 bg-gradient-to-r from-emerald-500 to-green-600"
-                      isDisabled={satisfactionRating === 0 || isSubmittingRating}
+                      isDisabled={
+                        satisfactionRating === 0 || isSubmittingRating
+                      }
                       isLoading={isSubmittingRating}
                       size="lg"
                       startContent={<Star className="w-5 h-5" />}
@@ -539,7 +543,6 @@ export function ClaimDetail({
             </CardBody>
           </Card>
         </Tab>
-
         <Tab key="details" title="Detalles">
           <Card className="bg-gradient-to-br from-slate-50 to-white border-2 border-slate-200 shadow-xl">
             <CardBody className="p-8">
@@ -558,8 +561,8 @@ export function ClaimDetail({
               </div>
             </CardBody>
           </Card>
-        </Tab>\
-
+        </Tab>
+        \
         <Tab key="comments" title={`Comentarios (${comments.length})`}>
           <Card className="bg-gradient-to-br from-slate-50 to-white border-2 border-slate-200 shadow-xl">
             <CardBody className="p-8">
@@ -652,11 +655,11 @@ export function ClaimDetail({
 
                 <Textarea
                   isDisabled={isSubmittingInfoResponse}
+                  maxLength={1000}
                   minRows={4}
                   placeholder="Escribe tu respuesta o información adicional..."
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
-                  maxLength={1000}
                 />
               </div>
 

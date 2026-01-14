@@ -2,17 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Card, CardBody, Button, Image, Link } from "@heroui/react";
+import { Card, CardBody, Button, Image } from "@heroui/react";
 import {
   FileText,
   Clock,
   CheckCircle,
   Shield,
   AlertCircle,
-  ExternalLink,
-  Phone,
-  MapPin,
-  Mail,
   ArrowLeftToLine,
 } from "lucide-react";
 
@@ -30,7 +26,7 @@ export default function TrackClaimPage() {
   const [initialClave] = useState(() => searchParams.get("clave") || "");
 
   const [view, setView] = useState<"search" | "loading" | "detail" | "error">(
-    "search"
+    "search",
   );
   const [claim, setClaim] = useState<any>(null);
   const [error, setError] = useState("");
@@ -126,8 +122,8 @@ export default function TrackClaimPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100">
       <Button
-        variant="flat"
         className="fixed top-4 left-4 md:top-8 md:left-8 flex items-center gap-2 text-slate-700 hover:text-slate-900 transition z-[50] bg-white border border-slate-500 shadow-lg hover:shadow-xl"
+        variant="flat"
         onPress={() => router.push("/")}
       >
         <ArrowLeftToLine className="w-4 h-4" />

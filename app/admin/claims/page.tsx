@@ -2,8 +2,6 @@
 
 import type { Reclamo } from "@/lib/api/claims";
 
-import { CommentTypeSwitch } from "@/components/comment-type-switch";
-
 import { useState, useEffect, useCallback } from "react";
 import {
   Avatar,
@@ -59,6 +57,8 @@ import {
   Send,
   User,
 } from "lucide-react";
+
+import { CommentTypeSwitch } from "@/components/comment-type-switch";
 import { SatisfactionRatingCard } from "@/components/SatisfactionRatingCard";
 
 const priorityColors = {
@@ -113,7 +113,9 @@ export default function ClaimsPage() {
 
   // Pending changes state (only saved when clicking "Guardar Cambios")
   const [pendingPriority, setPendingPriority] = useState<string | null>(null);
-  const [pendingSupervisor, setPendingSupervisor] = useState<string | null>(null);
+  const [pendingSupervisor, setPendingSupervisor] = useState<string | null>(
+    null,
+  );
   const [isSavingChanges, setIsSavingChanges] = useState(false);
 
   const rowsPerPage = 10;
@@ -240,7 +242,9 @@ export default function ClaimsPage() {
       if (response.ok) {
         const data = await response.json();
         const supervisorUsers = data.usuarios.filter((u: any) =>
-          u.roles.some((r: any) => r.arquetipo?.codigo?.toUpperCase() === "SUPERVISOR"),
+          u.roles.some(
+            (r: any) => r.arquetipo?.codigo?.toUpperCase() === "SUPERVISOR",
+          ),
         );
 
         setSupervisors(supervisorUsers);
@@ -448,7 +452,10 @@ export default function ClaimsPage() {
 
     try {
       // 1. Save status change if different
-      const originalStatusId = selectedClaim.estado?.id ? String(selectedClaim.estado.id) : "";
+      const originalStatusId = selectedClaim.estado?.id
+        ? String(selectedClaim.estado.id)
+        : "";
+
       if (selectedNewStatus && selectedNewStatus !== originalStatusId) {
         const response = await fetch(
           `${API_BASE_URL}/denuncias/${selectedClaim.id}/estado`,
@@ -464,6 +471,7 @@ export default function ClaimsPage() {
             }),
           },
         );
+
         if (!response.ok) {
           errors.push("Error al actualizar el estado");
         }
@@ -482,13 +490,17 @@ export default function ClaimsPage() {
             body: JSON.stringify({ prioridad: pendingPriority }),
           },
         );
+
         if (!response.ok) {
           errors.push("Error al actualizar la prioridad");
         }
       }
 
       // 3. Save supervisor change if different
-      const originalSupervisorId = selectedClaim.supervisor?.id ? String(selectedClaim.supervisor.id) : null;
+      const originalSupervisorId = selectedClaim.supervisor?.id
+        ? String(selectedClaim.supervisor.id)
+        : null;
+
       if (pendingSupervisor !== originalSupervisorId && pendingSupervisor) {
         const response = await fetch(`${API_BASE_URL}/denuncias/asignar`, {
           method: "POST",
@@ -501,6 +513,7 @@ export default function ClaimsPage() {
             usuario_id: Number(pendingSupervisor),
           }),
         });
+
         if (!response.ok) {
           errors.push("Error al asignar supervisor");
         }
@@ -512,7 +525,7 @@ export default function ClaimsPage() {
 
       // Refresh claims list
       await fetchClaims();
-      
+
       // Close modal after saving
       onClose();
     } catch {
@@ -589,7 +602,9 @@ export default function ClaimsPage() {
     setSelectedClaim(claim);
     // Initialize pending values to current values
     setPendingPriority(claim.prioridad);
-    setPendingSupervisor(claim.supervisor?.id ? String(claim.supervisor.id) : null);
+    setPendingSupervisor(
+      claim.supervisor?.id ? String(claim.supervisor.id) : null,
+    );
     setSelectedNewStatus(claim.estado?.id ? String(claim.estado.id) : "");
     setStatusChangeReason("");
     onOpen();
@@ -850,13 +865,9 @@ export default function ClaimsPage() {
                       : selectedClaim?.prioridad}
                   </Chip>
                   <Tooltip content="Días desde creación">
-                    <Chip
-                    color='warning'
-                    size="lg"
-                    variant="flat"
-                  >
-                    {selectedClaim?.dias}
-                  </Chip>
+                    <Chip color="warning" size="lg" variant="flat">
+                      {selectedClaim?.dias}
+                    </Chip>
                   </Tooltip>
                 </div>
                 <p className="text-sm text-muted-foreground font-normal">
@@ -961,9 +972,9 @@ export default function ClaimsPage() {
                                 />
                                 <div className="flex items-center justify-end gap-2">
                                   <CommentTypeSwitch
+                                    isDisabled={isSubmittingComment}
                                     isInternal={isCommentInternal}
                                     onValueChange={setIsCommentInternal}
-                                    isDisabled={isSubmittingComment}
                                   />
                                   <Button
                                     color="primary"
@@ -1148,15 +1159,15 @@ export default function ClaimsPage() {
                             </div>
                           </div>
                           <div className="flex items-start gap-2">
-                             <CreditCard className="h-4 w-4 text-muted-foreground mt-0.5" />
-                             <div className="flex-1">
-                               <p className="text-xs text-muted-foreground">
-                                 RUT
-                               </p>
-                               <p className="text-sm font-medium">
-                                 {selectedClaim?.denunciante.rut || "N/A"}
-                               </p>
-                             </div>
+                            <CreditCard className="h-4 w-4 text-muted-foreground mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-xs text-muted-foreground">
+                                RUT
+                              </p>
+                              <p className="text-sm font-medium">
+                                {selectedClaim?.denunciante.rut || "N/A"}
+                              </p>
+                            </div>
                           </div>
                           <div className="flex items-start gap-2">
                             <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
@@ -1195,7 +1206,12 @@ export default function ClaimsPage() {
 
                     {/* Satisfaction Card */}
                     {selectedClaim?.nota_satisfaccion && (
-                      <SatisfactionRatingCard rating={selectedClaim.nota_satisfaccion} comment={selectedClaim.comentario_satisfaccion ?? undefined} />
+                      <SatisfactionRatingCard
+                        comment={
+                          selectedClaim.comentario_satisfaccion ?? undefined
+                        }
+                        rating={selectedClaim.nota_satisfaccion}
+                      />
                     )}
 
                     {/* Actions Card */}
@@ -1206,9 +1222,13 @@ export default function ClaimsPage() {
                         <div>
                           <p className="text-xs text-muted-foreground mb-1.5">
                             Estado
-                            {selectedNewStatus && selectedNewStatus !== (selectedClaim?.estado?.id ? String(selectedClaim.estado.id) : "") && (
-                              <span className="text-warning ml-1">●</span>
-                            )}
+                            {selectedNewStatus &&
+                              selectedNewStatus !==
+                                (selectedClaim?.estado?.id
+                                  ? String(selectedClaim.estado.id)
+                                  : "") && (
+                                <span className="text-warning ml-1">●</span>
+                              )}
                           </p>
                           <Select
                             aria-label="Seleccionar estado"
@@ -1260,7 +1280,9 @@ export default function ClaimsPage() {
                           <Select
                             aria-label="Seleccionar prioridad"
                             className="max-w-xs"
-                            selectedKeys={pendingPriority ? [pendingPriority] : []}
+                            selectedKeys={
+                              pendingPriority ? [pendingPriority] : []
+                            }
                             onChange={(e) => setPendingPriority(e.target.value)}
                           >
                             <SelectItem key="baja">Baja</SelectItem>
@@ -1274,7 +1296,10 @@ export default function ClaimsPage() {
                         <div>
                           <p className="text-xs text-muted-foreground mb-1.5">
                             Asignar Supervisor
-                            {pendingSupervisor !== (selectedClaim?.supervisor?.id ? String(selectedClaim.supervisor.id) : null) && (
+                            {pendingSupervisor !==
+                              (selectedClaim?.supervisor?.id
+                                ? String(selectedClaim.supervisor.id)
+                                : null) && (
                               <span className="text-warning ml-1">●</span>
                             )}
                           </p>
@@ -1282,8 +1307,12 @@ export default function ClaimsPage() {
                             aria-label="Asignar supervisor"
                             className="max-w-xs"
                             placeholder="Seleccionar supervisor"
-                            selectedKeys={pendingSupervisor ? [pendingSupervisor] : []}
-                            onChange={(e) => setPendingSupervisor(e.target.value)}
+                            selectedKeys={
+                              pendingSupervisor ? [pendingSupervisor] : []
+                            }
+                            onChange={(e) =>
+                              setPendingSupervisor(e.target.value)
+                            }
                           >
                             {supervisors.map((supervisor) => (
                               <SelectItem key={supervisor.id_usuario}>
@@ -1301,8 +1330,8 @@ export default function ClaimsPage() {
                 <Button variant="light" onPress={onClose}>
                   Cerrar
                 </Button>
-                <Button 
-                  color="primary" 
+                <Button
+                  color="primary"
                   isLoading={isSavingChanges}
                   onPress={handleSaveAllChanges}
                 >

@@ -293,8 +293,8 @@ export function InvolvedStep({
               <div className="flex-1 relative">
                 <Input
                   ref={inputRef}
-                  maxLength={220}
                   className="w-full"
+                  maxLength={220}
                   placeholder="Buscar empresa por nombre o RUT..."
                   size="lg"
                   startContent={<Search className="h-5 w-5 text-gray-400" />}
@@ -319,9 +319,9 @@ export function InvolvedStep({
             ) : (
               <Input
                 className="flex-1"
+                maxLength={100}
                 placeholder={`Ingresa el nombre de la ${getTypeLabel(partyType).toLowerCase()}...`}
                 size="lg"
-                maxLength={100}
                 startContent={
                   partyType === "person" ? (
                     <User className="h-5 w-5 text-gray-400" />

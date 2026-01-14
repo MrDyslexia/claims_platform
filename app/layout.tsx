@@ -3,6 +3,7 @@ import "@/styles/globals.css";
 import type { Metadata, Viewport } from "next";
 
 import { Providers } from "./providers";
+
 import { siteConfig } from "@/config/site";
 //import { ConditionalNavbar } from "@/components/conditional-navbar";
 
