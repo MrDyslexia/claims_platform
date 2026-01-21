@@ -10,4 +10,4 @@ test-reports-endpoint.sh
 uploads
 public
 migrations
-*.sql
+fix_admin_pass.sql
