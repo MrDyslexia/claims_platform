@@ -7,7 +7,7 @@
     "scripts": {
         "dev": "bun --watch src/app.ts",
         "start": "node --enable-source-maps dist/app.js",
-        "build": "tsc -p tsconfig.json",
+        "build": "bun build ./src/app.ts --outdir ./dist --target node --external '*'",
         "db:init": "bun scripts/init-db.ts",
         "db:migrate": "bun scripts/run-migrations.ts",
         "db:seed": "bun scripts/seed-users.ts",
