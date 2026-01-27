@@ -6,12 +6,9 @@ import Link from "next/link";
 import { Search, Shield, Lock, Clock, CheckCircle } from "lucide-react";
 
 import { ClaimsWizard } from "@/components/claims-wizard";
-import { useAuth } from "@/lib/auth/auth-context";
 import LogoCarousel from "@/components/LogoCarousel";
 import Footer from "@/components/Footer";
 export default function HomePage() {
-  const { setIsLoginDrawerOpen } = useAuth();
-
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100">
       <div className="relative overflow-hidden bg-gradient-to-br from-[#1a2647] via-[#202e5e] to-[#2a3f7a] mb-4">

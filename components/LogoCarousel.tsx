@@ -10,31 +10,35 @@ const PARTNER_LOGOS = [
 
 export default function LogoCarousel() {
   return (
-    <div className="relative overflow-hidden py-6 mb-8">
-      <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-[#202e5e] to-transparent z-10 pointer-events-none" />
-      <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-[#202e5e] to-transparent z-10 pointer-events-none" />
+    /* He aplicado la máscara aquí: [mask-image:...] 
+       Esto crea un desvanecimiento real en los bordes sin importar el color de fondo.
+    */
+    <div className="relative overflow-hidden py-10 mb-8 w-full [mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent)]">
+      
       <div
         className="flex gap-12 hover:[animation-play-state:paused]"
         style={{
           width: "max-content",
-          animation: "carousel-scroll 25s linear infinite",
+          animation: "carousel-scroll 30s linear infinite",
         }}
       >
+        {/* Duplicamos los logos para un scroll infinito fluido */}
         {[...PARTNER_LOGOS, ...PARTNER_LOGOS, ...PARTNER_LOGOS].map(
           (logo, index) => (
             <div
               key={`logo-${index}`}
-              className="flex-shrink-0 bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-all duration-300 cursor-pointer"
+              className="flex-shrink-0 bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-white/10 hover:bg-white/20 hover:border-white/30 transition-all duration-300 cursor-pointer"
             >
               <Image
                 alt={logo.alt}
-                className="h-12 w-auto object-contain filter brightness-0 invert opacity-90 hover:opacity-100 transition-opacity"
+                className="h-10 md:h-12 w-auto object-contain filter brightness-0 invert opacity-80 hover:opacity-100 transition-opacity"
                 src={logo.src || "/placeholder.svg"}
               />
             </div>
           ),
         )}
       </div>
+
       <style>
         {`
           @keyframes carousel-scroll {
@@ -42,6 +46,7 @@ export default function LogoCarousel() {
               transform: translateX(0);
             }
             100% {
+              /* Usamos -33.33% porque tenemos 3 copias del array original */
               transform: translateX(-33.333%);
             }
           }
