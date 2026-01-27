@@ -164,26 +164,6 @@ export default function LoginDrawer({
                   Iniciar Sesión
                 </Button>
               </form>
-
-              <div className="mt-6 text-center space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Credenciales de prueba:
-                </p>
-                <div className="space-y-1 text-xs">
-                  <p className="font-mono bg-default-100 p-2 rounded">
-                    <strong>Admin:</strong> admin@example.com
-                  </p>
-                  <p className="font-mono bg-default-100 p-2 rounded">
-                    <strong>Analista:</strong> analista@example.com
-                  </p>
-                  <p className="font-mono bg-default-100 p-2 rounded">
-                    <strong>Supervisor:</strong> supervisor@example.com
-                  </p>
-                  <p className="text-default-400 mt-2">
-                    Contraseña: cualquiera
-                  </p>
-                </div>
-              </div>
             </DrawerBody>
             <DrawerFooter>
               <Button color="danger" variant="light" onPress={handleClose}>
