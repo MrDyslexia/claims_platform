@@ -25,19 +25,11 @@ import {
 } from "lucide-react";
 
 import { fetchDashboardData } from "@/lib/api/dashboard";
-
-const priorityColors = {
-  baja: "default",
-  media: "warning",
-  alta: "danger",
-  critica: "danger",
-} as const;
-
-const priorityIconColors = {
-  baja: "success",
-  media: "warning",
-  alta: "danger",
-  critica: "danger",
+const priorityConfig = {
+  baja: { color: "primary", bg: "bg-blue-50" },
+  media: { color: "warning", bg: "bg-amber-50" },
+  alta: { color: "danger", bg: "bg-orange-50" },
+  critica: { color: "danger", bg: "bg-red-50" },
 } as const;
 
 export default function AdminDashboard() {
@@ -93,7 +85,7 @@ export default function AdminDashboard() {
     {
       title: "Total Reclamos",
       value: stats.total_denuncias.toLocaleString(),
-      change: "+12%",
+      change: "+11%",
       trend: "up" as const,
       icon: FileText,
       color: "text-blue-600",
@@ -127,7 +119,6 @@ export default function AdminDashboard() {
       bgColor: "bg-red-100 dark:bg-red-900/30",
     },
   ];
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -190,107 +181,53 @@ export default function AdminDashboard() {
               </Chip>
             </div>
           </CardHeader>
-          <CardBody>
-            <Accordion selectionMode="multiple" variant="splitted">
-              {reclamos_recientes.map((claim) => (
-                <AccordionItem
-                  key={claim.id_denuncia}
-                  aria-label={`Reclamo ${claim.codigo_acceso}`}
-                  startContent={
-                    <Avatar
-                      isBordered
-                      classNames={{
-                        base: "bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/30 dark:to-purple-800/30",
-                        icon: "text-purple-600 dark:text-purple-400",
-                      }}
-                      color={priorityIconColors[claim.prioridad]}
-                      icon={<FileText className="h-5 w-5" />}
-                      radius="lg"
-                    />
-                  }
-                  subtitle={
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs text-muted-foreground">
-                        {claim.tipo_nombre}
-                      </span>
-                      <span className="text-xs text-muted-foreground">•</span>
-                      <Chip
-                        color={priorityColors[claim.prioridad]}
-                        size="sm"
-                        variant="flat"
-                      >
-                        {claim.prioridad}
-                      </Chip>
-                      <Chip size="sm" variant="bordered">
-                        {claim.estado_nombre}
-                      </Chip>
-                    </div>
-                  }
-                  title={
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">
-                        {claim.codigo_acceso}
-                      </span>
-                    </div>
-                  }
-                >
-                  <div className="space-y-3 px-1 pb-2">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-1">
-                        Descripción
-                      </p>
-                      <p className="text-sm line-clamp-3">
-                        {claim.descripcion}
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">
-                          Empresa
-                        </p>
-                        <p className="text-sm">{claim.empresa_nombre}</p>
+          <CardBody className="overflow-y-auto p-4 md:p-6 scrollbar-hide">
+              <Accordion 
+                selectionMode="multiple" 
+                variant="light"
+                itemClasses={{
+                  base: "group mb-4 border border-slate-100 rounded-xl hover:border-blue-100 transition-all shadow-sm hover:shadow-md",
+                  title: "font-semibold text-slate-700 text-sm md:text-base",
+                  trigger: "px-4 py-4",
+                  content: "px-4 pb-4 pt-0 text-slate-600 bg-slate-50/50 rounded-b-xl"
+                }}
+              >
+                {reclamos_recientes.map((claim) => (
+                  <AccordionItem
+                    key={claim.id_denuncia}
+                    startContent={
+                      <div className={`p-2 rounded-lg ${priorityConfig[claim.prioridad]?.bg || 'bg-slate-50'}`}>
+                        <FileText className={`h-5 w-5 text-${priorityConfig[claim.prioridad]?.color || 'default'}-600`} />
                       </div>
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">
-                          Fecha de Creación
-                        </p>
-                        <p className="text-sm">
-                          {claim.fecha_creacion
-                            ? new Date(claim.fecha_creacion).toLocaleDateString(
-                                "es-CL",
-                              )
-                            : "N/A"}
-                        </p>
+                    }
+                    subtitle={
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[11px] text-slate-400">{claim.tipo_nombre}</span>
+                        <Chip size="sm" variant="flat" color={priorityConfig[claim.prioridad]?.color as any} className="h-4 text-[10px] font-bold uppercase">{claim.prioridad}</Chip>
+                      </div>
+                    }
+                    title={<span className="font-semibold text-slate-800">{claim.empresa_nombre}</span>}
+                  >
+                    <div className="space-y-4 pt-2">
+                      <div className="bg-white p-3 rounded-lg border border-slate-200/50 shadow-sm">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Descripción</p>
+                        <p className="text-sm leading-relaxed">{claim.descripcion}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase block">Estado</span>
+                          <span className="text-sm font-semibold text-blue-700">{claim.estado_nombre}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase block">Fecha</span>
+                          <span className="text-sm font-medium">{claim.fecha_creacion ? new Date(claim.fecha_creacion).toLocaleDateString("es-CL") : "N/A"}</span>
+                        </div>
                       </div>
                     </div>
-
-                    {claim.nombre_denunciante && (
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">
-                          Denunciante
-                        </p>
-                        <p className="text-sm">{claim.nombre_denunciante}</p>
-                        {claim.email_denunciante && (
-                          <p className="text-xs text-muted-foreground">
-                            {claim.email_denunciante}
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    {(String(claim.es_anonimo) === "1" ||
-                      String(claim.es_anonimo).toLowerCase() === "true" ||
-                      claim.es_anonimo === true) && (
-                      <Chip color="default" size="sm" variant="flat">
-                        Denuncia Anónima
-                      </Chip>
-                    )}
-                  </div>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </CardBody>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </CardBody>
         </Card>
 
         {/* Quick Stats */}
