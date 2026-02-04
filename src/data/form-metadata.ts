@@ -139,7 +139,7 @@ export const FORM_COUNTRIES: string[] = [
   "Argentina",
   "Perú",
   "Francia",
-  "Mexico",
+  "México",
 ];
 
 export const FORM_TIMEFRAMES: TimeframeMetadata[] = [
