@@ -10,6 +10,7 @@ import {
   Mail,
   CreditCard,
   UserCheck,
+  AlertTriangle,
 } from "lucide-react";
 
 interface IdentificationStepProps {
@@ -21,6 +22,7 @@ export function IdentificationStep({
   formData,
   onUpdate,
 }: IdentificationStepProps) {
+
   const [isAnonymous, setIsAnonymous] = useState<boolean>(
     formData.isAnonymous ?? false,
   );
@@ -299,7 +301,7 @@ export function IdentificationStep({
                         errorMessage={validationErrors.email}
                         id="email"
                         isInvalid={!!validationErrors.email}
-                        placeholder="tu@email.com (opcional)"
+                        placeholder="tu@email.com (OPCIONAL)"
                         size="md"
                         type="email"
                         value={personalData.email}
@@ -313,7 +315,26 @@ export function IdentificationStep({
                   </div>
                 </CardBody>
               </Card>
-              
+
+              <Card className="bg-yellow-50/50 border-yellow-200">
+                <CardBody className="p-0">
+                  <div className="flex items-stretch gap-4">
+                    <div className="flex items-center justify-center p-3 bg-yellow-100 rounded-l-lg border-r border-yellow-200">
+                      <AlertTriangle className="h-7 w-7 text-yellow-600" />
+                    </div>
+                    <div className="flex-1 p-2">
+                      <p className="font-semibold text-yellow-900 mb-2 text-base">
+                        Atención
+                      </p>
+                      <p className="text-sm text-yellow-800 leading-relaxed">
+                        Considerar que si no ingresará su correo electrónico, deberá
+                        de asegurarse de guardar los códigos seguimiento ya sea como
+                        imagen o escrito.
+                      </p>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
             </div>
           )}
         </CardBody>
