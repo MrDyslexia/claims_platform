@@ -42,7 +42,7 @@ export function DetailsStep({ formData, onUpdate }: DetailsStepProps) {
       <Card>
         <CardHeader>
           <h2>
-            Información complementaria que ayude a contextualizar tu reclamo
+            Información complementaria que ayude a entregar más detalles a tu reclamo
             (máximo 240 caracteres).
           </h2>
         </CardHeader>

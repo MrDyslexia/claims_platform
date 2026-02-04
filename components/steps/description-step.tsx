@@ -59,7 +59,7 @@ export function DescriptionStep({ formData, onUpdate }: DescriptionStepProps) {
               <span>Relato detallado</span>
             </h1>
             <h2>
-              Describe los hechos de manera cronológica y detallada (mínimo{" "}
+              Describe los hechos de manera cronológica (mínimo{" "}
               {minLength} caracteres)
             </h2>
           </div>
@@ -101,11 +101,11 @@ export function DescriptionStep({ formData, onUpdate }: DescriptionStepProps) {
             <ul className="list-disc list-inside space-y-1">
               <li>Sé específico con fechas, horarios y ubicaciones</li>
               <li>Lugar donde ocurrió</li>
-              <li>Describe los hechos en orden cronológico</li>
+              <li>Describe los hechos en orden cronológicos</li>
               <li>Incluye nombres de personas involucradas (si los conoces)</li>
               <li>Menciona cualquier comunicación previa sobre el tema</li>
               <li>Describe las consecuencias o impacto del problema</li>
-              <li>Evita opiniones personales, enfócate en los hechos</li>
+              <li>Evita opiniones personales y enfócate en los hechos</li>
               <li>Números de referencia, códigos o documentos relevantes</li>
             </ul>
           </div>

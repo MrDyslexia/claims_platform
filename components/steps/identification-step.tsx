@@ -299,7 +299,7 @@ export function IdentificationStep({
                         errorMessage={validationErrors.email}
                         id="email"
                         isInvalid={!!validationErrors.email}
-                        placeholder="tu@email.com"
+                        placeholder="tu@email.com (opcional)"
                         size="md"
                         type="email"
                         value={personalData.email}
@@ -313,6 +313,7 @@ export function IdentificationStep({
                   </div>
                 </CardBody>
               </Card>
+              
             </div>
           )}
         </CardBody>
@@ -328,7 +329,7 @@ export function IdentificationStep({
                 <span>Datos personales</span>
               </p>
               <p className="text-sm text-muted-foreground">
-                Completa todos los campos para identificarte como reclamante
+                Completa todos los campos para identificarte 
               </p>
             </div>
           </CardHeader>

@@ -56,7 +56,7 @@ export default function HomePage() {
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-5 py-2.5 rounded-full border border-white/20 shadow-lg">
               <Clock className="w-4 h-4 text-sky-300" />
               <span className="text-sm text-white font-medium">
-                Respuesta en 48h
+                Seguimiento en línea
               </span>
             </div>
           </div>
@@ -94,11 +94,7 @@ export default function HomePage() {
                   </h2>
                 </div>
                 <p className="text-slate-600 leading-relaxed text-base">
-                  Es una herramienta para que cualquier persona pueda denunciar
-                  hechos o conductas que constituyan o puedan constituir una
-                  violación de los principios y valores de la Compañía, sus
-                  normas corporativas o las leyes vigentes. La información
-                  entregada es{" "}
+                  Es una herramienta para que todos puedan denunciar hechos o conductas que constituyan o puedan constituir una violación de los principios y valores de la Compañía, sus normas corporativas o las leyes vigentes. La información entregada es{" "}
                   <strong className="text-[#202e5e]">
                     estrictamente confidencial
                   </strong>
@@ -120,8 +116,7 @@ export default function HomePage() {
                     </h3>
                   </div>
                   <p className="text-slate-600 mb-6 text-base leading-relaxed">
-                    Consulta el estado de tu denuncia o reclamo ingresando el
-                    código único que recibiste al momento de enviarla.
+                    Consulta el estado de tu denuncia o reclamo ingresando el código único que recibió al momento de enviarla.
                   </p>
                 </div>
                 <Button
