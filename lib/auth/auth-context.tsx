@@ -165,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Mapeo de arquetipos a rutas (por código de arquetipo)
     const arquetipoRoutes: Record<string, string> = {
       ADMIN: "/admin",
+      SUPERSU: "/admin",
       SUPERVISOR: "/supervisor",
       ANALISTA: "/analyst",
       AUDITOR: "/auditor",
