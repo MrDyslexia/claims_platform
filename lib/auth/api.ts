@@ -170,6 +170,61 @@ class AuthAPI {
 
     return response.json();
   }
+
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    const response = await fetch(`${this.baseURL}/auth/forgot-password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .catch(() => ({ error: "Error al solicitar recuperación" }));
+
+      throw new Error(error.error || "Error al solicitar recuperación de contraseña.");
+    }
+
+    return response.json();
+  }
+
+  async resetPassword(
+    email: string,
+    code: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    const response = await fetch(`${this.baseURL}/auth/reset-password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, code, newPassword }),
+    });
+
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .catch(() => ({ error: "Error al restablecer contraseña" }));
+
+      switch (response.status) {
+        case 400:
+          throw new Error(
+            error.error || "Código inválido o expirado.",
+          );
+        case 500:
+          throw new Error(
+            "Error interno del servidor. Por favor intente más tarde.",
+          );
+        default:
+          throw new Error(error.error || "Error al restablecer contraseña.");
+      }
+    }
+
+    return response.json();
+  }
 }
 
 export const authAPI = new AuthAPI();
