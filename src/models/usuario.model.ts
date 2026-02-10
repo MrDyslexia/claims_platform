@@ -76,6 +76,8 @@ export const defineUsuario = (sequelize: Sequelize) => {
                 defaultValue: DataTypes.NOW,
             },
             last_login_at: { type: DataTypes.DATE, allowNull: true },
+            reset_code_hash: { type: DataTypes.STRING(255), allowNull: true },
+            reset_code_expires: { type: DataTypes.DATE, allowNull: true },
         },
         {
             tableName: 'usuario',

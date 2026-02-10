@@ -936,6 +936,114 @@ Este es un correo automático, por favor no responda a este mensaje.
         }
     }
 
+    async sendPasswordResetCode(
+        to: string,
+        data: {
+            code: string;
+            nombreUsuario?: string;
+        }
+    ): Promise<boolean> {
+        try {
+            const transporter = await this.getTransporter();
+
+            const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #4a5568; color: white; padding: 20px; text-align: center; }
+        .content { background-color: #f7fafc; padding: 30px; border-radius: 5px; margin-top: 20px; }
+        .code-box { background-color: #dbeafe; padding: 25px; border-radius: 5px; margin: 20px 0; border: 2px solid #3b82f6; text-align: center; }
+        .reset-code { font-size: 36px; font-weight: bold; color: #1d4ed8; font-family: monospace; letter-spacing: 8px; margin: 20px 0; }
+        .warning { background-color: #fef5e7; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #f59e0b; }
+        .footer { text-align: center; margin-top: 30px; color: #718096; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔑 Recuperación de Contraseña</h1>
+        </div>
+        
+        <div class="content">
+            ${
+                data.nombreUsuario
+                    ? `<p>Estimado/a ${data.nombreUsuario},</p>`
+                    : '<p>Estimado/a usuario,</p>'
+            }
+            
+            <p>Hemos recibido una solicitud para restablecer la contraseña de su cuenta.</p>
+
+            <div class="code-box">
+                <h3 style="margin-top: 0; color: #1d4ed8;">Código de Verificación</h3>
+                <p>Ingrese el siguiente código en el formulario de recuperación:</p>
+                <div class="reset-code">${data.code}</div>
+                <p style="color: #6b7280; margin-bottom: 0;">Este código expira en <strong>15 minutos</strong></p>
+            </div>
+
+            <div class="warning">
+                <strong>⚠️ Importante:</strong>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>Si usted no solicitó este código, ignore este correo.</li>
+                    <li>Nunca comparta este código con nadie.</li>
+                    <li>Nuestro equipo nunca le pedirá este código.</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Este es un correo automático, por favor no responda a este mensaje.</p>
+            <p>&copy; ${new Date().getFullYear()} Sistema de Denuncias. Todos los derechos reservados.</p>
+        </div>
+    </div>
+</body>
+</html>
+            `;
+
+            const textContent = `
+🔑 RECUPERACIÓN DE CONTRASEÑA
+
+${
+    data.nombreUsuario
+        ? `Estimado/a ${data.nombreUsuario},`
+        : 'Estimado/a usuario,'
+}
+
+Hemos recibido una solicitud para restablecer la contraseña de su cuenta.
+
+CÓDIGO DE VERIFICACIÓN
+${data.code}
+
+Este código expira en 15 minutos.
+
+⚠️ IMPORTANTE:
+- Si usted no solicitó este código, ignore este correo.
+- Nunca comparta este código con nadie.
+- Nuestro equipo nunca le pedirá este código.
+
+---
+Este es un correo automático, por favor no responda a este mensaje.
+© ${new Date().getFullYear()} Sistema de Denuncias. Todos los derechos reservados.
+            `;
+
+            await transporter.sendMail({
+                from: env.email.from,
+                to,
+                subject: `🔑 Código de Recuperación de Contraseña`,
+                text: textContent,
+                html: htmlContent,
+            });
+
+            return true;
+        } catch (error) {
+            console.error('Error sending password reset code email:', error);
+            return false;
+        }
+    }
+
 }
 
 export const emailService = new EmailService();

@@ -4,6 +4,9 @@ import bcrypt from 'bcryptjs';
 import { env } from '../config/env';
 import { signJwt } from '../middlewares/auth';
 import { v4 as uuidv4 } from 'uuid';
+import { randomInt } from 'crypto';
+import { emailService } from '../utils/email.service';
+import { Op } from 'sequelize';
 
 export const register = async (req: Request, res: Response) => {
     const { rut, nombre_completo, email, password } = req.body;
@@ -224,6 +227,83 @@ export const me = async (req: Request & { user?: any }, res: Response) => {
             empresa: user.get('empresa'),
             permisos: Array.from(permisos),
         });
+    } catch (e: any) {
+        return res.status(500).json({ error: e.message });
+    }
+};
+
+export const forgotPassword = async (req: Request, res: Response) => {
+    const { email } = req.body;
+    if (!email)
+        return res.status(400).json({ error: 'missing email' });
+
+    try {
+        const user = await models.Usuario.findOne({ where: { email } });
+
+        if (user && user.get('activo') === 1) {
+            // Generate a 6-digit code
+            const code = String(randomInt(100000, 999999));
+            const codeHash = await bcrypt.hash(code, 10);
+            const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+            await user.update({
+                reset_code_hash: codeHash,
+                reset_code_expires: expires,
+            });
+
+            // Send email (fire-and-forget, don't block response)
+            emailService.sendPasswordResetCode(
+                String(user.get('email')),
+                {
+                    code,
+                    nombreUsuario: String(user.get('nombre_completo')),
+                }
+            );
+        }
+
+        // Always respond success to prevent email enumeration
+        return res.json({
+            message: 'Si el email existe, se enviará un código de verificación.',
+        });
+    } catch (e: any) {
+        return res.status(500).json({ error: e.message });
+    }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+    const { email, code, newPassword } = req.body;
+    if (!email || !code || !newPassword)
+        return res.status(400).json({ error: 'missing fields' });
+
+    if (newPassword.length < 6)
+        return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres.' });
+
+    try {
+        const user = await models.Usuario.findOne({
+            where: {
+                email,
+                reset_code_hash: { [Op.ne]: null },
+                reset_code_expires: { [Op.gt]: new Date() },
+            },
+        });
+
+        if (!user) {
+            return res.status(400).json({ error: 'Código inválido o expirado.' });
+        }
+
+        const codeValid = await bcrypt.compare(code, String(user.get('reset_code_hash')));
+        if (!codeValid) {
+            return res.status(400).json({ error: 'Código inválido o expirado.' });
+        }
+
+        const passHash = await bcrypt.hash(newPassword, 10);
+        await user.update({
+            pass_hash: passHash,
+            reset_code_hash: null,
+            reset_code_expires: null,
+        });
+
+        return res.json({ message: 'Contraseña restablecida exitosamente.' });
     } catch (e: any) {
         return res.status(500).json({ error: e.message });
     }
