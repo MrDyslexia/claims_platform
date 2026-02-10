@@ -26,6 +26,7 @@ import { defineSeqDenuncia } from './seq-denuncia.model';
 import { defineVDenunciaLookup } from './v-denuncia-lookup.model';
 import { defineUsuarioCategoria } from './usuario-categoria.model';
 import { defineRolCategoria } from './rol-categoria.model';
+import { defineAuditoria } from './auditoria.model';
 
 /**
  * Inicializa todos los modelos y sus asociaciones
@@ -58,6 +59,7 @@ export const initModels = (sequelize: Sequelize) => {
     const VDenunciaLookup = defineVDenunciaLookup(sequelize);
     const UsuarioCategoria = defineUsuarioCategoria(sequelize);
     const RolCategoria = defineRolCategoria(sequelize);
+    const Auditoria = defineAuditoria(sequelize);
 
     // ==========================================
     // ASOCIACIONES / RELATIONSHIPS
@@ -241,6 +243,16 @@ export const initModels = (sequelize: Sequelize) => {
 
 
 
+    // Auditoria associations
+    Auditoria.belongsTo(Usuario, {
+        foreignKey: 'actor_usuario_id',
+        as: 'actor',
+    });
+    Usuario.hasMany(Auditoria, {
+        foreignKey: 'actor_usuario_id',
+        as: 'auditorias',
+    });
+
     // APIRequestLog associations
     APIRequestLog.belongsTo(Usuario, {
         foreignKey: 'usuario_id',
@@ -278,6 +290,7 @@ export const initModels = (sequelize: Sequelize) => {
         SeqDenuncia,
         UsuarioCategoria,
         RolCategoria,
+        Auditoria,
     } as const;
 };
 

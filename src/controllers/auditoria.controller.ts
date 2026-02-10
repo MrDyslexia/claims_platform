@@ -593,7 +593,7 @@ async function obtenerEstadisticasAuditoria() {
                 u.nombre_completo as usuario,
                 COUNT(*) as cantidad
             FROM api_request_log arl
-            JOIN usuario u ON u.id_usuario = arl.usuario_id
+            JOIN usuario u ON u.id = arl.usuario_id
             WHERE arl.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
             AND arl.usuario_id IS NOT NULL
             GROUP BY u.nombre_completo

@@ -18,6 +18,7 @@ import reasignacionRoutes from './reasignacion.routes';
 import publicRoutes from './public.routes';
 import emailTestRoutes from './email-test.routes';
 import dashboardRoutes from './dashboard.routes';
+import auditoriaRoutes from './auditoria.routes';
 
 const router = Router();
 
@@ -54,5 +55,5 @@ router.use('/adjuntos', adjuntoRoutes);
 
 // Testing routes (remove in production)
 router.use('/email-test', emailTestRoutes);
-
+router.use('/auditoria', auditoriaRoutes);
 export default router;

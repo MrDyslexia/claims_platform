@@ -21,7 +21,7 @@ export const crearEmpresa = async (req: Request, res: Response) => {
             nombre,
             estado: estado ?? 1,
             direccion,
-            email,
+            email: email === '' ? null : email,
             telefono,
         });
 
@@ -108,7 +108,7 @@ export const actualizarEmpresa = async (req: Request, res: Response) => {
 
         await empresa.update({
             direccion: direccion ?? empresa.get('direccion'),
-            email: email ?? empresa.get('email'),
+            email: email === '' ? null : (email ?? empresa.get('email')),
             estado: estado ?? empresa.get('estado'),
             nombre: nombre ?? empresa.get('nombre'),
             rut: rut ?? empresa.get('rut'),
