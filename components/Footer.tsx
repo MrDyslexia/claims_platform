@@ -32,7 +32,7 @@ export default function Footer() {
               <div className="flex gap-3">
                 <a
                   className="text-blue-300 hover:text-white transition-colors text-sm flex items-center gap-1"
-                  href="https://www.grupobelator.com"
+                  href="https://www.grupobelator.cl"
                   rel="noopener noreferrer"
                   target="_blank"
                 >
@@ -97,16 +97,16 @@ export default function Footer() {
                 <li className="flex items-start gap-2">
                   <Mail className="w-4 h-4 text-blue-300 mt-0.5 shrink-0" />
                   <span className="text-blue-200 text-sm">
-                    contacto@grupobelator.com
+                    contacto@belator.cl
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Phone className="w-4 h-4 text-blue-300 mt-0.5 shrink-0" />
-                  <span className="text-blue-200 text-sm">+56 2 2345 6789</span>
+                  <span className="text-blue-200 text-sm">44 357 0237</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <MapPin className="w-4 h-4 text-blue-300 mt-0.5 shrink-0" />
-                  <span className="text-blue-200 text-sm">Santiago, Chile</span>
+                  <span className="text-blue-200 text-sm">12 Norte 840, Viña del Mar, Chile</span>
                 </li>
               </ul>
             </div>
@@ -134,9 +134,6 @@ export default function Footer() {
                 </Link>
               </div>
             </div>
-            <p className="text-blue-300/50 text-xs text-center mt-6">
-              Desarrollado por Blocktype SpA
-            </p>
           </div>
         </div>
       </div>
