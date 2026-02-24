@@ -36,11 +36,11 @@ async function bootstrap() {
             next();
         }
     });
-    app.use(express.json({ limit: '20mb' }));
+    app.use(express.json({ limit: '50mb' }));
     app.use(requestLogger());
 
     app.get('/', (req, res) => res.json({ ok: true }));
-    app.use('/api', routes);
+    app.use('/', routes);
 
     app.use((err: any, _req: any, res: any, _next: any) => {
         console.error(err);

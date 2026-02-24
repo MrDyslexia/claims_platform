@@ -7,8 +7,8 @@ import path from 'path';
 export const UPLOAD_CONFIG = {
     // Límites
     MAX_FILES_PER_DENUNCIA: 10,
-    MAX_FILE_SIZE: 10 * 1024 * 1024, // 10 MB por archivo
-    MAX_TOTAL_SIZE: 50 * 1024 * 1024, // 50 MB total por denuncia
+    MAX_FILE_SIZE: 50 * 1024 * 1024, // 10 MB por archivo
+    MAX_TOTAL_SIZE: 90 * 1024 * 1024, // 50 MB total por denuncia
 
     // Tipos de archivo permitidos
     ALLOWED_MIME_TYPES: [
