@@ -258,20 +258,20 @@ export function InvolvedStep({
       <div className="flex justify-start">
         <ButtonGroup size="lg" variant="flat">
           <Button
-            color={partyType === "person" ? "primary" : "default"}
-            startContent={<User className="h-4 w-4" />}
-            variant={partyType === "person" ? "solid" : "flat"}
-            onPress={() => handlePartyTypeChange("person")}
-          >
-            Persona
-          </Button>
-          <Button
             color={partyType === "company" ? "secondary" : "default"}
             startContent={<Building className="h-4 w-4" />}
             variant={partyType === "company" ? "solid" : "flat"}
             onPress={() => handlePartyTypeChange("company")}
           >
             Empresa
+          </Button>
+          <Button
+            color={partyType === "person" ? "primary" : "default"}
+            startContent={<User className="h-4 w-4" />}
+            variant={partyType === "person" ? "solid" : "flat"}
+            onPress={() => handlePartyTypeChange("person")}
+          >
+            Persona
           </Button>
           <Button
             className={partyType === "entity" ? "text-white" : ""}

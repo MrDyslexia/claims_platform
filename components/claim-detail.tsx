@@ -458,24 +458,26 @@ export function ClaimDetail({
         </Card>
       )}
       {/* Info Cards Grid */}
-      <div className="grid md:grid-cols-3 gap-6 mb-8">
-        <Card className="border-2 border-slate-200 shadow-lg hover:shadow-xl transition-shadow duration-300">
-          <CardBody className="p-6">
-            <div className="flex items-start gap-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                <Building2 className="w-7 h-7 text-white" />
+      <div className={`grid gap-6 mb-8 ${claim.empresa ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+        {claim.empresa && (
+          <Card className="border-2 border-slate-200 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <CardBody className="p-6">
+              <div className="flex items-start gap-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                  <Building2 className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500 font-medium mb-1">
+                    Empresa
+                  </p>
+                  <p className="font-bold text-slate-800 text-lg">
+                    {claim.empresa.nombre}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-slate-500 font-medium mb-1">
-                  Empresa
-                </p>
-                <p className="font-bold text-slate-800 text-lg">
-                  {claim.empresa?.nombre || "No disponible"}
-                </p>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
+            </CardBody>
+          </Card>
+        )}
 
         <Card className="border-2 border-slate-200 shadow-lg hover:shadow-xl transition-shadow duration-300">
           <CardBody className="p-6">
@@ -515,6 +517,7 @@ export function ClaimDetail({
           </CardBody>
         </Card>
       </div>
+
 
       {/* Tabs with improved styling */}
       <Tabs
