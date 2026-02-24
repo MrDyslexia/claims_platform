@@ -37,7 +37,7 @@ export default function Footer() {
                   target="_blank"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  www.grupobelator.com
+                  www.grupobelator.cl
                 </a>
               </div>
             </div>
