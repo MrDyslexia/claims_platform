@@ -25,7 +25,7 @@ export function InvolvedStep({
     formData.involvedParties || [],
   );
   const [newParty, setNewParty] = useState("");
-  const [partyType, setPartyType] = useState("person");
+  const [partyType, setPartyType] = useState("company");
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedEnterprise, setSelectedEnterprise] =
