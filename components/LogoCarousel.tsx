@@ -6,6 +6,8 @@ const PARTNER_LOGOS = [
   { src: "/sub/Logo_BelatorOtec_2.svg", alt: "Belator Otec" },
   { src: "/sub/Logo_BelatorSIE_2.svg", alt: "Belator SIE" },
   { src: "/sub/Logo_BelatorSecurity_2.svg", alt: "Belator Security" },
+  { src: "/sub/Logo_BelatorTOQUI_2.svg", alt: "Belator TOQUI" },
+  { src: "/sub/Logo_ProtacticalBelator_2.svg", alt: "Protactical Belator" },
 ];
 
 export default function LogoCarousel() {
