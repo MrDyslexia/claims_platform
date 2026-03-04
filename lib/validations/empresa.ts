@@ -17,11 +17,11 @@ export function validarRUT(rut: string): {
   // Limpiar formato (quitar puntos y guión)
   const rutLimpio = rut.replace(/[.-]/g, "").trim();
 
-  // Validar que tenga entre 7 y 9 dígitos
-  if (!/^\d{7,9}$/.test(rutLimpio)) {
+  // Validar que tenga entre 7 y 9 caracteres y termine en dígito o K
+  if (!/^\d{6,8}[0-9kK]$/.test(rutLimpio)) {
     return {
       valido: false,
-      mensaje: "RUT inválido. Debe tener entre 7 y 9 dígitos (ej: 76123456-7)",
+      mensaje: "RUT inválido. Debe tener entre 7 y 9 caracteres (ej: 76123456-7)",
     };
   }
 
@@ -143,9 +143,9 @@ export function formatearRUT(input: string): string {
   // Limpiar: eliminar puntos, espacios y guiones
   const rutLimpio = input.replace(/[.\s\-]/g, "").trim();
 
-  // Si no hay números, retornar vacío
-  if (!/^\d+$/.test(rutLimpio)) {
-    return input; // Retornar el input original si contiene caracteres no numéricos
+  // Si contiene caracteres inválidos, retornar original
+  if (!/^\d+[0-9kK]?$/i.test(rutLimpio)) {
+    return input; // Retornar el input original si contiene caracteres inválidos
   }
 
   // Si tiene menos de 7 dígitos, retornar sin formato
