@@ -463,7 +463,7 @@ export const generateReports = async (req: Request, res: Response) => {
         });
 
         const estadoResueltoId =
-            estadosMap.get('RESUELTO') || estadosMap.get('CERRADO');
+            estadosMap.get('RESUELTO') || estadosMap.get('CERRADO') || -1;
 
         // ===== SUMMARY - Período actual =====
         const totalReclamosCurrent = await models.Denuncia.count({
@@ -852,9 +852,9 @@ export const getDashboardAnalista = async (
         });
 
         const estadoResueltoId = estadosMap.get('RESUELTO') || 
-            Array.from(estadosMap.entries()).find(([codigo, _]) => codigo.includes('RESUELTO'))?.[1];
+            Array.from(estadosMap.entries()).find(([codigo, _]) => codigo.includes('RESUELTO'))?.[1] || -1;
         const estadoPendienteId = estadosMap.get('PENDIENTE') || 
-            Array.from(estadosMap.entries()).find(([codigo, _]) => codigo.includes('PENDIENTE'))?.[1];
+            Array.from(estadosMap.entries()).find(([codigo, _]) => codigo.includes('PENDIENTE'))?.[1] || -1;
 
         // ===== GLOBAL KPIs =====
         // Current Month
@@ -1788,10 +1788,11 @@ export const getDashboardAnalytics = async (req: Request & { user?: any }, res: 
             estadosMap.set(estado.codigo.toUpperCase(), estado.id);
         });
 
-        const estadoResueltoId = estadosMap.get('RESUELTO');
-        const estadoCerradoId = estadosMap.get('CERRADO');
-        const estadoProcesoId = estadosMap.get('EN_PROCESO') || estadosMap.get('PROCESO');
-        const estadosPendientesIds = [estadoResueltoId, estadoCerradoId].filter(Boolean);
+        const estadoResueltoId = estadosMap.get('RESUELTO') || -1;
+        const estadoCerradoId = estadosMap.get('CERRADO') || -1;
+        const estadoProcesoId = estadosMap.get('EN_PROCESO') || estadosMap.get('PROCESO') || -1;
+        const estadosPendientesIds = [estadoResueltoId, estadoCerradoId].filter((id) => id !== undefined && id !== -1);
+        if (estadosPendientesIds.length === 0) estadosPendientesIds.push(-1);
 
         // ===== SUMMARY =====
         const totalClaims = await models.Denuncia.count();
@@ -2126,9 +2127,10 @@ export const getAdminDashboardComplete = async (
             estadosMap.set(estado.codigo.toUpperCase(), estado.id);
         });
 
-        const estadoResueltoId = estadosMap.get('RESUELTO');
-        const estadoCerradoId = estadosMap.get('CERRADO');
-        const estadosFinalizados = [estadoResueltoId, estadoCerradoId].filter(Boolean) as number[];
+        const estadoResueltoId = estadosMap.get('RESUELTO') || -1;
+        const estadoCerradoId = estadosMap.get('CERRADO') || -1;
+        const estadosFinalizados = [estadoResueltoId, estadoCerradoId].filter((id) => id !== undefined && id !== -1) as number[];
+        if (estadosFinalizados.length === 0) estadosFinalizados.push(-1);
 
         // Helper para calcular tendencia
         const getTrend = (current: number, previous: number): 'up' | 'down' | 'neutral' => {

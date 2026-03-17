@@ -31,6 +31,12 @@ export const defineCategoriaDenuncia = (sequelize: Sequelize) => {
                 allowNull: false,
                 defaultValue: 1,
             },
+            permite_anonimo: {
+                type: DataTypes.TINYINT,
+                allowNull: false,
+                defaultValue: 1,
+                comment: 'Indica si la categoría permite denuncias anónimas (0=No, 1=Sí). Ley Karin requiere identificación.',
+            },
         },
         {
             tableName: 'categoria_denuncia',

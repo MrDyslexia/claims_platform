@@ -30,6 +30,7 @@ export const obtenerMetadataFormulario = async (
             name: cat.nombre,
             description: cat.descripcion,
             icon: cat.icono,
+            allowsAnonymous: cat.permite_anonimo === 1 || cat.permite_anonimo === true,
             subcategories: cat.tipos.map((tipo: any) => ({
                 code: tipo.codigo,
                 name: tipo.nombre,
