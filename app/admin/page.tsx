@@ -1,12 +1,11 @@
 "use client";
 
-import type { DashboardResponse } from "@/lib/types/dashboard";
+import type { DashboardResponse, AdminDashboardCompleteResponse } from "@/lib/types/dashboard";
 
 import { useEffect, useState } from "react";
 import {
   Accordion,
   AccordionItem,
-  Avatar,
   Card,
   CardBody,
   CardHeader,
@@ -21,10 +20,12 @@ import {
   Clock,
   FileText,
   TrendingUp,
+  TrendingDown,
   Users,
 } from "lucide-react";
 
-import { fetchDashboardData } from "@/lib/api/dashboard";
+import { fetchDashboardData, fetchAdminDashboardComplete } from "@/lib/api/dashboard";
+
 const priorityConfig = {
   baja: { color: "primary", bg: "bg-blue-50" },
   media: { color: "warning", bg: "bg-amber-50" },
@@ -34,13 +35,18 @@ const priorityConfig = {
 
 export default function AdminDashboard() {
   const [dashData, setDashData] = useState<DashboardResponse | null>(null);
+  const [adminComplete, setAdminComplete] = useState<AdminDashboardCompleteResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchDashboardData()
-      .then((data) => {
+    Promise.all([
+      fetchDashboardData(),
+      fetchAdminDashboardComplete().catch(() => null),
+    ])
+      .then(([data, completeData]) => {
         setDashData(data);
+        setAdminComplete(completeData);
         setError(null);
       })
       .catch((err) => {
@@ -78,15 +84,25 @@ export default function AdminDashboard() {
   const { stats, distribucion_estados, metricas_rapidas, reclamos_recientes } =
     dashData.data;
 
-  // Construir stats con datos reales
-  const trendCriticas: "up" | "down" = stats.criticas > 0 ? "up" : "down";
+  // Calcular porcentajes reales de variación del admin/complete
+  const summary = adminComplete?.data?.summary;
+  const tasaVariacion = summary?.tasaResolucion?.variacion ?? 0;
+  const tasaTendencia = summary?.tasaResolucion?.tendencia ?? "neutral";
+
+  // Calcular variaciones reales para cada stat card
+  // Total reclamos: comparar con mes anterior si tenemos datos
+  const totalChange = summary
+    ? `${tasaVariacion >= 0 ? "+" : ""}${tasaVariacion.toFixed(1)}%`
+    : "—";
 
   const statsCards = [
     {
       title: "Total Reclamos",
       value: stats.total_denuncias.toLocaleString(),
-      change: "+11%",
-      trend: "up" as const,
+      change: summary
+        ? `${summary.totalReclamos} total`
+        : stats.total_denuncias.toLocaleString(),
+      showTrend: false,
       icon: FileText,
       color: "text-blue-600",
       bgColor: "bg-blue-100 dark:bg-blue-900/30",
@@ -94,8 +110,10 @@ export default function AdminDashboard() {
     {
       title: "En Proceso",
       value: stats.en_proceso.toLocaleString(),
-      change: "+5%",
-      trend: "up" as const,
+      change: stats.total_denuncias > 0
+        ? `${((stats.en_proceso / stats.total_denuncias) * 100).toFixed(1)}% del total`
+        : "0%",
+      showTrend: false,
       icon: Clock,
       color: "text-orange-600",
       bgColor: "bg-orange-100 dark:bg-orange-900/30",
@@ -103,8 +121,13 @@ export default function AdminDashboard() {
     {
       title: "Resueltos",
       value: stats.resueltas.toLocaleString(),
-      change: "+18%",
-      trend: "up" as const,
+      change: summary
+        ? `Tasa: ${summary.tasaResolucion.actual}%`
+        : stats.total_denuncias > 0
+          ? `${((stats.resueltas / stats.total_denuncias) * 100).toFixed(1)}%`
+          : "0%",
+      trend: tasaTendencia,
+      showTrend: !!summary,
       icon: CheckCircle2,
       color: "text-green-600",
       bgColor: "bg-green-100 dark:bg-green-900/30",
@@ -112,13 +135,24 @@ export default function AdminDashboard() {
     {
       title: "Críticos",
       value: stats.criticas.toLocaleString(),
-      change: stats.criticas > 0 ? "+3%" : "0%",
-      trend: trendCriticas,
+      change: stats.criticas > 0 ? "Requieren atención" : "Sin críticos",
+      trend: stats.criticas > 0 ? ("up" as const) : ("down" as const),
+      showTrend: stats.criticas > 0,
       icon: AlertTriangle,
       color: "text-red-600",
       bgColor: "bg-red-100 dark:bg-red-900/30",
     },
   ];
+
+  // Distribución como porcentaje del total
+  const totalByEstado = 
+    (distribucion_estados.nuevos || 0) + 
+    (distribucion_estados.en_proceso || 0) + 
+    (distribucion_estados.resueltos || 0) + 
+    (distribucion_estados.cerrados || 0);
+
+  const getPercent = (value: number) => totalByEstado > 0 ? Math.round((value / totalByEstado) * 100) : 0;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -144,13 +178,15 @@ export default function AdminDashboard() {
                     </p>
                     <p className="text-2xl font-bold mt-1">{stat.value}</p>
                     <div className="flex items-center gap-1 mt-2">
-                      <TrendingUp
-                        className={`h-3 w-3 ${stat.trend === "up" ? "text-green-600" : "text-red-600"}`}
-                      />
-                      <span
-                        className={`text-xs ${stat.trend === "up" ? "text-green-600" : "text-red-600"}`}
-                      >
-                        {stat.change} vs mes anterior
+                      {stat.showTrend && (
+                        stat.trend === "up" ? (
+                          <TrendingUp className="h-3 w-3 text-green-600" />
+                        ) : stat.trend === "down" ? (
+                          <TrendingDown className="h-3 w-3 text-red-600" />
+                        ) : null
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {stat.change}
                       </span>
                     </div>
                   </div>
@@ -241,52 +277,52 @@ export default function AdminDashboard() {
                 <div className="flex justify-between text-sm mb-1">
                   <span>Nuevos</span>
                   <span className="font-medium">
-                    {distribucion_estados.nuevos}
+                    {distribucion_estados.nuevos} ({getPercent(distribucion_estados.nuevos)}%)
                   </span>
                 </div>
                 <Progress
                   color="primary"
                   size="sm"
-                  value={distribucion_estados.nuevos}
+                  value={getPercent(distribucion_estados.nuevos)}
                 />
               </div>
               <div>
                 <div className="flex justify-between text-sm mb-1">
                   <span>En Proceso</span>
                   <span className="font-medium">
-                    {distribucion_estados.en_proceso}
+                    {distribucion_estados.en_proceso} ({getPercent(distribucion_estados.en_proceso)}%)
                   </span>
                 </div>
                 <Progress
                   color="warning"
                   size="sm"
-                  value={distribucion_estados.en_proceso}
+                  value={getPercent(distribucion_estados.en_proceso)}
                 />
               </div>
               <div>
                 <div className="flex justify-between text-sm mb-1">
                   <span>Resueltos</span>
                   <span className="font-medium">
-                    {distribucion_estados.resueltos}
+                    {distribucion_estados.resueltos} ({getPercent(distribucion_estados.resueltos)}%)
                   </span>
                 </div>
                 <Progress
                   color="success"
                   size="sm"
-                  value={distribucion_estados.resueltos}
+                  value={getPercent(distribucion_estados.resueltos)}
                 />
               </div>
               <div>
                 <div className="flex justify-between text-sm mb-1">
                   <span>Cerrados</span>
                   <span className="font-medium">
-                    {distribucion_estados.cerrados}
+                    {distribucion_estados.cerrados} ({getPercent(distribucion_estados.cerrados)}%)
                   </span>
                 </div>
                 <Progress
                   color="default"
                   size="sm"
-                  value={distribucion_estados.cerrados}
+                  value={getPercent(distribucion_estados.cerrados)}
                 />
               </div>
             </CardBody>

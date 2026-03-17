@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardBody,
@@ -8,16 +8,19 @@ import {
   Button,
   Select,
   SelectItem,
+  Spinner,
 } from "@heroui/react";
 import {
   Download,
   FileText,
   TrendingUp,
+  TrendingDown,
   Building2,
   Calendar,
   BarChart3,
   PieChart,
   Activity,
+  AlertTriangle,
 } from "lucide-react";
 import {
   BarChart,
@@ -30,45 +33,68 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-// Mock data for charts
-const claimsByMonth = [
-  { mes: "Ene", total: 45, resueltos: 38, pendientes: 7 },
-  { mes: "Feb", total: 52, resueltos: 45, pendientes: 7 },
-  { mes: "Mar", total: 48, resueltos: 42, pendientes: 6 },
-  { mes: "Abr", total: 61, resueltos: 53, pendientes: 8 },
-  { mes: "May", total: 55, resueltos: 48, pendientes: 7 },
-  { mes: "Jun", total: 58, resueltos: 51, pendientes: 7 },
-];
-
-const claimsByType = [
-  { tipo: "Acoso Laboral", cantidad: 89, porcentaje: 35 },
-  { tipo: "Discriminación", cantidad: 67, porcentaje: 26 },
-  { tipo: "Fraude", cantidad: 45, porcentaje: 18 },
-  { tipo: "Conflicto de Interés", cantidad: 34, porcentaje: 13 },
-  { tipo: "Otros", cantidad: 20, porcentaje: 8 },
-];
-
-const claimsByCompany = [
-  { empresa: "Empresa ABC", cantidad: 78 },
-  { empresa: "Corporación XYZ", cantidad: 65 },
-  { empresa: "Industrias DEF", cantidad: 52 },
-  { empresa: "Grupo GHI", cantidad: 38 },
-  { empresa: "Otros", cantidad: 22 },
-];
-
-const resolutionTime = [
-  { rango: "0-3 días", cantidad: 45 },
-  { rango: "4-7 días", cantidad: 89 },
-  { rango: "8-14 días", cantidad: 67 },
-  { rango: "15-30 días", cantidad: 34 },
-  { rango: "+30 días", cantidad: 20 },
-];
+import {
+  fetchDashboardReports,
+  type DashboardReportResponse,
+} from "@/lib/api/dashboard";
 
 const COLORS = ["#7928CA", "#0070F3", "#17C964", "#F5A524", "#F31260"];
 
 export default function ReportsPage() {
   const [reportPeriod, setReportPeriod] = useState("monthly");
   const [activeTab, setActiveTab] = useState("executive");
+  const [reportData, setReportData] = useState<DashboardReportResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadReportData = async (period: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchDashboardReports(period);
+      setReportData(data);
+    } catch (err: any) {
+      setError(err.message || "Error al cargar los datos del reporte");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadReportData(reportPeriod);
+  }, [reportPeriod]);
+
+  if (loading && !reportData) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Spinner label="Cargando reportes..." size="lg" />
+      </div>
+    );
+  }
+
+  if (error && !reportData) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Card className="max-w-md">
+          <CardBody className="text-center p-6">
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Error al cargar datos</h2>
+            <p className="text-muted-foreground">{error}</p>
+          </CardBody>
+        </Card>
+      </div>
+    );
+  }
+
+  const summary = reportData?.summary;
+  const claimsByMonth = reportData?.claimsByMonth || [];
+  const claimsByType = reportData?.claimsByType || [];
+  const claimsByCompany = reportData?.claimsByCompany || [];
+  const resolutionTime = reportData?.resolutionTime || [];
+
+  const variacionTotal = summary ? (summary.variacionTotalReclamos * 100) : 0;
+  const variacionTasa = summary ? (summary.variacionTasaResolucion * 100) : 0;
+  const variacionTiempo = summary ? (summary.variacionTiempoPromedioDias * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -102,6 +128,7 @@ export default function ReportsPage() {
           </Select>
           <Button
             className="bg-blue-900 text-white hover:bg-blue-800 "
+            isLoading={loading}
             size="lg"
             startContent={<Download size={20} />}
           >
@@ -117,9 +144,9 @@ export default function ReportsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Reclamos</p>
-                <p className="text-2xl font-bold mt-1">255</p>
-                <p className="text-xs text-green-600 mt-1">
-                  +12% vs período anterior
+                <p className="text-2xl font-bold mt-1">{summary?.totalReclamos ?? 0}</p>
+                <p className={`text-xs mt-1 ${variacionTotal >= 0 ? "text-green-600" : "text-red-600"}`}>
+                  {variacionTotal >= 0 ? "+" : ""}{variacionTotal.toFixed(1)}% vs período anterior
                 </p>
               </div>
               <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
@@ -136,13 +163,19 @@ export default function ReportsPage() {
                 <p className="text-sm text-muted-foreground">
                   Tasa de Resolución
                 </p>
-                <p className="text-2xl font-bold mt-1">87%</p>
-                <p className="text-xs text-green-600 mt-1">
-                  +5% vs período anterior
+                <p className="text-2xl font-bold mt-1">
+                  {summary ? (summary.tasaResolucion * 100).toFixed(0) : 0}%
+                </p>
+                <p className={`text-xs mt-1 ${variacionTasa >= 0 ? "text-green-600" : "text-red-600"}`}>
+                  {variacionTasa >= 0 ? "+" : ""}{variacionTasa.toFixed(1)}% vs período anterior
                 </p>
               </div>
               <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                <TrendingUp className="h-6 w-6 text-green-600" />
+                {variacionTasa >= 0 ? (
+                  <TrendingUp className="h-6 w-6 text-green-600" />
+                ) : (
+                  <TrendingDown className="h-6 w-6 text-red-600" />
+                )}
               </div>
             </div>
           </CardBody>
@@ -153,9 +186,11 @@ export default function ReportsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Tiempo Promedio</p>
-                <p className="text-2xl font-bold mt-1">5.2 días</p>
-                <p className="text-xs text-red-600 mt-1">
-                  +0.3 días vs período anterior
+                <p className="text-2xl font-bold mt-1">
+                  {summary?.tiempoPromedioDias ?? 0} días
+                </p>
+                <p className={`text-xs mt-1 ${variacionTiempo <= 0 ? "text-green-600" : "text-red-600"}`}>
+                  {variacionTiempo >= 0 ? "+" : ""}{variacionTiempo.toFixed(1)}% vs período anterior
                 </p>
               </div>
               <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
@@ -172,9 +207,9 @@ export default function ReportsPage() {
                 <p className="text-sm text-muted-foreground">
                   Empresas Activas
                 </p>
-                <p className="text-2xl font-bold mt-1">12</p>
+                <p className="text-2xl font-bold mt-1">{summary?.empresasActivas ?? 0}</p>
                 <p className="text-xs text-green-600 mt-1">
-                  +2 nuevas este mes
+                  +{summary?.nuevasEmpresas ?? 0} nuevas este período
                 </p>
               </div>
               <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
@@ -228,14 +263,14 @@ export default function ReportsPage() {
                   <div className="flex items-center gap-3 flex-1">
                     <div
                       className="w-4 h-4 rounded"
-                      style={{ backgroundColor: COLORS[index] }}
+                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
                     />
                     <span className="text-sm">{item.tipo}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium">{item.cantidad}</span>
                     <span className="text-sm font-medium">
-                      {item.porcentaje}%
+                      {(item.porcentaje * 100).toFixed(0)}%
                     </span>
                   </div>
                 </div>
@@ -324,27 +359,31 @@ export default function ReportsPage() {
               </button>
             </div>
 
-            {activeTab === "executive" && (
+            {activeTab === "executive" && summary && (
               <div className="p-6 space-y-4">
                 <h3 className="text-lg font-semibold">Resumen Ejecutivo</h3>
                 <p className="text-sm text-muted-foreground">
-                  Durante el período seleccionado, se registraron 255 reclamos
-                  en total, con una tasa de resolución del 87%. El tiempo
-                  promedio de resolución fue de 5.2 días, ligeramente superior
-                  al período anterior.
+                  Durante el período seleccionado, se registraron {summary.totalReclamos} reclamos
+                  en total, con una tasa de resolución del {(summary.tasaResolucion * 100).toFixed(0)}%. El tiempo
+                  promedio de resolución fue de {summary.tiempoPromedioDias} días
+                  {variacionTiempo > 0
+                    ? ", ligeramente superior al período anterior."
+                    : variacionTiempo < 0
+                    ? ", mejorando respecto al período anterior."
+                    : "."}
                 </p>
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   <div className="p-4 bg-default-50 dark:bg-default-100/50 rounded-lg">
                     <p className="text-sm text-muted-foreground">
                       Reclamos Críticos
                     </p>
-                    <p className="text-2xl font-bold mt-1">8</p>
+                    <p className="text-2xl font-bold mt-1">{summary.reclamosCriticos}</p>
                   </div>
                   <div className="p-4 bg-default-50 dark:bg-default-100/50 rounded-lg">
                     <p className="text-sm text-muted-foreground">
                       Satisfacción Promedio
                     </p>
-                    <p className="text-2xl font-bold mt-1">4.2/5</p>
+                    <p className="text-2xl font-bold mt-1">{summary.satisfaccionPromedio}/5</p>
                   </div>
                 </div>
               </div>

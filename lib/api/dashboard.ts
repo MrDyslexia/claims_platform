@@ -100,6 +100,145 @@ export interface AnalystAnalyticsResponse {
   satisfactionTrend: { fecha: string; satisfaccion: number }[];
 }
 
+// ==========================================
+// DASHBOARD REPORTS (POST /dashboard/reports)
+// ==========================================
+
+export interface ReportSummary {
+  totalReclamos: number;
+  tasaResolucion: number;
+  tiempoPromedioDias: number;
+  empresasActivas: number;
+  variacionTotalReclamos: number;
+  variacionTasaResolucion: number;
+  variacionTiempoPromedioDias: number;
+  nuevasEmpresas: number;
+  reclamosCriticos: number;
+  satisfaccionPromedio: number;
+}
+
+export interface ClaimsByMonth {
+  mes: string;
+  total: number;
+  resueltos: number;
+  pendientes: number;
+}
+
+export interface ClaimsByType {
+  tipo: string;
+  cantidad: number;
+  porcentaje: number;
+}
+
+export interface ClaimsByCompany {
+  empresa: string;
+  cantidad: number;
+}
+
+export interface ResolutionTime {
+  rango: string;
+  cantidad: number;
+}
+
+export interface DashboardReportResponse {
+  reportPeriod: string;
+  summary: ReportSummary;
+  claimsByMonth: ClaimsByMonth[];
+  claimsByType: ClaimsByType[];
+  claimsByCompany: ClaimsByCompany[];
+  resolutionTime: ResolutionTime[];
+}
+
+export async function fetchDashboardReports(
+  period: string = "monthly",
+): Promise<DashboardReportResponse> {
+  const token = localStorage.getItem("auth_token");
+
+  if (!token) {
+    throw new Error("No hay token de autenticación");
+  }
+
+  const response = await fetch(`${API_URL}/dashboard/reports?period=${period}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+// ==========================================
+// DASHBOARD ANALISTA (GET /dashboard/analista)
+// ==========================================
+
+export interface TrendData {
+  value: number;
+  change: string;
+  trend: "up" | "down" | "neutral";
+}
+
+export interface GlobalKPIs {
+  total_claims: TrendData;
+  pending_claims: TrendData;
+  resolved_claims: TrendData;
+  resolution_rate: TrendData;
+}
+
+export interface KeyMetrics {
+  avg_resolution_time: TrendData;
+  customer_satisfaction: TrendData;
+  critical_claims: { value: number; description: string };
+  recurrence_rate: TrendData;
+}
+
+export interface CompanySummary {
+  empresa_id: number;
+  empresa_nombre: string;
+  total_claims: number;
+  pending_claims: number;
+  resolved_claims: number;
+  resolution_rate: number;
+}
+
+export interface DashboardAnalistaResponse {
+  global_kpis: GlobalKPIs;
+  monthly_data: { mes: string; reclamos: number; resueltos: number }[];
+  claims_by_type: { tipo: string; cantidad: number }[];
+  claims_by_status: { estado: string; cantidad: number }[];
+  key_metrics: KeyMetrics;
+  companies_summary: CompanySummary[];
+}
+
+export async function fetchDashboardAnalista(): Promise<DashboardAnalistaResponse> {
+  const token = localStorage.getItem("auth_token");
+
+  if (!token) {
+    throw new Error("No hay token de autenticación");
+  }
+
+  const response = await fetch(`${API_URL}/dashboard/analista`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
 /**
  * Obtiene métricas detalladas para analista
  * @param startDate Fecha de inicio (YYYY-MM-DD)

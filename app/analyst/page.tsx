@@ -1,6 +1,7 @@
 "use client";
 
-import { Card, CardBody, CardHeader, Divider } from "@heroui/react";
+import { useEffect, useState } from "react";
+import { Card, CardBody, CardHeader, Divider, Spinner } from "@heroui/react";
 import {
   TrendingUp,
   TrendingDown,
@@ -8,6 +9,7 @@ import {
   CheckCircle2,
   AlertCircle,
   FileText,
+  AlertTriangle,
 } from "lucide-react";
 import {
   LineChart,
@@ -26,7 +28,10 @@ import {
 } from "recharts";
 
 import { useAuth } from "@/lib/auth/auth-context";
-import { mockClaims } from "@/lib/data";
+import {
+  fetchDashboardAnalista,
+  type DashboardAnalistaResponse,
+} from "@/lib/api/dashboard";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -66,91 +71,104 @@ const chartColors = {
   yellow: "hsl(48, 96%, 53%)",
 };
 
+const statusColors = [
+  chartColors.orange,
+  chartColors.blue,
+  chartColors.green,
+  chartColors.purple,
+  chartColors.pink,
+  chartColors.cyan,
+];
+
 export default function AnalystDashboard() {
   const { user } = useAuth();
+  const [data, setData] = useState<DashboardAnalistaResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const companyClaims = mockClaims.filter(
-    (c) => c.empresa_id === user?.empresa_id,
-  );
+  useEffect(() => {
+    fetchDashboardAnalista()
+      .then((result) => {
+        setData(result);
+        setError(null);
+      })
+      .catch((err) => {
+        setError(err.message || "Error al cargar los datos del dashboard");
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
-  const totalClaims = companyClaims.length;
-  const pendingClaims = companyClaims.filter(
-    (c) => c.estado === "pendiente",
-  ).length;
-  const resolvedClaims = companyClaims.filter(
-    (c) => c.estado === "resuelto",
-  ).length;
-  const inProgressClaims = companyClaims.filter(
-    (c) => c.estado === "en_revision",
-  ).length;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Spinner label="Cargando dashboard..." size="lg" />
+      </div>
+    );
+  }
 
-  const avgResolutionTime = 4.2; // días promedio
-  const resolutionRate = ((resolvedClaims / totalClaims) * 100).toFixed(1);
+  if (error || !data) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Card className="max-w-md">
+          <CardBody className="text-center p-6">
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2">
+              Error al cargar datos
+            </h2>
+            <p className="text-muted-foreground">
+              {error || "No se pudieron obtener los datos del dashboard"}
+            </p>
+          </CardBody>
+        </Card>
+      </div>
+    );
+  }
 
-  const monthlyData = [
-    { mes: "Ene", reclamos: 12, resueltos: 10 },
-    { mes: "Feb", reclamos: 19, resueltos: 15 },
-    { mes: "Mar", reclamos: 15, resueltos: 13 },
-    { mes: "Abr", reclamos: 22, resueltos: 18 },
-    { mes: "May", reclamos: 18, resueltos: 16 },
-    { mes: "Jun", reclamos: 25, resueltos: 20 },
-  ];
-
-  const claimsByType = [
-    { tipo: "Producto", cantidad: 45, color: chartColors.blue },
-    { tipo: "Servicio", cantidad: 32, color: chartColors.purple },
-    { tipo: "Facturación", cantidad: 28, color: chartColors.pink },
-    { tipo: "Entrega", cantidad: 20, color: chartColors.orange },
-  ];
-
-  const claimsByStatus = [
-    { estado: "Pendiente", cantidad: pendingClaims, color: chartColors.orange },
-    {
-      estado: "En Revisión",
-      cantidad: inProgressClaims,
-      color: chartColors.blue,
-    },
-    { estado: "Resuelto", cantidad: resolvedClaims, color: chartColors.green },
-  ];
+  const { global_kpis, monthly_data, claims_by_type, claims_by_status, key_metrics } = data;
 
   const kpiCards = [
     {
       title: "Total Reclamos",
-      value: totalClaims,
-      change: "+12%",
-      trend: "up",
+      value: global_kpis.total_claims.value,
+      change: global_kpis.total_claims.change,
+      trend: global_kpis.total_claims.trend,
       icon: FileText,
       color: "text-blue-500",
       bgColor: "bg-blue-500/10",
     },
     {
       title: "Pendientes",
-      value: pendingClaims,
-      change: "-5%",
-      trend: "down",
+      value: global_kpis.pending_claims.value,
+      change: global_kpis.pending_claims.change,
+      trend: global_kpis.pending_claims.trend,
       icon: Clock,
       color: "text-orange-500",
       bgColor: "bg-orange-500/10",
     },
     {
       title: "Resueltos",
-      value: resolvedClaims,
-      change: "+18%",
-      trend: "up",
+      value: global_kpis.resolved_claims.value,
+      change: global_kpis.resolved_claims.change,
+      trend: global_kpis.resolved_claims.trend,
       icon: CheckCircle2,
       color: "text-green-500",
       bgColor: "bg-green-500/10",
     },
     {
       title: "Tasa Resolución",
-      value: `${resolutionRate}%`,
-      change: "+3%",
-      trend: "up",
+      value: `${global_kpis.resolution_rate.value}%`,
+      change: global_kpis.resolution_rate.change,
+      trend: global_kpis.resolution_rate.trend,
       icon: TrendingUp,
       color: "text-purple-500",
       bgColor: "bg-purple-500/10",
     },
   ];
+
+  const claimsByStatusData = claims_by_status.map((item, index) => ({
+    ...item,
+    color: statusColors[index % statusColors.length],
+  }));
 
   return (
     <div className="p-8 space-y-8">
@@ -178,7 +196,7 @@ export default function AnalystDashboard() {
                     <Icon className={`w-6 h-6 ${kpi.color}`} />
                   </div>
                   <div
-                    className={`flex items-center gap-1 text-sm ${kpi.trend === "up" ? "text-success" : "text-danger"}`}
+                    className={`flex items-center gap-1 text-sm ${kpi.trend === "up" ? "text-success" : kpi.trend === "down" ? "text-danger" : "text-default-500"}`}
                   >
                     <TrendIcon className="w-4 h-4" />
                     <span>{kpi.change}</span>
@@ -209,7 +227,7 @@ export default function AnalystDashboard() {
           </CardHeader>
           <CardBody>
             <ResponsiveContainer height={300} width="100%">
-              <LineChart data={monthlyData}>
+              <LineChart data={monthly_data}>
                 <CartesianGrid
                   className="stroke-border"
                   opacity={0.3}
@@ -260,7 +278,7 @@ export default function AnalystDashboard() {
           </CardHeader>
           <CardBody>
             <ResponsiveContainer height={300} width="100%">
-              <BarChart data={claimsByType}>
+              <BarChart data={claims_by_type}>
                 <CartesianGrid
                   className="stroke-border"
                   opacity={0.3}
@@ -277,8 +295,8 @@ export default function AnalystDashboard() {
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="cantidad" name="Cantidad" radius={[8, 8, 0, 0]}>
-                  {claimsByType.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  {claims_by_type.map((_entry, index) => (
+                    <Cell key={`cell-${index}`} fill={statusColors[index % statusColors.length]} />
                   ))}
                 </Bar>
               </BarChart>
@@ -302,7 +320,7 @@ export default function AnalystDashboard() {
                 <Pie
                   cx="50%"
                   cy="50%"
-                  data={claimsByStatus}
+                  data={claimsByStatusData}
                   dataKey="cantidad"
                   fill="#8884d8"
                   label={(entry: any) => `${entry.estado}: ${entry.cantidad}`}
@@ -311,7 +329,7 @@ export default function AnalystDashboard() {
                   stroke="hsl(var(--background))"
                   strokeWidth={2}
                 >
-                  {claimsByStatus.map((entry, index) => (
+                  {claimsByStatusData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -338,21 +356,31 @@ export default function AnalystDashboard() {
                     Tiempo Promedio de Resolución
                   </p>
                   <p className="text-2xl font-bold text-foreground">
-                    {avgResolutionTime} días
+                    {key_metrics.avg_resolution_time.value} días
                   </p>
-                  <div className="flex items-center gap-1 text-sm text-success mt-1">
-                    <TrendingDown className="w-4 h-4" />
-                    <span>-0.8 días vs mes anterior</span>
+                  <div className={`flex items-center gap-1 text-sm mt-1 ${key_metrics.avg_resolution_time.trend === "down" ? "text-success" : "text-danger"}`}>
+                    {key_metrics.avg_resolution_time.trend === "down" ? (
+                      <TrendingDown className="w-4 h-4" />
+                    ) : (
+                      <TrendingUp className="w-4 h-4" />
+                    )}
+                    <span>{key_metrics.avg_resolution_time.change}</span>
                   </div>
                 </div>
                 <div>
                   <p className="text-sm text-default-500 mb-1">
                     Satisfacción del Cliente
                   </p>
-                  <p className="text-2xl font-bold text-foreground">4.6/5.0</p>
-                  <div className="flex items-center gap-1 text-sm text-success mt-1">
-                    <TrendingUp className="w-4 h-4" />
-                    <span>+0.3 vs mes anterior</span>
+                  <p className="text-2xl font-bold text-foreground">
+                    {key_metrics.customer_satisfaction.value}/5.0
+                  </p>
+                  <div className={`flex items-center gap-1 text-sm mt-1 ${key_metrics.customer_satisfaction.trend === "up" ? "text-success" : "text-danger"}`}>
+                    {key_metrics.customer_satisfaction.trend === "up" ? (
+                      <TrendingUp className="w-4 h-4" />
+                    ) : (
+                      <TrendingDown className="w-4 h-4" />
+                    )}
+                    <span>{key_metrics.customer_satisfaction.change}</span>
                   </div>
                 </div>
               </div>
@@ -361,20 +389,28 @@ export default function AnalystDashboard() {
                   <p className="text-sm text-default-500 mb-1">
                     Reclamos Críticos
                   </p>
-                  <p className="text-2xl font-bold text-danger">3</p>
+                  <p className="text-2xl font-bold text-danger">
+                    {key_metrics.critical_claims.value}
+                  </p>
                   <div className="flex items-center gap-1 text-sm text-default-500 mt-1">
                     <AlertCircle className="w-4 h-4" />
-                    <span>Requieren atención inmediata</span>
+                    <span>{key_metrics.critical_claims.description}</span>
                   </div>
                 </div>
                 <div>
                   <p className="text-sm text-default-500 mb-1">
                     Tasa de Reincidencia
                   </p>
-                  <p className="text-2xl font-bold text-foreground">8.2%</p>
-                  <div className="flex items-center gap-1 text-sm text-success mt-1">
-                    <TrendingDown className="w-4 h-4" />
-                    <span>-2.1% vs mes anterior</span>
+                  <p className="text-2xl font-bold text-foreground">
+                    {key_metrics.recurrence_rate.value}%
+                  </p>
+                  <div className={`flex items-center gap-1 text-sm mt-1 ${key_metrics.recurrence_rate.trend === "down" ? "text-success" : "text-danger"}`}>
+                    {key_metrics.recurrence_rate.trend === "down" ? (
+                      <TrendingDown className="w-4 h-4" />
+                    ) : (
+                      <TrendingUp className="w-4 h-4" />
+                    )}
+                    <span>{key_metrics.recurrence_rate.change}</span>
                   </div>
                 </div>
               </div>
