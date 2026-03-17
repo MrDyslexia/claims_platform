@@ -59,12 +59,12 @@ async function bootstrap() {
     // ALTER TABLE rol ADD COLUMN arquetipo_id BIGINT;
     // CREATE TABLE arquetipo (id BIGINT AUTO_INCREMENT PRIMARY KEY, codigo VARCHAR(50) UNIQUE, nombre VARCHAR(150), descripcion TEXT);
     // CREATE TABLE arquetipo_permiso (arquetipo_id BIGINT, permiso_id BIGINT, PRIMARY KEY(arquetipo_id, permiso_id));
-    if (env.nodeEnv === 'development') {
-        const { syncDatabase } = await import('./db/sequelize');
-        syncDatabase({ alter: true }).catch((e) =>
-            console.error('Database sync error:', e)
-        );
-    }
+    // if (env.nodeEnv === 'development') {
+    //     const { syncDatabase } = await import('./db/sequelize');
+    //     syncDatabase({ alter: true }).catch((e) =>
+    //         console.error('Database sync error:', e)
+    //     );
+    // }
 }
 
 bootstrap().catch((e) => {

@@ -83,8 +83,6 @@ export const defineUsuario = (sequelize: Sequelize) => {
             tableName: 'usuario',
             timestamps: false,
             indexes: [
-                { fields: ['rut'], unique: true },
-                { fields: ['email'], unique: true },
                 { fields: ['activo'] },
                 { fields: ['last_login_at'] },
             ],
