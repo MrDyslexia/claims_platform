@@ -548,8 +548,20 @@ export const generateReports = async (req: Request, res: Response) => {
             },
         });
 
-        // Satisfacción promedio (simulado, ajustar según tu modelo)
-        const satisfaccionPromedio = 4.2 + (Math.random() * 0.6 - 0.3);
+        // Satisfacción promedio (basado en nota_satisfaccion real)
+        const satisfaccionResult = await models.Denuncia.findAll({
+            where: {
+                created_at: {
+                    [Op.between]: [startDate, endDate],
+                },
+                nota_satisfaccion: { [Op.ne]: null },
+            },
+            attributes: [[fn('AVG', col('nota_satisfaccion')), 'avg_satisfaction']],
+            raw: true,
+        });
+        const satisfaccionPromedio = satisfaccionResult[0] 
+            ? parseFloat((satisfaccionResult[0] as any).avg_satisfaction) || 0 
+            : 0;
 
         // ===== SUMMARY - Período anterior (para variaciones) =====
         const totalReclamosPrevious = await models.Denuncia.count({

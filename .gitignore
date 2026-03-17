@@ -12,3 +12,4 @@ public
 migrations
 fix_admin_pass.sql
 denuncias_app_2026-01-28_181859.sql
+openapi.yaml
