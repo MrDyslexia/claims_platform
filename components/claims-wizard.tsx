@@ -178,6 +178,7 @@ export function ClaimsWizard() {
       {
         description: string;
         categories: string[];
+        allowsAnonymous?: boolean;
       }
     >
   >({});
@@ -230,9 +231,17 @@ export function ClaimsWizard() {
     setFormData((prev) => {
       const merged = { ...prev, ...newData };
 
+      // If category changed and it doesn't allow anonymous, force isAnonymous to false
+      if (newData.category && newData.category !== prev.category) {
+        const catData = categories[newData.category];
+        if (catData && catData.allowsAnonymous === false) {
+          merged.isAnonymous = false;
+        }
+      }
+
       return merged;
     });
-  }, []);
+  }, [categories]);
 
   const progress = (currentStep / STEPS.length) * 100;
   const currentStepData = STEPS.find((step) => step.id === currentStep);
@@ -426,7 +435,11 @@ export function ClaimsWizard() {
         );
       case 2:
         return (
-          <IdentificationStep formData={formData} onUpdate={handleFormUpdate} />
+          <IdentificationStep
+            allowsAnonymous={formData.category ? (categories[formData.category]?.allowsAnonymous !== false) : true}
+            formData={formData}
+            onUpdate={handleFormUpdate}
+          />
         );
       case 3:
         return (

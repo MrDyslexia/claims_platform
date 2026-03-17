@@ -68,6 +68,7 @@ export interface CategoriaDenuncia {
   descripcion?: string;
   icono?: string;
   activo: boolean;
+  permite_anonimo?: boolean;
 }
 
 export interface TipoDenuncia {

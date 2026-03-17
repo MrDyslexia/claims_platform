@@ -155,6 +155,7 @@ export default function SettingsPage() {
     descripcion: "",
     activo: true,
     icono: "Settings",
+    permite_anonimo: true,
   });
 
   const [iconSearch, setIconSearch] = useState("");
@@ -207,6 +208,7 @@ export default function SettingsPage() {
         descripcion: category.descripcion || "",
         activo: category.activo,
         icono: category.icono || "Settings",
+        permite_anonimo: category.permite_anonimo !== false,
       });
     } else {
       setEditingCategory(null);
@@ -215,6 +217,7 @@ export default function SettingsPage() {
         descripcion: "",
         activo: true,
         icono: "Settings",
+        permite_anonimo: true,
       });
     }
     onCategoryOpen();
@@ -720,6 +723,19 @@ export default function SettingsPage() {
               >
                 Categoría activa
               </Checkbox>
+              <div className="space-y-1">
+                <Checkbox
+                  isSelected={categoryFormData.permite_anonimo}
+                  onValueChange={(checked) =>
+                    setCategoryFormData({ ...categoryFormData, permite_anonimo: checked })
+                  }
+                >
+                  Permite reclamos anónimos
+                </Checkbox>
+                <p className="text-xs text-muted-foreground ml-6">
+                  Si se desactiva, los usuarios deberán identificarse obligatoriamente al seleccionar esta categoría (ej: Ley Karin)
+                </p>
+              </div>
             </div>
           </ModalBody>
           <ModalFooter>

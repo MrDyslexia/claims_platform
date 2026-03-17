@@ -16,11 +16,13 @@ import {
 interface IdentificationStepProps {
   readonly formData: Record<string, any>;
   readonly onUpdate: (data: Record<string, any>) => void;
+  readonly allowsAnonymous?: boolean;
 }
 
 export function IdentificationStep({
   formData,
   onUpdate,
+  allowsAnonymous = true,
 }: IdentificationStepProps) {
 
   const [isAnonymous, setIsAnonymous] = useState<boolean>(
@@ -231,25 +233,45 @@ export function IdentificationStep({
           </div>
         </CardHeader>
         <CardBody className="space-y-4">
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div className="flex items-center space-x-3">
-              <UserX className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">Reclamo anónimo</p>
-                <p className="text-sm text-muted-foreground">
-                  Tu identidad se mantendrá confidencial
-                </p>
+          {allowsAnonymous ? (
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center space-x-3">
+                <UserX className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">Reclamo anónimo</p>
+                  <p className="text-sm text-muted-foreground">
+                    Tu identidad se mantendrá confidencial
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={isAnonymous}
+                classNames={{
+                  wrapper: "group-data-[selected=true]:bg-[#2B448D]",
+                }}
+                id="anonymous-mode"
+                onChange={(e) => handleAnonymousToggle(e.target.checked)}
+              />
+            </div>
+          ) : (
+            <div className="p-4 border rounded-lg bg-blue-50/50 border-blue-200">
+              <div className="flex items-start gap-3">
+                <div className="flex items-center justify-center p-2 bg-blue-100 rounded-lg">
+                  <AlertTriangle className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-blue-900 mb-1">
+                    Identificación requerida
+                  </p>
+                  <p className="text-sm text-blue-700 leading-relaxed">
+                    La categoría seleccionada requiere que proporciones tus datos
+                    personales por disposición legal. No es posible realizar este
+                    tipo de reclamo de forma anónima.
+                  </p>
+                </div>
               </div>
             </div>
-            <Switch
-              checked={isAnonymous}
-              classNames={{
-                wrapper: "group-data-[selected=true]:bg-[#2B448D]",
-              }}
-              id="anonymous-mode"
-              onChange={(e) => handleAnonymousToggle(e.target.checked)}
-            />
-          </div>
+          )}
 
           {isAnonymous && (
             <div className="space-y-3">

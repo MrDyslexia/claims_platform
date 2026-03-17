@@ -10,6 +10,7 @@ interface BackendCategory {
   icon: string;
   name: string;
   description: string | null;
+  allowsAnonymous?: boolean;
   subcategories: BackendSubcategory[];
 }
 
@@ -26,6 +27,7 @@ interface TransformedData {
     {
       description: string;
       categories: string[];
+      allowsAnonymous: boolean;
     }
   >;
   categoryIcons: Record<string, any>;
@@ -38,6 +40,7 @@ const DEFAULT_DATA: TransformedData = {
   categories: {
     "Respeto y seguridad en el trabajo": {
       description: "Problemas relacionados con respeto y seguridad laboral",
+      allowsAnonymous: false,
       categories: [
         "Acoso laboral",
         "Acoso sexual",
@@ -50,6 +53,7 @@ const DEFAULT_DATA: TransformedData = {
     },
     "Ley Karin": {
       description: "Problemas relacionados con respeto y seguridad laboral",
+      allowsAnonymous: false,
       categories: [
         "Acoso laboral",
         "Acoso sexual",
@@ -62,6 +66,7 @@ const DEFAULT_DATA: TransformedData = {
     },
     "Integridad en los negocios": {
       description: "Problemas relacionados con integridad empresarial",
+      allowsAnonymous: true,
       categories: [
         "Apropiación o uso indebido de recursos de la compañía",
         "Conflicto de intereses",
@@ -77,6 +82,7 @@ const DEFAULT_DATA: TransformedData = {
     },
     "Sostenibilidad y medio ambiente": {
       description: "Problemas relacionados con sostenibilidad y medio ambiente",
+      allowsAnonymous: true,
       categories: [
         "Medio ambiente",
         "Trabajo infantil o forzoso",
@@ -103,6 +109,7 @@ function transformBackendData(backendData: BackendResponse): TransformedData {
     {
       description: string;
       categories: string[];
+      allowsAnonymous: boolean;
       enterprise: [{ rut: string; nombre: string }];
     }
   > = {};
@@ -116,6 +123,7 @@ function transformBackendData(backendData: BackendResponse): TransformedData {
     transformedCategories[category.name] = {
       description: category.description || "Sin descripción disponible",
       categories: subcategoryNames,
+      allowsAnonymous: category.allowsAnonymous !== false,
       enterprise: [{ rut: "", nombre: "" }],
     };
 
