@@ -92,8 +92,9 @@ const DEFAULT_DATA: TransformedData = {
   },
   categoryIcons: {
     "Respeto y seguridad en el trabajo": (LucideIcons as any).Headset,
-    "Integridad en los negocios": (LucideIcons as any).Headset,
-    "Sostenibilidad y medio ambiente": (LucideIcons as any).Headset,
+    "Ley Karin": (LucideIcons as any).Shield,
+    "Integridad en los negocios": (LucideIcons as any).Briefcase,
+    "Sostenibilidad y medio ambiente": (LucideIcons as any).Leaf,
   },
   countries: ["Argentina", "Chile", "Perú", "Francia", "Mexico"],
 };

@@ -3,7 +3,7 @@
 import { Button } from "@heroui/button";
 import { Card, CardBody, Image } from "@heroui/react";
 import Link from "next/link";
-import { Search, Shield, Lock, Clock, CheckCircle } from "lucide-react";
+import { Search, Shield, Lock, Clock } from "lucide-react";
 
 import { ClaimsWizard } from "@/components/claims-wizard";
 import LogoCarousel from "@/components/LogoCarousel";
@@ -81,25 +81,37 @@ export default function HomePage() {
 
       <div className="container mx-auto px-4 mt-6 relative z-10 pb-16">
         <div className="max-w-6xl mx-auto">
+          <div className="mb-10 text-slate-600 text-[1.05rem] md:text-lg leading-relaxed space-y-5 font-light">
+            <p>
+              Bienvenido al Canal de Denuncias de Grupo Belator. Esta es una plataforma oficial, segura y estrictamente confidencial, dispuesta para que colaboradores y terceros reporten cualquier hecho o conducta que pudiese constituir una infracción a nuestros principios éticos o a la legalidad vigente (en especial bajo el marco de las Leyes N° 20.393 y N° 21.643).
+            </p>
+            <p>
+              Nuestra organización garantiza la protección absoluta de los denunciantes que actúen de buena fe, asegurando la inexistencia de represalias y el manejo profesional de la información.
+            </p>
+            <p>
+              Para facilitar una investigación efectiva, le solicitamos hacer un uso responsable de este medio, proporcionando un relato detallado de los hechos, identificando a los involucrados, señalando el lugar y adjuntando cualquier antecedente o evidencia relevante para el caso.
+            </p>
+          </div>
+
           <div className="grid md:grid-cols-2 gap-6 mb-12">
-            {/* Card informativa */}
-            <Card className="bg-white border border-slate-200 shadow-lg hover:shadow-xl transition-all duration-300">
+            {/* Card Importante */}
+            <Card className="bg-white border border-orange-100 shadow-lg hover:shadow-xl transition-all duration-300">
               <CardBody className="p-6 md:p-8">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="bg-[#202e5e] p-3 rounded-xl shrink-0 shadow-lg">
-                    <CheckCircle className="w-6 h-6 text-white" />
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="bg-orange-500 w-10 h-10 flex items-center justify-center rounded-xl shrink-0 shadow-md">
+                    <span className="text-white font-bold text-xl">!</span>
                   </div>
-                  <h2 className="text-xl md:text-2xl font-semibold text-slate-800">
-                    ¿Qué es Canal de Denuncias?
+                  <h2 className="text-xl font-semibold text-slate-800 uppercase">
+                    Importante
                   </h2>
                 </div>
-                <p className="text-slate-600 leading-relaxed text-base">
-                  Es una herramienta para que todos puedan denunciar hechos o conductas que constituyan o puedan constituir una violación de los principios y valores de la Compañía, sus normas corporativas o las leyes vigentes. La información entregada es{" "}
-                  <strong className="text-[#202e5e]">
-                    estrictamente confidencial
-                  </strong>
-                  .
+                <p className="text-slate-600 mb-2 text-base">
+                  No utilices el canal de denuncias para:
                 </p>
+                <ul className="text-slate-600 text-sm md:text-base space-y-1 list-disc pl-5">
+                  <li>Reclamos por servicios o productos.</li>
+                  <li>Consultas u ofrecimientos de carácter comercial.</li>
+                </ul>
               </CardBody>
             </Card>
 
@@ -143,6 +155,15 @@ export default function HomePage() {
               </p>
             </div>
             <ClaimsWizard />
+          </div>
+
+          <div className="mt-12 text-slate-700 text-[0.95rem] leading-relaxed space-y-6">
+            <p>
+              <strong className="text-slate-900 font-semibold">Modelo de Prevención de Delitos (Ley N° 20.393):</strong> Este canal constituye un elemento esencial de nuestro Modelo de Prevención de Delitos (MPD), implementado bajo los estándares de la Ley N° 20.393 sobre responsabilidad penal de las personas jurídicas. A través de este medio, Grupo Belator recibe denuncias relativas a delitos económicos, cohecho, lavado de activos, administración desleal y cualquier otro ilícito contemplado en el catálogo legal vigente. Nuestro compromiso es gestionar cada reporte de manera técnica y eficiente, asegurando una respuesta oportuna ante cualquier riesgo corporativo identificado.
+            </p>
+            <p>
+              <strong className="text-slate-900 font-semibold">Ley Karin (Ley N° 21.643):</strong> En estricto cumplimiento con la Ley N° 21.643, este espacio está habilitado para la recepción de denuncias sobre acoso laboral, acoso sexual y violencia en el trabajo. Grupo Belator garantiza que estos reportes serán gestionados bajo los principios de confidencialidad, celeridad, imparcialidad y perspectiva de género. Aseguramos un procedimiento orientado a la protección de la integridad de los denunciantes, promoviendo un entorno laboral digno, seguro y libre de violencia para todos nuestros integrantes
+            </p>
           </div>
         </div>
       </div>

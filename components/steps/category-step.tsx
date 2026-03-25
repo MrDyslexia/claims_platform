@@ -61,7 +61,9 @@ export function CategoryStep({
   const categoryKeys = Object.keys(CATEGORIES) as CategoryKey[];
 
   const renderIcon = (categoryKey: CategoryKey, className: string) => {
-    const Icon = CATEGORY_ICONS[categoryKey];
+    const Icon = CATEGORY_ICONS[categoryKey] || CATEGORY_ICONS[Object.keys(CATEGORY_ICONS)[0]];
+
+    if (!Icon) return null;
 
     return <Icon className={className} />;
   };
