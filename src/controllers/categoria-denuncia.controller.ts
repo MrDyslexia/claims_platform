@@ -90,7 +90,7 @@ export const listarCategoriasDenuncia = async (req: Request, res: Response) => {
 export const actualizarCategoriaDenuncia = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { nombre, descripcion, activo, permite_anonimo } = req.body;
+        const { nombre, descripcion, activo, permite_anonimo, icono } = req.body;
 
         const categoria = await models.CategoriaDenuncia.findByPk(id);
         if (!categoria) {
@@ -104,6 +104,7 @@ export const actualizarCategoriaDenuncia = async (req: Request, res: Response) =
                     ? descripcion
                     : categoria.get('descripcion'),
             activo: activo !== undefined ? activo : categoria.get('activo'),
+            icono: icono !== undefined ? icono : categoria.get('icono'),
             permite_anonimo: permite_anonimo !== undefined ? permite_anonimo : categoria.get('permite_anonimo'),
         });
 
