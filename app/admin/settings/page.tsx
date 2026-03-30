@@ -507,6 +507,13 @@ export default function SettingsPage() {
                             >
                               {category.activo ? "Activo" : "Inactivo"}
                             </Chip>
+                            <Chip
+                              color={category.permite_anonimo !== false ? "primary" : "warning"}
+                              size="sm"
+                              variant="flat"
+                            >
+                              {category.permite_anonimo !== false ? "Anónimo Permitido" : "Requiere Identificación"}
+                            </Chip>
                           </div>
                         </div>
                       }
