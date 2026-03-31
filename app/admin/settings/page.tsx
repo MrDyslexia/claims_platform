@@ -208,7 +208,7 @@ export default function SettingsPage() {
         descripcion: category.descripcion || "",
         activo: category.activo,
         icono: category.icono || "Settings",
-        permite_anonimo: category.permite_anonimo !== false,
+        permite_anonimo: category.permite_anonimo !== false && category.permite_anonimo !== 0,
       });
     } else {
       setEditingCategory(null);
@@ -508,11 +508,11 @@ export default function SettingsPage() {
                               {category.activo ? "Activo" : "Inactivo"}
                             </Chip>
                             <Chip
-                              color={category.permite_anonimo !== false ? "primary" : "warning"}
+                              color={category.permite_anonimo !== false && category.permite_anonimo !== 0 ? "primary" : "warning"}
                               size="sm"
                               variant="flat"
                             >
-                              {category.permite_anonimo !== false ? "Anónimo Permitido" : "Requiere Identificación"}
+                              {category.permite_anonimo !== false && category.permite_anonimo !== 0 ? "Anónimo Permitido" : "Requiere Identificación"}
                             </Chip>
                           </div>
                         </div>

@@ -117,6 +117,7 @@ export default function ClaimsPage() {
     null,
   );
   const [isSavingChanges, setIsSavingChanges] = useState(false);
+  const [saveErrors, setSaveErrors] = useState<string[]>([]);
 
   const rowsPerPage = 10;
 
@@ -420,7 +421,8 @@ export default function ClaimsPage() {
       );
 
       if (!response.ok) {
-        throw new Error("Error al actualizar el estado");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Error al actualizar el estado");
       }
 
       // Actualizar el reclamo en la lista
@@ -436,8 +438,8 @@ export default function ClaimsPage() {
       // Resetear formulario
       setSelectedNewStatus("");
       setStatusChangeReason("");
-    } catch {
-      alert("Error al actualizar el estado del reclamo");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error al actualizar el estado del reclamo");
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -473,7 +475,8 @@ export default function ClaimsPage() {
         );
 
         if (!response.ok) {
-          errors.push("Error al actualizar el estado");
+          const errorData = await response.json();
+          errors.push(errorData.error || "Error al actualizar el estado");
         }
       }
 
@@ -520,16 +523,18 @@ export default function ClaimsPage() {
       }
 
       if (errors.length > 0) {
-        alert(errors.join("\n"));
+        setSaveErrors(errors);
+        return; // Don't close modal if there's an error
       }
 
+      setSaveErrors([]);
       // Refresh claims list
       await fetchClaims();
 
       // Close modal after saving
       onClose();
     } catch {
-      alert("Error al guardar los cambios");
+      setSaveErrors(["Error al guardar los cambios"]);
     } finally {
       setIsSavingChanges(false);
     }
@@ -607,6 +612,7 @@ export default function ClaimsPage() {
     );
     setSelectedNewStatus(claim.estado?.id ? String(claim.estado.id) : "");
     setStatusChangeReason("");
+    setSaveErrors([]);
     onOpen();
   };
 
@@ -1218,6 +1224,17 @@ export default function ClaimsPage() {
                     <Card>
                       <CardBody className="space-y-4">
                         <h3 className="font-semibold">Gestión</h3>
+
+                        {saveErrors.length > 0 && (
+                          <div className="bg-red-50 border border-red-200 rounded-lg p-3 space-y-1">
+                            {saveErrors.map((err, i) => (
+                              <div key={i} className="flex items-start gap-2">
+                                <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                                <p className="text-sm text-red-700">{err}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
 
                         <div>
                           <p className="text-xs text-muted-foreground mb-1.5">
