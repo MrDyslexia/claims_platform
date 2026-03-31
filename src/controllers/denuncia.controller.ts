@@ -984,7 +984,7 @@ export const actualizarEstado = async (
                     await fsPromises.unlink(file.path).catch(() => {});
                 }
                 return res.status(400).json({ 
-                    error: 'No se puede volver a un estado anterior (secuencia: 1->2->3->4/5)' 
+                    error: 'Error: No se puede devolver a un estado anterior. El flujo solo se puede avanzar (1->2->3->4/5), con la única excepción de poder retornar de "Requiere información" a "En proceso".'
                 });
             }
         }
