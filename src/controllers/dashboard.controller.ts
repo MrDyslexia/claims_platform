@@ -514,15 +514,9 @@ export const generateReports = async (req: Request, res: Response) => {
             tiempoPromedioDias = totalDias / denunciasResueltas.length;
         }
 
-        // Empresas activas (con al menos un reclamo en el período)
-        const empresasActivas = await models.Denuncia.count({
-            where: {
-                created_at: {
-                    [Op.between]: [startDate, endDate],
-                },
-            },
-            distinct: true,
-            col: 'empresa_id',
+        // Empresas activas (empresas en estado activo)
+        const empresasActivas = await models.Empresa.count({
+            where: { estado: 1 },
         });
 
         // Nuevas empresas (empresas que registraron su primer reclamo en este período)
@@ -793,7 +787,7 @@ export const generateReports = async (req: Request, res: Response) => {
                 reclamosCriticos: reclamosCriticos,
                 satisfaccionPromedio:
                     Math.round(satisfaccionPromedio * 10) / 10,
-            },
+                },
             claimsByMonth,
             claimsByType,
             claimsByCompany,
