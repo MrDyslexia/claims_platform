@@ -700,37 +700,64 @@ export const generateReports = async (req: Request, res: Response) => {
             };
         });
 
-        // ===== CLAIMS BY COMPANY =====
-        const empresasResult = await models.Denuncia.findAll({
-            attributes: [
-                'empresa_id',
-                [fn('COUNT', col('denuncia.id')), 'cantidad'],
-            ],
+        // ===== CLAIMS BY COMPANY (Basado en Involved Parties) =====
+        const getInvolvedCompanies = (claim: any): string[] => {
+            if (claim.involved_parties) {
+                try {
+                    const parties = typeof claim.involved_parties === 'string' 
+                        ? JSON.parse(claim.involved_parties) 
+                        : claim.involved_parties;
+                    if (Array.isArray(parties) && parties.length > 0) {
+                        return parties.map((p: any) => p.name || p);
+                    }
+                } catch (e) {}
+            }
+
+            // Fallback a extracción de descripción
+            if (claim.descripcion) {
+                const regex = /Empresa:\s*([^,\n\r(]+)/gi;
+                const companies: string[] = [];
+                let match;
+                while ((match = regex.exec(claim.descripcion)) !== null) {
+                    if (match[1]) {
+                        const name = match[1].trim();
+                        if (name && !companies.includes(name)) companies.push(name);
+                    }
+                }
+                if (companies.length > 0) return companies;
+            }
+
+            return [claim['empresa.nombre'] || 'Sin empresa'];
+        };
+
+        const allClaimsInPeriod = await models.Denuncia.findAll({
             where: {
                 created_at: {
                     [Op.between]: [startDate, endDate],
                 },
             },
-            group: ['empresa_id', 'empresa.id', 'empresa.nombre'],
-            include: [
-                {
-                    model: models.Empresa,
-                    as: 'empresa',
-                    attributes: ['nombre'],
-                    required: false,
-                },
-            ],
-            order: [[literal('cantidad'), 'DESC']],
-            limit: 10,
-            raw: true,
+            attributes: ['involved_parties', 'descripcion'],
+            include: [{
+                model: models.Empresa,
+                as: 'empresa',
+                attributes: ['nombre'],
+                required: false,
+            }],
+            raw: true
         });
 
-        const claimsByCompany: ClaimsByCompany[] = empresasResult.map(
-            (e: any) => ({
-                empresa: e['empresa.nombre'] || 'Sin empresa',
-                cantidad: parseInt(e.cantidad),
-            })
-        );
+        const companyCounts: Record<string, number> = {};
+        allClaimsInPeriod.forEach((claim: any) => {
+            const companies = getInvolvedCompanies(claim);
+            companies.forEach(company => {
+                companyCounts[company] = (companyCounts[company] || 0) + 1;
+            });
+        });
+
+        const claimsByCompany: ClaimsByCompany[] = Object.entries(companyCounts)
+            .map(([empresa, cantidad]) => ({ empresa, cantidad }))
+            .sort((a, b) => b.cantidad - a.cantidad)
+            .slice(0, 10);
 
         // ===== RESOLUTION TIME =====
         const rangos = [
