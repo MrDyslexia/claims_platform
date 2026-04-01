@@ -144,28 +144,41 @@ export function ClaimDetail({
   // Helper para extraer las empresas/entidades involucradas de la descripción
   const extractCompanies = (description: string) => {
     if (!description) return [];
-    const partsIndex = description.indexOf("Partes involucradas:\n");
+    
+    // Buscar la sección sin depender de \n exacto
+    const partsIndex = description.indexOf("Partes involucradas:");
     if (partsIndex === -1) return [];
     
-    const endOfListIndex = description.indexOf("\n\n", partsIndex);
-    const listString = endOfListIndex !== -1 
-      ? description.substring(partsIndex, endOfListIndex)
-      : description.substring(partsIndex);
+    // Encontrar el siguiente doble salto de línea o tomar hasta el final
+    const remainingText = description.substring(partsIndex);
+    const match = remainingText.match(/\n\s*\n/);
+    const listString = match ? remainingText.substring(0, match.index) : remainingText;
       
+    // Separar por salto de línea sin importar sin son \r\n o \n
     return listString
-      .split('\n')
-      .filter(line => line.trim().startsWith('• ') && (line.includes('(Empresa)') || line.includes('(Entidad)')))
+      .split(/\r?\n/)
+      .filter(line => line.trim().startsWith('•'))
       .map(line => {
-        const text = line.replace('• ', '').trim();
-        const match = text.match(/(.+?)\s*\((.+?)\)$/);
-        return match ? match[1].trim() : text;
+        let text = line.replace('•', '').trim();
+        // Quitar la etiqueta (Empresa), (Entidad), etc. si se desea limpiar el nombre
+        const tagMatch = text.match(/(.*?)\s*\((.+?)\)$/);
+        return tagMatch ? tagMatch[1].trim() : text;
       });
   };
 
-  const associatedCompanies = extractCompanies(claim?.descripcion || "");
-  const displayCompanies = associatedCompanies.length > 0 
-    ? associatedCompanies 
-    : (claim?.empresa?.nombre ? [claim.empresa.nombre] : []);
+  const nativeInvolvedParties = Array.isArray(claim?.involved_parties)
+    ? claim.involved_parties
+        .filter((p: any) => p.type === "company" || p.type === "entity")
+        .map((p: any) => p.name)
+    : [];
+
+  const extractedCompanies = extractCompanies(claim?.descripcion || "");
+  
+  const displayCompanies = nativeInvolvedParties.length > 0
+    ? nativeInvolvedParties
+    : extractedCompanies.length > 0
+      ? extractedCompanies
+      : claim?.empresa?.nombre ? [claim.empresa.nombre] : [];
 
   // Handler unificado para enviar comentario Y/O archivos en estado INFO
   const [isSubmittingInfoResponse, setIsSubmittingInfoResponse] =
@@ -497,7 +510,7 @@ export function ClaimDetail({
                     {displayCompanies.length > 1 ? "Empresas Asociadas" : "Empresa"}
                   </p>
                   <div className="flex flex-col gap-1">
-                    {displayCompanies.map((comp, idx) => (
+                    {displayCompanies.map((comp: string, idx: number) => (
                       <p key={idx} className={`font-bold text-slate-800 ${displayCompanies.length > 1 ? "text-base" : "text-lg"}`}>
                         {comp}
                       </p>
