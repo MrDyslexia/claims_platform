@@ -365,7 +365,7 @@ Este es un correo automático, por favor no responda a este mensaje.
             </div>
             <div class="info-item">
                 <strong>Fecha y hora:</strong> ${data.revealedAt.toLocaleString(
-                    'es-CL'
+                    'es-CL', { timeZone: 'America/Santiago' }
                 )}
             </div>
             ${
@@ -405,7 +405,7 @@ revelada al personal autorizado.
 DETALLES DEL REVELADO:
 Denuncia: ${data.numero}
 Revelado por: ${data.revealedBy}
-Fecha y hora: ${data.revealedAt.toLocaleString('es-CL')}
+Fecha y hora: ${data.revealedAt.toLocaleString('es-CL', { timeZone: 'America/Santiago' })}
 ${data.reason ? `Motivo: ${data.reason}` : ''}
 
 Esta acción ha sido registrada en nuestro sistema de auditoría.
@@ -495,7 +495,7 @@ Este es un correo automático, por favor no responda a este mensaje.
 
             <div class="comment-box">
                 <div class="comment-author">De: ${data.autorNombre}</div>
-                <div class="comment-date">${data.fechaComentario.toLocaleString('es-CL')}</div>
+                <div class="comment-date">${data.fechaComentario.toLocaleString('es-CL', { timeZone: 'America/Santiago' })}</div>
                 <div class="comment-content">${contenidoTruncado}</div>
             </div>
 
@@ -536,7 +536,7 @@ Asunto: ${data.asunto}
 
 COMENTARIO
 De: ${data.autorNombre}
-Fecha: ${data.fechaComentario.toLocaleString('es-CL')}
+Fecha: ${data.fechaComentario.toLocaleString('es-CL', { timeZone: 'America/Santiago' })}
 
 ${contenidoTruncado}
 
@@ -633,7 +633,7 @@ Este es un correo automático, por favor no responda a este mensaje.
                     <span class="status-badge status-new">${data.estadoNuevo}</span>
                 </div>
                 <p style="margin-bottom: 0; color: #6b7280; font-size: 12px;">
-                    ${data.fechaCambio.toLocaleString('es-CL')}
+                    ${data.fechaCambio.toLocaleString('es-CL', { timeZone: 'America/Santiago' })}
                 </p>
             </div>
 
@@ -685,7 +685,7 @@ Asunto: ${data.asunto}
 
 CAMBIO DE ESTADO
 ${data.estadoAnterior} → ${data.estadoNuevo}
-Fecha: ${data.fechaCambio.toLocaleString('es-CL')}
+Fecha: ${data.fechaCambio.toLocaleString('es-CL', { timeZone: 'America/Santiago' })}
 
 ${data.motivo ? `MOTIVO DEL CAMBIO:\n${data.motivo}\n` : ''}
 
@@ -874,7 +874,7 @@ Este es un correo automático, por favor no responda a este mensaje.
                 <p><strong>Número:</strong> ${data.numero}</p>
                 <p><strong>Asunto:</strong> ${data.asunto}</p>
                 <p><strong>Categoría:</strong> <span class="category-badge">${data.categoria}</span></p>
-                <p><strong>Fecha:</strong> ${data.fechaCreacion.toLocaleString('es-CL')}</p>
+                <p><strong>Fecha:</strong> ${data.fechaCreacion.toLocaleString('es-CL', { timeZone: 'America/Santiago' })}</p>
             </div>
 
             <div class="alert-box">
@@ -908,7 +908,7 @@ INFORMACIÓN DE LA DENUNCIA
 Número: ${data.numero}
 Asunto: ${data.asunto}
 Categoría: ${data.categoria}
-Fecha: ${data.fechaCreacion.toLocaleString('es-CL')}
+Fecha: ${data.fechaCreacion.toLocaleString('es-CL', { timeZone: 'America/Santiago' })}
 
 ⚡ ACCIÓN REQUERIDA
 Por favor revise la denuncia y asígnela a un supervisor para su gestión.
