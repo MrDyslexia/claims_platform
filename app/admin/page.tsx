@@ -13,18 +13,9 @@ import {
   Progress,
   Spinner,
 } from "@heroui/react";
-import {
-  AlertTriangle,
-  Building2,
-  CheckCircle2,
-  Clock,
-  FileText,
-  TrendingUp,
-  TrendingDown,
-  Users,
-} from "lucide-react";
-
+import { AlertTriangle, Building2, CheckCircle2, Clock, FileText, TrendingUp, TrendingDown, Users } from "lucide-react";
 import { fetchDashboardData, fetchAdminDashboardComplete } from "@/lib/api/dashboard";
+import { getDisplayCompanies } from "@/lib/utils";
 
 const priorityConfig = {
   baja: { color: "primary", bg: "bg-blue-50" },
@@ -237,12 +228,23 @@ export default function AdminDashboard() {
                       </div>
                     }
                     subtitle={
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex flex-wrap gap-2 mt-1">
                         <span className="text-[11px] text-slate-400">{claim.tipo_nombre}</span>
                         <Chip size="sm" variant="flat" color={priorityConfig[claim.prioridad]?.color as any} className="h-4 text-[10px] font-bold uppercase">{claim.prioridad}</Chip>
+                        <div className="flex gap-1 flex-wrap">
+                          {getDisplayCompanies(claim).map((comp, idx) => (
+                            <Chip key={idx} size="sm" variant="flat" className="h-4 text-[9px] bg-slate-100 text-slate-600">
+                              {comp}
+                            </Chip>
+                          ))}
+                        </div>
                       </div>
                     }
-                    title={<span className="font-semibold text-slate-800">{claim.empresa_nombre}</span>}
+                    title={
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-slate-800">{claim.codigo_acceso}</span>
+                      </div>
+                    }
                   >
                     <div className="space-y-4 pt-2">
                       <div className="bg-white p-3 rounded-lg border border-slate-200/50 shadow-sm">
