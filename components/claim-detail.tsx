@@ -141,6 +141,32 @@ export function ClaimDetail({
     return <Clock className="w-4 h-4" />;
   };
 
+  // Helper para extraer las empresas/entidades involucradas de la descripción
+  const extractCompanies = (description: string) => {
+    if (!description) return [];
+    const partsIndex = description.indexOf("Partes involucradas:\n");
+    if (partsIndex === -1) return [];
+    
+    const endOfListIndex = description.indexOf("\n\n", partsIndex);
+    const listString = endOfListIndex !== -1 
+      ? description.substring(partsIndex, endOfListIndex)
+      : description.substring(partsIndex);
+      
+    return listString
+      .split('\n')
+      .filter(line => line.trim().startsWith('• ') && (line.includes('(Empresa)') || line.includes('(Entidad)')))
+      .map(line => {
+        const text = line.replace('• ', '').trim();
+        const match = text.match(/(.+?)\s*\((.+?)\)$/);
+        return match ? match[1].trim() : text;
+      });
+  };
+
+  const associatedCompanies = extractCompanies(claim?.descripcion || "");
+  const displayCompanies = associatedCompanies.length > 0 
+    ? associatedCompanies 
+    : (claim?.empresa?.nombre ? [claim.empresa.nombre] : []);
+
   // Handler unificado para enviar comentario Y/O archivos en estado INFO
   const [isSubmittingInfoResponse, setIsSubmittingInfoResponse] =
     useState(false);
@@ -458,8 +484,8 @@ export function ClaimDetail({
         </Card>
       )}
       {/* Info Cards Grid */}
-      <div className={`grid gap-6 mb-8 ${claim.empresa ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
-        {claim.empresa && (
+      <div className={`grid gap-6 mb-8 ${claim.empresa || displayCompanies.length > 0 ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+        {(claim.empresa || displayCompanies.length > 0) && (
           <Card className="border-2 border-slate-200 shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardBody className="p-6">
               <div className="flex items-start gap-4">
@@ -468,11 +494,15 @@ export function ClaimDetail({
                 </div>
                 <div>
                   <p className="text-sm text-slate-500 font-medium mb-1">
-                    Empresa
+                    {displayCompanies.length > 1 ? "Empresas Asociadas" : "Empresa"}
                   </p>
-                  <p className="font-bold text-slate-800 text-lg">
-                    {claim.empresa.nombre}
-                  </p>
+                  <div className="flex flex-col gap-1">
+                    {displayCompanies.map((comp, idx) => (
+                      <p key={idx} className={`font-bold text-slate-800 ${displayCompanies.length > 1 ? "text-base" : "text-lg"}`}>
+                        {comp}
+                      </p>
+                    ))}
+                  </div>
                 </div>
               </div>
             </CardBody>

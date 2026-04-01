@@ -24,10 +24,10 @@ const RELATIONSHIP_STYLES: Record<string, { icon: LucideIcon; color: string }> =
       icon: Users,
       color: "bg-blue-500/10 text-blue-700 border-blue-200",
     },
-    colaborador_security: {
-      icon: Shield,
-      color: "bg-green-500/10 text-green-700 border-green-200",
-    },
+    // colaborador_security: {
+    //   icon: Shield,
+    //   color: "bg-green-500/10 text-green-700 border-green-200",
+    // },
     colaborador_belator: {
       icon: Briefcase,
       color: "bg-emerald-500/10 text-emerald-700 border-emerald-200",

@@ -125,11 +125,11 @@ const FALLBACK_CATEGORIES: CategoryMetadata[] = [
 
 export const FALLBACK_RELATIONSHIPS: RelationshipMetadata[] = [
   { id: "cliente", title: "Cliente", description: "Soy cliente de la empresa" },
-  {
-    id: "colaborador_security",
-    title: "Colaborador SECURITY",
-    description: "Trabajo en SECURITY",
-  },
+  // {
+  //   id: "colaborador_security",
+  //   title: "Colaborador SECURITY",
+  //   description: "Trabajo en SECURITY",
+  // },
   {
     id: "colaborador_belator",
     title: "Colaborador GRUPO BELATOR",
