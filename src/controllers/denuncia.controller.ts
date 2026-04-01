@@ -459,8 +459,17 @@ export const crearDenunciaPublica = async (req: Request, res: Response) => {
             .json({ error: 'description must be at least 20 characters' });
     }
 
-    // Canal validation removed - CanalDenuncia model eliminated
-    // const canalId = payload.canal_id ? Number(payload.canal_id) : undefined;
+    // Parse data from string if sent via FormData (multer)
+    try {
+        if (typeof payload.involvedParties === 'string') {
+            payload.involvedParties = JSON.parse(payload.involvedParties);
+        }
+        if (typeof payload.evidence === 'string') {
+            payload.evidence = JSON.parse(payload.evidence);
+        }
+    } catch (e) {
+        console.error('Error parsing JSON fields from payload:', e);
+    }
 
     try {
         await ensureFormMetadataSeeded(models);
@@ -750,6 +759,7 @@ export const lookupDenuncia = async (req: Request, res: Response) => {
         es_anonima: denuncia.get('es_anonima'),
         nota_satisfaccion: denuncia.get('nota_satisfaccion') || null,
         comentario_satisfaccion: denuncia.get('comentario_satisfaccion') || null,
+        involved_parties: denuncia.get('involved_parties'),
         statusHistory: statusHistoryWithNames,
         comments: commentsWithAuthor,
     });
