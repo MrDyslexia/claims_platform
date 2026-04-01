@@ -144,32 +144,48 @@ export function ClaimDetail({
   // Helper para extraer las empresas/entidades involucradas de la descripción
   const extractCompanies = (description: string) => {
     if (!description) return [];
-    
-    // Buscar la sección sin depender de \n exacto
-    const partsIndex = description.indexOf("Partes involucradas:");
+
+    // Buscar "Partes involucradas:" (case-insensitive y flexible)
+    const normalizedDesc = description.toLowerCase();
+    const searchStr = "partes involucradas:";
+    const partsIndex = normalizedDesc.indexOf(searchStr);
+
     if (partsIndex === -1) return [];
+
+    // Extraer desde el índice encontrado hasta el siguiente doble salto de línea o final
+    const fromIndex = description.substring(partsIndex + searchStr.length);
+    const listPart = fromIndex.split(/\r?\n\r?\n/)[0].trim();
     
-    // Encontrar el siguiente doble salto de línea o tomar hasta el final
-    const remainingText = description.substring(partsIndex);
-    const match = remainingText.match(/\n\s*\n/);
-    const listString = match ? remainingText.substring(0, match.index) : remainingText;
-      
-    // Separar por salto de línea sin importar sin son \r\n o \n
-    return listString
+    // Buscar líneas que empiezan con viñetas: •, -, *, o simplemente texto
+    return listPart
       .split(/\r?\n/)
-      .filter(line => line.trim().startsWith('•'))
+      .map(line => line.trim())
+      .filter(line => line.startsWith('•') || line.startsWith('-') || line.startsWith('*'))
       .map(line => {
-        let text = line.replace('•', '').trim();
-        // Quitar la etiqueta (Empresa), (Entidad), etc. si se desea limpiar el nombre
+        let text = line.replace(/^[•\-*]\s*/, '').trim();
+        // Limpiar el tipo entre paréntesis (ej: "Empresa A (Empresa)" -> "Empresa A")
         const tagMatch = text.match(/(.*?)\s*\((.+?)\)$/);
         return tagMatch ? tagMatch[1].trim() : text;
       });
   };
 
-  const nativeInvolvedParties = Array.isArray(claim?.involved_parties)
-    ? claim.involved_parties
-        .filter((p: any) => p.type === "company" || p.type === "entity")
+  // 1. Lectura robusta de involved_parties (JSON nativo)
+  let rawParties = claim?.involved_parties;
+  
+  // Si llega como string (por seguridad), intentamos parsearlo
+  if (typeof rawParties === "string") {
+    try {
+      rawParties = JSON.parse(rawParties);
+    } catch {
+      rawParties = null;
+    }
+  }
+
+  const nativeInvolvedParties = Array.isArray(rawParties)
+    ? rawParties
+        .filter((p: any) => p && (p.type === "company" || p.type === "entity"))
         .map((p: any) => p.name)
+        .filter(Boolean)
     : [];
 
   const extractedCompanies = extractCompanies(claim?.descripcion || "");
