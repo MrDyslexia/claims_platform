@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Op } from 'sequelize';
+import type { Request, Response } from 'express';
 import { models } from '../db/sequelize';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -50,16 +51,31 @@ export const generateReport = async (req: Request, res: Response) => {
         });
 
         // Generate CSV content
-        const header = 'ID,Fecha,Tipo,Categoria,Estado,Prioridad\n';
+        const header = 'ID,Fecha,Tipo,Categoria,Estado,Prioridad,Partes Involucradas\n';
         const rows = denuncias.map((d: any) => {
             const fecha = d.created_at ? new Date(d.created_at).toISOString().split('T')[0] : '';
             const tipo = d.tipo_denuncia?.nombre || 'N/A';
             const categoria = d.tipo_denuncia?.categoria?.nombre || 'N/A';
             const estado = d.estado_denuncia?.nombre || 'N/A';
-            // Prioridad might be an ID or joined, assuming ID for now or checking model
             const prioridad = d.prioridad_id || 'N/A'; 
             
-            return `${d.id},${fecha},"${tipo}","${categoria}","${estado}",${prioridad}`;
+            // Extract involved parties
+            let involved = '';
+            if (d.involved_parties) {
+                try {
+                    const parties = typeof d.involved_parties === 'string' 
+                        ? JSON.parse(d.involved_parties) 
+                        : d.involved_parties;
+                    
+                    if (Array.isArray(parties)) {
+                        involved = parties.map((p: any) => p.name || p).join('; ');
+                    }
+                } catch (e) {
+                    involved = String(d.involved_parties);
+                }
+            }
+            
+            return `${d.id},${fecha},"${tipo}","${categoria}","${estado}",${prioridad},"${involved}"`;
         }).join('\n');
 
         const csvContent = header + rows;

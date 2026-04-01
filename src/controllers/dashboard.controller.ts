@@ -395,6 +395,7 @@ export const getDashboardStats = async (req: Request & { user?: any }, res: Resp
                 estado_nombre:
                     claimData.estado_denuncia?.nombre || 'Sin estado',
                 empresa_nombre: claimData.empresa?.nombre || 'Sin empresa',
+                involved_parties: claimData.involved_parties,
             };
         });
 

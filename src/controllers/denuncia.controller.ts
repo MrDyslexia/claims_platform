@@ -150,7 +150,7 @@ async function createDenunciaRecord(
                 is_anonymous: input.esAnonima ? 1 : 0,
                 created_by: input.createdBy ?? null,
                 pais: normalizeNullableString(input.pais),
-                involved_parties: input.involvedParties ?? null,
+                involved_parties: input.involvedParties || extractCompaniesFromDesc(input.descripcion) || null,
             },
             { transaction }
         );
@@ -217,6 +217,26 @@ function formatEvidenceSummary(evidence: EvidencePayload[]) {
         .filter(Boolean);
     if (!lines.length) return undefined;
     return `Evidencias adjuntas (meta):\n${lines.join('\n')}`;
+}
+
+function extractCompaniesFromDesc(desc: string): string[] {
+    if (!desc) return [];
+    
+    // Buscar patrones como "Empresa: Nombre" o "Empresa:Nombre"
+    const regex = /Empresa:\s*([^,\n\r(]+)/gi;
+    const companies: string[] = [];
+    let match;
+
+    while ((match = regex.exec(desc)) !== null) {
+        if (match[1]) {
+            const name = match[1].trim();
+            if (name && !companies.includes(name)) {
+                companies.push(name);
+            }
+        }
+    }
+
+    return companies;
 }
 
 function buildDescripcionFromPayload(payload: PublicDenunciaPayload) {
@@ -1754,6 +1774,7 @@ export const obtenerReclamosAsignados = async (
                         telefono: denuncia.get('denunciante_fono'),
                         anonimo: denuncia.get('es_anonima') === 1,
                     },
+                    involved_parties: denuncia.get('involved_parties'),
                     supervisor: asignacion?.get('asignado')
                         ? {
                               id: (asignacion.get('asignado') as any).id,
