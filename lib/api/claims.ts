@@ -116,6 +116,7 @@ export interface Reclamo {
   resolucion: Resolucion | null;
   nota_satisfaccion?: number | null;
   comentario_satisfaccion?: string | null;
+  involved_parties?: any;
 }
 
 export interface ReclamosResponse {

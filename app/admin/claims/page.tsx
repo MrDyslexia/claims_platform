@@ -201,6 +201,59 @@ export default function ClaimsPage() {
     setToken(storedToken);
   }, []);
 
+  // Helper para extraer las empresas/entidades involucradas de la descripción
+  const extractCompaniesFromDesc = (description: string) => {
+    if (!description || typeof description !== "string") return [];
+
+    const normalizedDesc = description.toLowerCase();
+    const searchStr = "partes involucradas:";
+    const partsIndex = normalizedDesc.indexOf(searchStr);
+
+    if (partsIndex === -1) return [];
+
+    try {
+      const fromIndex = description.substring(partsIndex + searchStr.length);
+      const listPart = fromIndex.split(/\r?\n\r?\n/)[0].trim();
+
+      return listPart
+        .split("\n")
+        .map((line) => {
+          const match = line.match(/Empresa:\s*([^,\n\r(]+)/i);
+          return match ? match[1].trim() : null;
+        })
+        .filter((name): name is string => !!name);
+    } catch (e) {
+      console.error("Error extracting companies:", e);
+      return [];
+    }
+  };
+
+  // Helper para obtener las empresas a mostrar (JSON o extraídas o fallback)
+  const getDisplayCompanies = (claim: any): string[] => {
+    // 1. Intentar usar involved_parties si existe (formato JSON)
+    if (claim.involved_parties) {
+      try {
+        const parties =
+          typeof claim.involved_parties === "string"
+            ? JSON.parse(claim.involved_parties)
+            : claim.involved_parties;
+
+        if (Array.isArray(parties) && parties.length > 0) {
+          return parties.map((p: any) => p.name || p);
+        }
+      } catch (e) {
+        console.error("Error parsing involved_parties:", e);
+      }
+    }
+
+    // 2. Intentar extraer de la descripción
+    const extracted = extractCompaniesFromDesc(claim.descripcion);
+    if (extracted.length > 0) return extracted;
+
+    // 3. Fallback a la empresa principal
+    return [claim.empresa?.nombre || claim.empresa_nombre || "Sin empresa"];
+  };
+
   const fetchClaims = useCallback(async () => {
     if (!token) return;
     setIsLoading(true);
@@ -787,7 +840,15 @@ export default function ClaimsPage() {
                       </div>
                     </TableCell>
                     <TableCell>{claim.tipo.nombre}</TableCell>
-                    <TableCell>{claim.empresa.nombre}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1 max-w-[200px]">
+                        {getDisplayCompanies(claim).map((comp, idx) => (
+                          <Chip key={idx} size="sm" variant="flat" className="bg-blue-50 text-blue-700 border-blue-100">
+                            {comp}
+                          </Chip>
+                        ))}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Chip
                         color={statusColors[claim.estado.nombre] || "default"}
@@ -1116,9 +1177,13 @@ export default function ClaimsPage() {
                             <p className="text-xs text-muted-foreground">
                               Empresa
                             </p>
-                            <p className="text-sm font-medium">
-                              {selectedClaim?.empresa.nombre}
-                            </p>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {selectedClaim && getDisplayCompanies(selectedClaim).map((comp, idx) => (
+                                <Chip key={idx} size="sm" variant="flat" className="bg-blue-50 text-blue-700 border-blue-100">
+                                  {comp}
+                                </Chip>
+                              ))}
+                            </div>
                           </div>
                         </div>
                         <div className="flex items-start gap-2">

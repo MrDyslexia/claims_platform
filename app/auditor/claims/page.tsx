@@ -126,17 +126,69 @@ export default function ClaimsPage() {
     }
   };
 
+  // Helper para extraer las empresas/entidades involucradas de la descripción
+  const extractCompaniesFromDesc = (description: string) => {
+    if (!description) return [];
+
+    const normalizedDesc = description.toLowerCase();
+    const searchStr = "partes involucradas:";
+    const partsIndex = normalizedDesc.indexOf(searchStr);
+
+    if (partsIndex === -1) return [];
+
+    const fromIndex = description.substring(partsIndex + searchStr.length);
+    const listPart = fromIndex.split(/\r?\n\r?\n/)[0].trim();
+
+    return listPart
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(
+        (line) =>
+          line.startsWith("•") || line.startsWith("-") || line.startsWith("*"),
+      )
+      .map((line) => {
+        let text = line.replace(/^[•\-*]\s*/, "").trim();
+        const tagMatch = text.match(/(.*?)\s*\((.+?)\)$/);
+        return tagMatch ? tagMatch[1].trim() : text;
+      });
+  };
+
+  // Helper para obtener las empresas a mostrar (unificado)
+  const getDisplayCompanies = (claim: Reclamo) => {
+    let rawParties = claim.involved_parties;
+
+    if (typeof rawParties === "string") {
+      try {
+        rawParties = JSON.parse(rawParties);
+      } catch {
+        rawParties = null;
+      }
+    }
+
+    const nativeInvolvedParties = Array.isArray(rawParties)
+      ? rawParties
+          .filter(
+            (p: any) => p && (p.type === "company" || p.type === "entity"),
+          )
+          .map((p: any) => p.name)
+          .filter(Boolean)
+      : [];
+
+    const extracted = extractCompaniesFromDesc(claim.descripcion || "");
+
+    if (nativeInvolvedParties.length > 0) return nativeInvolvedParties;
+    if (extracted.length > 0) return extracted;
+    return claim.empresa?.nombre ? [claim.empresa.nombre] : [];
+  };
+
   // Helper para formatear solo fecha (sin hora)
   const formatDateOnly = (
     dateString: string | Date | null | undefined,
   ): string => {
     try {
-      // Si no hay fecha, usar la fecha actual
       const date = dateString ? new Date(dateString) : new Date();
 
-      // Verificar si la fecha es válida
       if (isNaN(date.getTime())) {
-        // Si la fecha es inválida, usar la fecha actual
         return new Date().toLocaleDateString("es-CL", {
           year: "numeric",
           month: "2-digit",
@@ -150,7 +202,6 @@ export default function ClaimsPage() {
         day: "2-digit",
       });
     } catch {
-      // En caso de error, retornar la fecha actual
       return new Date().toLocaleDateString("es-CL", {
         year: "numeric",
         month: "2-digit",
@@ -198,11 +249,13 @@ export default function ClaimsPage() {
   }, [token, fetchClaims]);
 
   const filteredClaims = (claims || []).filter((claim) => {
-    // Use local claims state
+    const displayCompanies = getDisplayCompanies(claim);
     const matchesSearch =
       claim.numero.toLowerCase().includes(searchQuery.toLowerCase()) ||
       claim.tipo.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      claim.empresa.nombre.toLowerCase().includes(searchQuery.toLowerCase());
+      displayCompanies.some((c) =>
+        c.toLowerCase().includes(searchQuery.toLowerCase()),
+      );
 
     const matchesStatus =
       filterStatus === "all" || claim.estado.nombre === filterStatus;
@@ -383,7 +436,15 @@ export default function ClaimsPage() {
                       </div>
                     </TableCell>
                     <TableCell>{claim.tipo.nombre}</TableCell>
-                    <TableCell>{claim.empresa.nombre}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {getDisplayCompanies(claim).map((comp, idx) => (
+                          <Chip key={idx} size="sm" variant="flat">
+                            {comp}
+                          </Chip>
+                        ))}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Chip
                         color={statusColors[claim.estado.nombre] || "default"}
@@ -659,11 +720,18 @@ export default function ClaimsPage() {
                         <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
                         <div className="flex-1">
                           <p className="text-xs text-muted-foreground">
-                            Empresa
+                            Empresas/Entidades Involucradas
                           </p>
-                          <p className="text-sm font-medium">
-                            {selectedClaim?.empresa.nombre}
-                          </p>
+                          <div className="flex flex-col gap-1 mt-1">
+                            {selectedClaim &&
+                              getDisplayCompanies(selectedClaim).map(
+                                (comp, idx) => (
+                                  <p key={idx} className="text-sm font-medium">
+                                    {comp}
+                                  </p>
+                                ),
+                              )}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-start gap-2">

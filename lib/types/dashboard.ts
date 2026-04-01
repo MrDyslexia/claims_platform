@@ -35,6 +35,7 @@ export interface ReclamoReciente {
   tipo_nombre: string;
   estado_nombre: string;
   empresa_nombre: string;
+  involved_parties?: any;
 }
 
 export interface DashboardData {

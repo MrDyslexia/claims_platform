@@ -18,6 +18,59 @@ import { useAuth } from "@/lib/auth/auth-context";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003";
 
 export default function SupervisorDashboard() {
+  // Helper para extraer las empresas/entidades involucradas de la descripción
+  const extractCompaniesFromDesc = (description: string) => {
+    if (!description || typeof description !== "string") return [];
+
+    const normalizedDesc = description.toLowerCase();
+    const searchStr = "partes involucradas:";
+    const partsIndex = normalizedDesc.indexOf(searchStr);
+
+    if (partsIndex === -1) return [];
+
+    try {
+      const fromIndex = description.substring(partsIndex + searchStr.length);
+      const listPart = fromIndex.split(/\r?\n\r?\n/)[0].trim();
+
+      return listPart
+        .split("\n")
+        .map((line) => {
+          const match = line.match(/Empresa:\s*([^,\n\r(]+)/i);
+          return match ? match[1].trim() : null;
+        })
+        .filter((name): name is string => !!name);
+    } catch (e) {
+      console.error("Error extracting companies:", e);
+      return [];
+    }
+  };
+
+  // Helper para obtener las empresas a mostrar (JSON o extraídas o fallback)
+  const getDisplayCompanies = (claim: any): string[] => {
+    // 1. Intentar usar involved_parties si existe (formato JSON)
+    if (claim.involved_parties) {
+      try {
+        const parties =
+          typeof claim.involved_parties === "string"
+            ? JSON.parse(claim.involved_parties)
+            : claim.involved_parties;
+
+        if (Array.isArray(parties) && parties.length > 0) {
+          return parties.map((p: any) => p.name || p);
+        }
+      } catch (e) {
+        console.error("Error parsing involved_parties:", e);
+      }
+    }
+
+    // 2. Intentar extraer de la descripción
+    const extracted = extractCompaniesFromDesc(claim.descripcion);
+    if (extracted.length > 0) return extracted;
+
+    // 3. Fallback a la empresa principal
+    return [claim.empresa_nombre || "Sin empresa"];
+  };
+
   const { user, token } = useAuth();
   const router = useRouter();
   const [data, setData] = useState<any>(null);
@@ -264,6 +317,13 @@ export default function SupervisorDashboard() {
                       <h4 className="font-semibold text-foreground mb-1">
                         {claim.tipo?.nombre || "Sin tipo"}
                       </h4>
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {getDisplayCompanies(claim).map((comp: string, idx: number) => (
+                          <Chip key={idx} size="sm" variant="flat" className="h-5 text-[10px]">
+                            {comp}
+                          </Chip>
+                        ))}
+                      </div>
                       <p className="text-sm text-default-500 line-clamp-2">
                         {claim.descripcion}
                       </p>

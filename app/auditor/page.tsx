@@ -41,6 +41,59 @@ const priorityIconColors = {
 } as const;
 
 export default function AdminDashboard() {
+  // Helper para extraer las empresas/entidades involucradas de la descripción
+  const extractCompaniesFromDesc = (description: string) => {
+    if (!description || typeof description !== "string") return [];
+
+    const normalizedDesc = description.toLowerCase();
+    const searchStr = "partes involucradas:";
+    const partsIndex = normalizedDesc.indexOf(searchStr);
+
+    if (partsIndex === -1) return [];
+
+    try {
+      const fromIndex = description.substring(partsIndex + searchStr.length);
+      const listPart = fromIndex.split(/\r?\n\r?\n/)[0].trim();
+
+      return listPart
+        .split("\n")
+        .map((line) => {
+          const match = line.match(/Empresa:\s*([^,\n\r(]+)/i);
+          return match ? match[1].trim() : null;
+        })
+        .filter((name): name is string => !!name);
+    } catch (e) {
+      console.error("Error extracting companies:", e);
+      return [];
+    }
+  };
+
+  // Helper para obtener las empresas a mostrar (JSON o extraídas o fallback)
+  const getDisplayCompanies = (claim: any): string[] => {
+    // 1. Intentar usar involved_parties si existe (formato JSON)
+    if (claim.involved_parties) {
+      try {
+        const parties =
+          typeof claim.involved_parties === "string"
+            ? JSON.parse(claim.involved_parties)
+            : claim.involved_parties;
+
+        if (Array.isArray(parties) && parties.length > 0) {
+          return parties.map((p: any) => p.name || p);
+        }
+      } catch (e) {
+        console.error("Error parsing involved_parties:", e);
+      }
+    }
+
+    // 2. Intentar extraer de la descripción
+    const extracted = extractCompaniesFromDesc(claim.descripcion);
+    if (extracted.length > 0) return extracted;
+
+    // 3. Fallback a la empresa principal
+    return [claim.empresa_nombre || "Sin empresa"];
+  };
+
   const [dashData, setDashData] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -249,9 +302,15 @@ export default function AdminDashboard() {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <p className="text-xs font-medium text-muted-foreground mb-1">
-                          Empresa
+                          Empresa(s) Involucrada(s)
                         </p>
-                        <p className="text-sm">{claim.empresa_nombre}</p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {getDisplayCompanies(claim).map((comp, idx) => (
+                            <Chip key={idx} size="sm" variant="flat">
+                              {comp}
+                            </Chip>
+                          ))}
+                        </div>
                       </div>
                       <div>
                         <p className="text-xs font-medium text-muted-foreground mb-1">
