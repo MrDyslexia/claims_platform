@@ -103,6 +103,40 @@ interface CompanySummary {
     resolution_rate: number;
 }
 
+// ==========================================
+// HELPERS
+// ==========================================
+
+const getInvolvedCompanies = (claim: any): string[] => {
+    if (claim.involved_parties) {
+        try {
+            const parties = typeof claim.involved_parties === 'string' 
+                ? JSON.parse(claim.involved_parties) 
+                : claim.involved_parties;
+            if (Array.isArray(parties) && parties.length > 0) {
+                return parties.map((p: any) => p.name || (typeof p === 'string' ? p : 'Sin nombre'));
+            }
+        } catch (e) {}
+    }
+
+    // Fallback a extracción de descripción
+    if (claim.descripcion) {
+        const regex = /Empresa:\s*([^,\n\r(]+)/gi;
+        const companies: string[] = [];
+        let match;
+        while ((match = regex.exec(claim.descripcion)) !== null) {
+            if (match[1]) {
+                const name = match[1].trim();
+                if (name && !companies.includes(name)) companies.push(name);
+            }
+        }
+        if (companies.length > 0) return companies;
+    }
+
+    const empresaNombre = claim['empresa.nombre'] || (claim.empresa?.nombre) || 'Sin empresa';
+    return [empresaNombre];
+};
+
 interface DashboardAnalistaResponse {
     global_kpis: GlobalKPIs;
     monthly_data: MonthlyDataAnalista[];
@@ -348,6 +382,7 @@ export const getDashboardStats = async (req: Request & { user?: any }, res: Resp
                 'asunto',
                 'descripcion',
                 'prioridad_id',
+                'involved_parties',
             ],
             include: [
                 {
@@ -395,7 +430,7 @@ export const getDashboardStats = async (req: Request & { user?: any }, res: Resp
                 estado_nombre:
                     claimData.estado_denuncia?.nombre || 'Sin estado',
                 empresa_nombre: claimData.empresa?.nombre || 'Sin empresa',
-                involved_parties: claimData.involved_parties,
+                involved_parties: getInvolvedCompanies(claimData),
             };
         });
 
@@ -701,35 +736,6 @@ export const generateReports = async (req: Request, res: Response) => {
         });
 
         // ===== CLAIMS BY COMPANY (Basado en Involved Parties) =====
-        const getInvolvedCompanies = (claim: any): string[] => {
-            if (claim.involved_parties) {
-                try {
-                    const parties = typeof claim.involved_parties === 'string' 
-                        ? JSON.parse(claim.involved_parties) 
-                        : claim.involved_parties;
-                    if (Array.isArray(parties) && parties.length > 0) {
-                        return parties.map((p: any) => p.name || p);
-                    }
-                } catch (e) {}
-            }
-
-            // Fallback a extracción de descripción
-            if (claim.descripcion) {
-                const regex = /Empresa:\s*([^,\n\r(]+)/gi;
-                const companies: string[] = [];
-                let match;
-                while ((match = regex.exec(claim.descripcion)) !== null) {
-                    if (match[1]) {
-                        const name = match[1].trim();
-                        if (name && !companies.includes(name)) companies.push(name);
-                    }
-                }
-                if (companies.length > 0) return companies;
-            }
-
-            return [claim['empresa.nombre'] || 'Sin empresa'];
-        };
-
         const allClaimsInPeriod = await models.Denuncia.findAll({
             where: {
                 created_at: {
@@ -1137,20 +1143,30 @@ export const getDashboardAnalista = async (
             }
         };
 
-        // ===== COMPANIES SUMMARY =====
+        // ===== COMPANIES SUMMARY (Basado en Involved Parties) =====
         const empresas = await models.Empresa.findAll({
             where: { estado: 1 },
             attributes: ['id', 'nombre'],
             raw: true
         });
 
-        const companies_summary: CompanySummary[] = await Promise.all(empresas.map(async (empresa: any) => {
-            const total = await models.Denuncia.count({ where: { empresa_id: empresa.id } });
-            const pending = await models.Denuncia.count({ 
-                where: { empresa_id: empresa.id, estado_id: estadoPendienteId } 
-            });
-            const resolved = await models.Denuncia.count({ 
-                where: { empresa_id: empresa.id, estado_id: estadoResueltoId } 
+        const allClaims = await models.Denuncia.findAll({
+            attributes: ['id', 'empresa_id', 'estado_id', 'involved_parties', 'descripcion'],
+            raw: true
+        });
+
+        const companies_summary: CompanySummary[] = empresas.map((empresa: any) => {
+            let total = 0;
+            let pending = 0;
+            let resolved = 0;
+
+            allClaims.forEach((claim: any) => {
+                const involved = getInvolvedCompanies(claim);
+                if (involved.includes(empresa.nombre) || claim.empresa_id === empresa.id) {
+                    total++;
+                    if (claim.estado_id === estadoPendienteId) pending++;
+                    if (claim.estado_id === estadoResueltoId) resolved++;
+                }
             });
             
             return {
@@ -1161,7 +1177,7 @@ export const getDashboardAnalista = async (
                 resolved_claims: resolved,
                 resolution_rate: total > 0 ? Math.round((resolved / total) * 1000) / 10 : 0
             };
-        }));
+        });
 
         // Sort companies by total claims desc
         companies_summary.sort((a, b) => b.total_claims - a.total_claims);
@@ -1306,7 +1322,8 @@ export const getDashboardSupervisor = async (
                 estado_denuncia: plain.estado_denuncia,
                 tipo: plain.tipo_denuncia,
                 tipo_denuncia: plain.tipo_denuncia,
-                empresa: plain.empresa
+                empresa: plain.empresa,
+                involved_parties: getInvolvedCompanies(plain)
             };
         });
 
@@ -1392,7 +1409,8 @@ export const getAllSupervisorClaims = async (
                 fecha_creacion: plain.created_at,
                 created_at: plain.created_at,
                 tipo: plain.tipo_denuncia,
-                estadoObj: plain.estado_denuncia
+                estadoObj: plain.estado_denuncia,
+                involved_parties: getInvolvedCompanies(plain)
             };
         });
 
@@ -1473,7 +1491,8 @@ export const getPendingSupervisorClaims = async (
                 fecha_creacion: plain.created_at,
                 created_at: plain.created_at,
                 tipo: plain.tipo_denuncia,
-                estadoObj: plain.estado_denuncia
+                estadoObj: plain.estado_denuncia,
+                involved_parties: getInvolvedCompanies(plain)
             };
         });
 
@@ -1554,7 +1573,8 @@ export const getResolvedSupervisorClaims = async (
                 fecha_creacion: plain.created_at,
                 created_at: plain.created_at,
                 tipo: plain.tipo_denuncia,
-                estadoObj: plain.estado_denuncia
+                estadoObj: plain.estado_denuncia,
+                involved_parties: getInvolvedCompanies(plain)
             };
         });
 
