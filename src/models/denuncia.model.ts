@@ -163,6 +163,10 @@ export const defineDenuncia = (sequelize: Sequelize) => {
                     len: [0, 500],
                 },
             },
+            involved_parties: {
+                type: DataTypes.JSON,
+                allowNull: true,
+            },
         },
         {
             tableName: 'denuncia',

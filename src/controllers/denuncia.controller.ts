@@ -72,6 +72,7 @@ interface CreateDenunciaInput {
     createdBy?: number | null;
     prioridad?: string;
     pais?: string | null;
+    involvedParties?: InvolvedPartyPayload[];
 }
 
 interface CreateDenunciaResult {
@@ -149,6 +150,7 @@ async function createDenunciaRecord(
                 is_anonymous: input.esAnonima ? 1 : 0,
                 created_by: input.createdBy ?? null,
                 pais: normalizeNullableString(input.pais),
+                involved_parties: input.involvedParties ?? null,
             },
             { transaction }
         );
@@ -401,6 +403,7 @@ export const crearDenuncia = async (
             createdBy,
             prioridad: payload.prioridad,
             pais: payload.pais,
+            involvedParties: payload.involved_parties || payload.involvedParties,
         });
 
         // Enviar correo de confirmación si hay email
@@ -542,6 +545,7 @@ export const crearDenunciaPublica = async (req: Request, res: Response) => {
             esAnonima,
             createdBy: null,
             pais: payload.country,
+            involvedParties: payload.involvedParties,
         });
 
         // Enviar correo de confirmación si hay email
@@ -1433,6 +1437,7 @@ export const obtenerTodosLosReclamos = async (
                         nombre: tipo?.get('nombre') || 'Tipo desconocido',
                         codigo: tipo?.get('codigo'),
                     },
+                    involved_parties: denuncia.get('involved_parties'),
                     denunciante: {
                         nombre: denuncia.get('denunciante_nombre'),
                         email: denuncia.get('denunciante_email'),
