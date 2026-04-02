@@ -1,5 +1,12 @@
 // Tipos para el Dashboard del Frontend
 
+export interface InvolvedParty {
+  id?: number;
+  name: string;
+  type: "person" | "company" | "entity";
+  rut?: string;
+}
+
 export interface DashboardStats {
   total_denuncias: number;
   en_proceso: number;
@@ -35,7 +42,8 @@ export interface ReclamoReciente {
   tipo_nombre: string;
   estado_nombre: string;
   empresa_nombre: string;
-  involved_parties?: string[];
+  involved_parties?: InvolvedParty[];
+  involved_organizations?: InvolvedParty[];
 }
 
 export interface DashboardData {

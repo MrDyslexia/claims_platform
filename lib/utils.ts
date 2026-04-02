@@ -39,6 +39,15 @@ export const extractCompaniesFromDesc = (description: string): string[] => {
  * involved_parties, luego la extracción del relato y finalmente la empresa principal.
  */
 export const getDisplayCompanies = (claim: any): string[] => {
+  if (
+    Array.isArray(claim.involved_organizations) &&
+    claim.involved_organizations.length > 0
+  ) {
+    return claim.involved_organizations
+      .map((p: any) => (typeof p?.name === "string" ? p.name : null))
+      .filter((name: string | null): name is string => Boolean(name));
+  }
+
   // 1. Intentar usar involved_parties si existe (formato JSON o Array)
   if (claim.involved_parties) {
     try {
@@ -48,7 +57,16 @@ export const getDisplayCompanies = (claim: any): string[] => {
           : claim.involved_parties;
 
       if (Array.isArray(parties) && parties.length > 0) {
-        return parties.map((p: any) => p.name || p);
+        return parties
+          .filter((p: any) => {
+            if (!p || typeof p === "string") return true;
+            return p.type === "company" || p.type === "entity";
+          })
+          .map((p: any) => (typeof p === "string" ? p : p.name))
+          .filter(
+            (name: any): name is string =>
+              typeof name === "string" && name.trim().length > 0,
+          );
       }
     } catch (e) {
       // Si falla el parseo, continuamos con los otros métodos
