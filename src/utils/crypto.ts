@@ -89,6 +89,17 @@ export function encryptText(plaintext: string): {
     };
 }
 
+export function encryptTextIfConfigured(
+    plaintext: string
+): { ciphertext: string; iv: string; tag: string } | null {
+    const keyBase64 = process.env.MASTER_KEY_BASE64;
+    if (!keyBase64) {
+        return null;
+    }
+
+    return encryptText(plaintext);
+}
+
 /**
  * Desencripta un texto usando AES-256-GCM
  * Requiere ciphertext, IV y tag en base64

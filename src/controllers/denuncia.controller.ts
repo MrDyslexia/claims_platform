@@ -13,7 +13,7 @@ import {
 } from '../data/form-metadata';
 import {
     decryptTextIfPresent,
-    encryptText,
+    encryptTextIfConfigured,
     sha256Buffer,
     verifyClaveWithSalt,
 } from '../utils/crypto';
@@ -125,16 +125,16 @@ async function createDenunciaRecord(
         const saltBuffer = crypto.randomBytes(16);
         const saltHex = saltBuffer.toString('hex').toUpperCase();
         const claveHash = sha256Buffer(`${clave}${saltHex}`);
-        const encryptedClave = encryptText(clave);
+        const encryptedClave = encryptTextIfConfigured(clave);
 
         const denuncia = await models.Denuncia.create(
             {
                 numero,
                 clave_hash: claveHash,
                 clave_salt: saltBuffer,
-                clave_ciphertext: encryptedClave.ciphertext,
-                clave_iv: encryptedClave.iv,
-                clave_tag: encryptedClave.tag,
+                clave_ciphertext: encryptedClave?.ciphertext ?? null,
+                clave_iv: encryptedClave?.iv ?? null,
+                clave_tag: encryptedClave?.tag ?? null,
                 empresa_id: input.empresaId,
                 tipo_id: input.tipoId,
                 estado_id: input.estadoId,
