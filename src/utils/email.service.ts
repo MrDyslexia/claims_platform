@@ -5,6 +5,18 @@ import { env } from '../config/env';
 class EmailService {
     private transporter: Transporter | null = null;
 
+    private buildTrackUrl(numero: string, clave?: string): string {
+        const params = new URLSearchParams({
+            numero: numero.trim(),
+        });
+
+        if (clave?.trim()) {
+            params.set('clave', clave.trim());
+        }
+
+        return `${env.frontendUrl}/track?${params.toString()}`;
+    }
+
     private async getTransporter(): Promise<Transporter> {
         if (this.transporter) {
             return this.transporter;
@@ -436,6 +448,7 @@ Este es un correo automático, por favor no responda a este mensaje.
         to: string,
         data: {
             numero: string;
+            clave?: string;
             asunto: string;
             nombreDenunciante?: string;
             comentarioContenido: string;
@@ -445,6 +458,7 @@ Este es un correo automático, por favor no responda a este mensaje.
     ): Promise<boolean> {
         try {
             const transporter = await this.getTransporter();
+            const trackingUrl = this.buildTrackUrl(data.numero, data.clave);
 
             // Truncate comment content if too long
             const maxLength = 500;
@@ -500,7 +514,7 @@ Este es un correo automático, por favor no responda a este mensaje.
             </div>
 
             <div class="button-container">
-                <a href="${env.frontendUrl}/track?numero=${encodeURIComponent(data.numero)}" class="track-button">
+                <a href="${trackingUrl}" class="track-button">
                     💬 Ver Todos los Comentarios
                 </a>
             </div>
@@ -542,7 +556,7 @@ ${contenidoTruncado}
 
 VER TODOS LOS COMENTARIOS
 Ingrese al siguiente enlace:
-${env.frontendUrl}/track?numero=${encodeURIComponent(data.numero)}
+${trackingUrl}
 
 Use su número de denuncia y clave de acceso para ingresar.
 
@@ -570,6 +584,7 @@ Este es un correo automático, por favor no responda a este mensaje.
         to: string,
         data: {
             numero: string;
+            clave?: string;
             asunto: string;
             nombreDenunciante?: string;
             estadoAnterior: string;
@@ -581,6 +596,7 @@ Este es un correo automático, por favor no responda a este mensaje.
     ): Promise<boolean> {
         try {
             const transporter = await this.getTransporter();
+            const trackingUrl = this.buildTrackUrl(data.numero, data.clave);
 
             const htmlContent = `
 <!DOCTYPE html>
@@ -649,7 +665,7 @@ Este es un correo automático, por favor no responda a este mensaje.
             }
 
             <div class="button-container">
-                <a href="${env.frontendUrl}/track?numero=${encodeURIComponent(data.numero)}" class="track-button">
+                <a href="${trackingUrl}" class="track-button">
                     📋 Ver Estado de mi Denuncia
                 </a>
             </div>
@@ -691,7 +707,7 @@ ${data.motivo ? `MOTIVO DEL CAMBIO:\n${data.motivo}\n` : ''}
 
 VER ESTADO DE SU DENUNCIA
 Ingrese al siguiente enlace:
-${env.frontendUrl}/track?numero=${encodeURIComponent(data.numero)}
+${trackingUrl}
 
 Use su número de denuncia y clave de acceso para ingresar.
 
@@ -719,11 +735,13 @@ Este es un correo automático, por favor no responda a este mensaje.
         to: string,
         data: {
             numero: string;
+            clave?: string;
             asunto: string;
         }
     ): Promise<boolean> {
         try {
             const transporter = await this.getTransporter();
+            const trackingUrl = this.buildTrackUrl(data.numero, data.clave);
 
             const htmlContent = `
 <!DOCTYPE html>
@@ -767,7 +785,7 @@ Este es un correo automático, por favor no responda a este mensaje.
             <p>Puede consultar el estado de su denuncia en cualquier momento a través de nuestro portal de seguimiento.</p>
 
             <div class="button-container">
-                <a href="${env.frontendUrl}/track?numero=${encodeURIComponent(data.numero)}" class="track-button">
+                <a href="${trackingUrl}" class="track-button">
                     📋 Seguimiento de mi Denuncia
                 </a>
             </div>
@@ -803,7 +821,7 @@ Puede consultar el estado de su denuncia en cualquier momento a través de nuest
 
 SEGUIMIENTO DE SU DENUNCIA
 Ingrese al siguiente enlace:
-${env.frontendUrl}/track?numero=${encodeURIComponent(data.numero)}
+${trackingUrl}
 
 Use su número de denuncia y clave de acceso para ingresar.
 

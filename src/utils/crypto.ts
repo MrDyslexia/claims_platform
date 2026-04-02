@@ -114,6 +114,18 @@ export function decryptText(
     return decrypted.toString('utf8');
 }
 
+export function decryptTextIfPresent(
+    ciphertextB64?: string | null,
+    ivB64?: string | null,
+    tagB64?: string | null
+): string | null {
+    if (!ciphertextB64 || !ivB64 || !tagB64) {
+        return null;
+    }
+
+    return decryptText(ciphertextB64, ivB64, tagB64);
+}
+
 /**
  * Genera un código de recuperación aleatorio
  * Formato: 8-12 caracteres alfanuméricos en mayúsculas

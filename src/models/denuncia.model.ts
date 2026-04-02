@@ -32,6 +32,18 @@ export const defineDenuncia = (sequelize: Sequelize) => {
                     notEmpty: true,
                 },
             },
+            clave_ciphertext: {
+                type: DataTypes.TEXT,
+                allowNull: true,
+            },
+            clave_iv: {
+                type: DataTypes.STRING(255),
+                allowNull: true,
+            },
+            clave_tag: {
+                type: DataTypes.STRING(255),
+                allowNull: true,
+            },
             empresa_id: {
                 type: DataTypes.BIGINT,
                 allowNull: false,

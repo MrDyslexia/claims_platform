@@ -12,6 +12,8 @@ import {
     ensureFormMetadataSeeded,
 } from '../data/form-metadata';
 import {
+    decryptTextIfPresent,
+    encryptText,
     sha256Buffer,
     verifyClaveWithSalt,
 } from '../utils/crypto';
@@ -123,12 +125,16 @@ async function createDenunciaRecord(
         const saltBuffer = crypto.randomBytes(16);
         const saltHex = saltBuffer.toString('hex').toUpperCase();
         const claveHash = sha256Buffer(`${clave}${saltHex}`);
+        const encryptedClave = encryptText(clave);
 
         const denuncia = await models.Denuncia.create(
             {
                 numero,
                 clave_hash: claveHash,
                 clave_salt: saltBuffer,
+                clave_ciphertext: encryptedClave.ciphertext,
+                clave_iv: encryptedClave.iv,
+                clave_tag: encryptedClave.tag,
                 empresa_id: input.empresaId,
                 tipo_id: input.tipoId,
                 estado_id: input.estadoId,
@@ -157,6 +163,22 @@ async function createDenunciaRecord(
 
         return { denuncia, clave };
     });
+}
+
+function getDenunciaTrackingClave(denuncia: any): string | null {
+    try {
+        return decryptTextIfPresent(
+            denuncia?.get('clave_ciphertext') as string | null,
+            denuncia?.get('clave_iv') as string | null,
+            denuncia?.get('clave_tag') as string | null
+        );
+    } catch (error) {
+        console.error(
+            '[Email] Error decrypting stored clave for tracking link:',
+            error
+        );
+        return null;
+    }
 }
 
 function findSubcategoryName(subcategoryCode?: string) {
@@ -530,9 +552,7 @@ export const crearDenunciaPublica = async (req: Request, res: Response) => {
             findSubcategoryName(subcategoryCode) ||
             (tipoFinal?.get('nombre') as string);
 
-        let asunto =
-            sanitizeString(payload.details).slice(0, 300) ||
-            subcategoryName.slice(0, 300);
+        let asunto = subcategoryName.slice(0, 300);
 
         // Asegurar longitud mínima de 5 caracteres
         if (asunto.length < 5) {
@@ -913,8 +933,10 @@ export const asignarDenuncia = async (
             const denuncianteEmail = denuncia.get('denunciante_email') as string | null;
             if (denuncianteEmail) {
                 // Enviar notificación de asignación
+                const clave = getDenunciaTrackingClave(denuncia);
                 emailService.sendAssignmentNotification(denuncianteEmail, {
                     numero: denuncia.get('numero') as string,
+                    clave: clave || undefined,
                     asunto: denuncia.get('asunto') as string,
                 }).catch(err => {
                     console.error('Error sending assignment notification email:', err);
@@ -1111,10 +1133,12 @@ export const actualizarEstado = async (
         const denuncianteEmail = denunciaActualizada?.get('denunciante_email') as string | null;
         if (denuncianteEmail) {
             try {
+                const clave = getDenunciaTrackingClave(denunciaActualizada);
                 await emailService.sendStatusChangeNotification(
                     denuncianteEmail,
                     {
                         numero: denunciaActualizada?.get('numero') as string,
+                        clave: clave || undefined,
                         asunto: denunciaActualizada?.get('asunto') as string,
                         nombreDenunciante: denunciaActualizada?.get('denunciante_nombre') as string || undefined,
                         estadoAnterior: estadoAnterior?.get('nombre') as string || 'Sin estado',

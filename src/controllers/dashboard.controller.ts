@@ -220,6 +220,22 @@ function mapEstadoToAnalista(estadoCodigo: string): EstadoAnalista {
     return 'en_revision';
 }
 
+function buildEstadoIds(estados: any[]) {
+    const estadosMap = new Map<string, number>();
+    estados.forEach((estado: any) => {
+        estadosMap.set(String(estado.codigo).toUpperCase(), Number(estado.id));
+    });
+
+    return {
+        pendiente: estadosMap.get('PENDIENTE') ?? -1,
+        proceso: estadosMap.get('PROCESO') ?? estadosMap.get('EN_PROCESO') ?? -1,
+        info: estadosMap.get('INFO') ?? -1,
+        resuelto: estadosMap.get('RESUELTO') ?? -1,
+        cerrado: estadosMap.get('CERRADO') ?? -1,
+        map: estadosMap,
+    };
+}
+
 // Helper para asignar colores a tipos de reclamos
 function getColorForType(index: number): string {
     const colors = [
@@ -276,17 +292,19 @@ export const getDashboardStats = async (req: Request & { user?: any }, res: Resp
         });
 
         // Mapear estados por código para facilitar el acceso
-        const estadosMap = new Map();
-        estados.forEach((estado: any) => {
-            estadosMap.set(estado.codigo, estado.id);
-        });
+        const estadoIds = buildEstadoIds(estados);
+        const estadosEnProceso = [estadoIds.proceso, estadoIds.info].filter(
+            (id) => id !== -1
+        );
+        const estadosFinalizados = [estadoIds.resuelto, estadoIds.cerrado].filter(
+            (id) => id !== -1
+        );
 
         // Contar denuncias "En Proceso" - buscar estados que no sean PENDIENTE ni finalizados
-        const estadoProcesoId = estadosMap.get('PENDIENTE') || 1;
         const enProceso = await models.Denuncia.count({
             where: {
                 ...baseWhere,
-                estado_id: { [Op.ne]: estadoProcesoId },
+                estado_id: { [Op.in]: estadosEnProceso },
             },
         });
 
@@ -295,7 +313,7 @@ export const getDashboardStats = async (req: Request & { user?: any }, res: Resp
         const resueltas = await models.Denuncia.count({
             where: {
                 ...baseWhere,
-                estado_id: estadosMap.get('RESUELTO') || 2,
+                estado_id: estadoIds.resuelto,
             },
         }); // Ajustar cuando tengas más estados
 
@@ -304,24 +322,30 @@ export const getDashboardStats = async (req: Request & { user?: any }, res: Resp
             where: {
                 ...baseWhere,
                 prioridad_id: 'CRITICA',
-                estado_id: { [Op.ne]: estadosMap.get('RESUELTO') || 2 },
+                estado_id: { [Op.notIn]: estadosFinalizados },
             },
         });
 
         // 2. DISTRIBUCIÓN POR ESTADO
         // Obtener conteos por cada estado
-        const estadosCount = await Promise.all(
-            Array.from(estadosMap.values()).map((estadoId: any) =>
-                models.Denuncia.count({ where: { ...baseWhere, estado_id: estadoId } })
-            )
-        );
 
         // Crear distribución (ajustar según tus estados reales)
         const distribucion_estados = {
-            nuevos: estadosCount[0],
-            en_proceso: estadosCount[1],
-            resueltos: estadosCount[2],
-            cerrados: estadosCount[3],
+            nuevos: await models.Denuncia.count({
+                where: { ...baseWhere, estado_id: estadoIds.pendiente },
+            }),
+            en_proceso: await models.Denuncia.count({
+                where: {
+                    ...baseWhere,
+                    estado_id: { [Op.in]: estadosEnProceso },
+                },
+            }),
+            resueltos: await models.Denuncia.count({
+                where: { ...baseWhere, estado_id: estadoIds.resuelto },
+            }),
+            cerrados: await models.Denuncia.count({
+                where: { ...baseWhere, estado_id: estadoIds.cerrado },
+            }),
         };
 
         // 3. MÉTRICAS RÁPIDAS
@@ -493,13 +517,8 @@ export const generateReports = async (req: Request, res: Response) => {
         const estados = await models.EstadoDenuncia.findAll({
             attributes: ['id', 'codigo', 'nombre'],
         });
-        const estadosMap = new Map();
-        estados.forEach((estado: any) => {
-            estadosMap.set(estado.codigo, estado.id);
-        });
-
-        const estadoResueltoId =
-            estadosMap.get('RESUELTO') || estadosMap.get('CERRADO') || -1;
+        const estadoIds = buildEstadoIds(estados);
+        const estadoResueltoId = estadoIds.resuelto;
 
         // ===== SUMMARY - Período actual =====
         const totalReclamosCurrent = await models.Denuncia.count({
@@ -1617,11 +1636,8 @@ export const getAnalystAnalytics = async (req: Request, res: Response) => {
         const estados = await models.EstadoDenuncia.findAll({
             attributes: ['id', 'codigo', 'nombre'],
         });
-        const estadosMap = new Map();
-        estados.forEach((estado: any) => {
-            estadosMap.set(estado.codigo, estado.id);
-        });
-        const estadoResueltoId = estadosMap.get('RESUELTO') || estadosMap.get('CERRADO') || 2;
+        const estadoIds = buildEstadoIds(estados);
+        const estadoResueltoId = estadoIds.resuelto;
 
         // 1. Rendimiento Diario (Recibidos vs Resueltos)
         const receivedByDay = await models.Denuncia.findAll({
@@ -1833,8 +1849,14 @@ export const getDashboardAnalytics = async (req: Request & { user?: any }, res: 
         const estadoResueltoId = estadosMap.get('RESUELTO') || -1;
         const estadoCerradoId = estadosMap.get('CERRADO') || -1;
         const estadoProcesoId = estadosMap.get('EN_PROCESO') || estadosMap.get('PROCESO') || -1;
-        const estadosPendientesIds = [estadoResueltoId, estadoCerradoId].filter((id) => id !== undefined && id !== -1);
-        if (estadosPendientesIds.length === 0) estadosPendientesIds.push(-1);
+        const estadosResueltosIds = [estadoResueltoId].filter(
+            (id) => id !== undefined && id !== -1
+        );
+        const estadosFinalizadosIds = [estadoResueltoId, estadoCerradoId].filter(
+            (id) => id !== undefined && id !== -1
+        );
+        if (estadosResueltosIds.length === 0) estadosResueltosIds.push(-1);
+        if (estadosFinalizadosIds.length === 0) estadosFinalizadosIds.push(-1);
 
         // ===== SUMMARY =====
         const totalClaims = await models.Denuncia.count();
@@ -1845,7 +1867,7 @@ export const getDashboardAnalytics = async (req: Request & { user?: any }, res: 
 
         const claimsResolved = await models.Denuncia.count({
             where: {
-                estado_id: { [Op.in]: estadosPendientesIds }
+                estado_id: { [Op.in]: estadosResueltosIds }
             }
         });
 
@@ -1856,7 +1878,7 @@ export const getDashboardAnalytics = async (req: Request & { user?: any }, res: 
         const resolvedCurrentMonth = await models.Denuncia.count({
             where: {
                 created_at: { [Op.between]: [startCurrentMonth, endCurrentMonth] },
-                estado_id: { [Op.in]: estadosPendientesIds }
+                estado_id: { [Op.in]: estadosResueltosIds }
             }
         });
         const resolutionRateCurrent = totalCurrentMonth > 0 
@@ -1870,7 +1892,7 @@ export const getDashboardAnalytics = async (req: Request & { user?: any }, res: 
         const resolvedPrevMonth = await models.Denuncia.count({
             where: {
                 created_at: { [Op.between]: [startPrevMonth, endPrevMonth] },
-                estado_id: { [Op.in]: estadosPendientesIds }
+                estado_id: { [Op.in]: estadosResueltosIds }
             }
         });
         const resolutionRatePrev = totalPrevMonth > 0 
@@ -1904,7 +1926,7 @@ export const getDashboardAnalytics = async (req: Request & { user?: any }, res: 
             const resueltos = await models.Denuncia.count({
                 where: {
                     created_at: { [Op.between]: [monthStart, monthEnd] },
-                    estado_id: { [Op.in]: estadosPendientesIds }
+                    estado_id: { [Op.in]: estadosResueltosIds }
                 }
             });
 
@@ -1968,7 +1990,7 @@ export const getDashboardAnalytics = async (req: Request & { user?: any }, res: 
         const getAvgResolutionTime = async (start: Date, end: Date): Promise<number> => {
             const resolved = await models.Denuncia.findAll({
                 where: {
-                    estado_id: { [Op.in]: estadosPendientesIds },
+                    estado_id: { [Op.in]: estadosResueltosIds },
                     updated_at: { [Op.ne]: null },
                     created_at: { [Op.between]: [start, end] }
                 },
@@ -2034,7 +2056,7 @@ export const getDashboardAnalytics = async (req: Request & { user?: any }, res: 
         const criticalClaims = await models.Denuncia.count({
             where: {
                 prioridad_id: 'CRITICA',
-                estado_id: { [Op.notIn]: estadosPendientesIds }
+                estado_id: { [Op.notIn]: estadosFinalizadosIds }
             }
         });
 
@@ -2171,7 +2193,13 @@ export const getAdminDashboardComplete = async (
 
         const estadoResueltoId = estadosMap.get('RESUELTO') || -1;
         const estadoCerradoId = estadosMap.get('CERRADO') || -1;
-        const estadosFinalizados = [estadoResueltoId, estadoCerradoId].filter((id) => id !== undefined && id !== -1) as number[];
+        const estadosResueltos = [estadoResueltoId].filter(
+            (id) => id !== undefined && id !== -1
+        ) as number[];
+        const estadosFinalizados = [estadoResueltoId, estadoCerradoId].filter(
+            (id) => id !== undefined && id !== -1
+        ) as number[];
+        if (estadosResueltos.length === 0) estadosResueltos.push(-1);
         if (estadosFinalizados.length === 0) estadosFinalizados.push(-1);
 
         // Helper para calcular tendencia
@@ -2196,7 +2224,7 @@ export const getAdminDashboardComplete = async (
         const resueltosMesActual = await models.Denuncia.count({
             where: {
                 created_at: { [Op.between]: [startCurrentMonth, endCurrentMonth] },
-                estado_id: { [Op.in]: estadosFinalizados }
+                estado_id: { [Op.in]: estadosResueltos }
             }
         });
         const tasaActual = totalMesActual > 0 ? Math.round((resueltosMesActual / totalMesActual) * 1000) / 10 : 0;
@@ -2208,7 +2236,7 @@ export const getAdminDashboardComplete = async (
         const resueltosMesAnterior = await models.Denuncia.count({
             where: {
                 created_at: { [Op.between]: [startPrevMonth, endPrevMonth] },
-                estado_id: { [Op.in]: estadosFinalizados }
+                estado_id: { [Op.in]: estadosResueltos }
             }
         });
         const tasaAnterior = totalMesAnterior > 0 ? Math.round((resueltosMesAnterior / totalMesAnterior) * 1000) / 10 : 0;
@@ -2224,7 +2252,7 @@ export const getAdminDashboardComplete = async (
         const getAvgResolutionDays = async (startDate: Date, endDate: Date): Promise<number> => {
             const denunciasResueltas = await models.Denuncia.findAll({
                 where: {
-                    estado_id: { [Op.in]: estadosFinalizados },
+                    estado_id: { [Op.in]: estadosResueltos },
                     created_at: { [Op.between]: [startDate, endDate] },
                     updated_at: { [Op.ne]: null }
                 },
@@ -2294,7 +2322,7 @@ export const getAdminDashboardComplete = async (
             const resueltos = await models.Denuncia.count({
                 where: {
                     created_at: { [Op.between]: [monthStart, monthEnd] },
-                    estado_id: { [Op.in]: estadosFinalizados }
+                    estado_id: { [Op.in]: estadosResueltos }
                 }
             });
 
@@ -2370,7 +2398,7 @@ export const getAdminDashboardComplete = async (
         // Obtener todas las denuncias resueltas con sus tiempos
         const denunciasParaTiempos = await models.Denuncia.findAll({
             where: {
-                estado_id: { [Op.in]: estadosFinalizados },
+                estado_id: { [Op.in]: estadosResueltos },
                 updated_at: { [Op.ne]: null }
             },
             attributes: ['created_at', 'updated_at'],

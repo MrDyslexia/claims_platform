@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { models } from '../db/sequelize';
 import { Op } from 'sequelize';
 import { emailService } from '../utils/email.service';
+import { decryptTextIfPresent } from '../utils/crypto';
 
 /**
  * Helper: Obtener rol del usuario
@@ -106,8 +107,14 @@ export const crearComentarioDenuncia = async (req: Request, res: Response) => {
         const denuncianteEmail = denuncia.get('denunciante_email') as string | null;
         if (visibilityValue === 'publico' && denuncianteEmail) {
             try {
+                const clave = decryptTextIfPresent(
+                    denuncia.get('clave_ciphertext') as string | null,
+                    denuncia.get('clave_iv') as string | null,
+                    denuncia.get('clave_tag') as string | null
+                );
                 await emailService.sendCommentNotification(denuncianteEmail, {
                     numero: denuncia.get('numero') as string,
+                    clave: clave || undefined,
                     asunto: denuncia.get('asunto') as string,
                     nombreDenunciante: (denuncia.get('denunciante_nombre') as string) || undefined,
                     comentarioContenido: contenido.trim(),

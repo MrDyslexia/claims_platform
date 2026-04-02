@@ -10,6 +10,7 @@
         "build": "bun build ./src/app.ts --outdir ./dist --target node --external '*'",
         "db:init": "bun scripts/init-db.ts",
         "db:migrate": "bun scripts/run-migrations.ts",
+        "db:add-clave-tracking": "bun src/add_clave_tracking_columns.ts",
         "db:seed": "bun scripts/seed-users.ts",
         "lint": "eslint --fix"
     },
