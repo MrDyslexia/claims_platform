@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardBody, CardHeader, Button, Spinner } from "@heroui/react";
 import {
   Download,
@@ -27,15 +27,15 @@ import {
 
 import {
   fetchDashboardReports,
-  exportDashboardReportPdf,
   type DashboardReportResponse,
 } from "@/lib/api/dashboard";
+import { exportElementToPdf } from "@/lib/export-element-to-pdf";
 
 const COLORS = ["#7928CA", "#0070F3", "#17C964", "#F5A524", "#F31260"];
 
 export default function ReportsPage() {
+  const exportRef = useRef<HTMLDivElement>(null);
   const [reportPeriod, setReportPeriod] = useState("monthly");
-  const [activeTab, setActiveTab] = useState("executive");
   const [reportData, setReportData] = useState<DashboardReportResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -60,8 +60,21 @@ export default function ReportsPage() {
 
   const handleExport = async () => {
     try {
+      if (!exportRef.current) {
+        throw new Error("No se pudo preparar el reporte para exportar");
+      }
       setExporting(true);
-      await exportDashboardReportPdf(reportPeriod);
+      const periodLabels: Record<string, string> = {
+        weekly: "semanal",
+        monthly: "mensual",
+        quarterly: "trimestral",
+        yearly: "anual",
+      };
+      const dateLabel = new Date().toISOString().slice(0, 10);
+
+      await exportElementToPdf(exportRef.current, {
+        filename: `reporte_${periodLabels[reportPeriod] || reportPeriod}_${dateLabel}.pdf`,
+      });
     } catch (err: any) {
       setError(err.message || "Error al exportar el reporte");
     } finally {
@@ -142,8 +155,26 @@ export default function ReportsPage() {
         </div>
       </div>
 
+      <div
+        ref={exportRef}
+        className="space-y-6 rounded-2xl bg-white p-6 text-black"
+      >
+      <div>
+        <h2 className="text-2xl font-bold">Reporte de Denuncias</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Reporte visual del período{" "}
+          {reportPeriod === "weekly"
+            ? "semanal"
+            : reportPeriod === "monthly"
+              ? "mensual"
+              : reportPeriod === "quarterly"
+                ? "trimestral"
+                : "anual"}
+        </p>
+      </div>
+
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardBody className="p-4">
             <div className="flex items-center justify-between">
@@ -226,7 +257,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Claims by Month */}
         <Card>
           <CardHeader>
@@ -327,95 +358,38 @@ export default function ReportsPage() {
         </Card>
       </div>
 
-      {/* Detailed Reports */}
       <Card>
-        <CardBody className="p-0">
-          <div className="w-full">
-            <div className="flex border-b border-default-200">
-              <button
-                className={`px-4 py-3 text-sm font-medium transition-colors ${
-                  activeTab === "executive"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                onClick={() => setActiveTab("executive")}
-              >
-                Reporte Ejecutivo
-              </button>
-              <button
-                className={`px-4 py-3 text-sm font-medium transition-colors ${
-                  activeTab === "detailed"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                onClick={() => setActiveTab("detailed")}
-              >
-                Reporte Detallado
-              </button>
-              <button
-                className={`px-4 py-3 text-sm font-medium transition-colors ${
-                  activeTab === "custom"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                onClick={() => setActiveTab("custom")}
-              >
-                Reporte Personalizado
-              </button>
+        <CardBody className="p-6 space-y-4">
+          <h3 className="text-lg font-semibold">Resumen Ejecutivo</h3>
+          <p className="text-sm text-muted-foreground">
+            Durante el período seleccionado, se registraron {summary?.totalReclamos ?? 0} reclamos
+            en total, con una tasa de resolución del {summary ? (summary.tasaResolucion * 100).toFixed(0) : 0}%. El tiempo
+            promedio de resolución fue de {summary?.tiempoPromedioDias ?? 0} días
+            {variacionTiempo > 0
+              ? ", ligeramente superior al período anterior."
+              : variacionTiempo < 0
+                ? ", mejorando respecto al período anterior."
+                : "."}
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <div className="rounded-lg bg-default-50 p-4 dark:bg-default-100/50">
+              <p className="text-sm text-muted-foreground">
+                Reclamos Críticos
+              </p>
+              <p className="mt-1 text-2xl font-bold">{summary?.reclamosCriticos ?? 0}</p>
             </div>
-
-            {activeTab === "executive" && summary && (
-              <div className="p-6 space-y-4">
-                <h3 className="text-lg font-semibold">Resumen Ejecutivo</h3>
-                <p className="text-sm text-muted-foreground">
-                  Durante el período seleccionado, se registraron {summary.totalReclamos} reclamos
-                  en total, con una tasa de resolución del {(summary.tasaResolucion * 100).toFixed(0)}%. El tiempo
-                  promedio de resolución fue de {summary.tiempoPromedioDias} días
-                  {variacionTiempo > 0
-                    ? ", ligeramente superior al período anterior."
-                    : variacionTiempo < 0
-                    ? ", mejorando respecto al período anterior."
-                    : "."}
-                </p>
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div className="p-4 bg-default-50 dark:bg-default-100/50 rounded-lg">
-                    <p className="text-sm text-muted-foreground">
-                      Reclamos Críticos
-                    </p>
-                    <p className="text-2xl font-bold mt-1">{summary.reclamosCriticos}</p>
-                  </div>
-                  <div className="p-4 bg-default-50 dark:bg-default-100/50 rounded-lg">
-                    <p className="text-sm text-muted-foreground">
-                      Satisfacción Promedio
-                    </p>
-                    <p className="text-2xl font-bold mt-1">
-                      {summary.satisfaccionPromedio}/5
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "detailed" && (
-              <div className="p-6">
-                <p className="text-sm text-muted-foreground">
-                  Análisis detallado de todos los reclamos, incluyendo
-                  tendencias, patrones y recomendaciones.
-                </p>
-              </div>
-            )}
-
-            {activeTab === "custom" && (
-              <div className="p-6">
-                <p className="text-sm text-muted-foreground">
-                  Crea reportes personalizados seleccionando las métricas y
-                  filtros que necesites.
-                </p>
-              </div>
-            )}
+            <div className="rounded-lg bg-default-50 p-4 dark:bg-default-100/50">
+              <p className="text-sm text-muted-foreground">
+                Satisfacción Promedio
+              </p>
+              <p className="mt-1 text-2xl font-bold">
+                {summary?.satisfaccionPromedio ?? 0}/5
+              </p>
+            </div>
           </div>
         </CardBody>
       </Card>
+      </div>
     </div>
   );
 }

@@ -283,7 +283,10 @@ export default function AdminDashboard() {
                   </span>
                 </div>
                 <Progress
-                  color="primary"
+                  classNames={{
+                    indicator: "bg-blue-600",
+                    track: "bg-blue-100",
+                  }}
                   size="sm"
                   value={getPercent(distribucion_estados.nuevos)}
                 />
@@ -296,7 +299,10 @@ export default function AdminDashboard() {
                   </span>
                 </div>
                 <Progress
-                  color="warning"
+                  classNames={{
+                    indicator: "bg-amber-500",
+                    track: "bg-amber-100",
+                  }}
                   size="sm"
                   value={getPercent(distribucion_estados.en_proceso)}
                 />
@@ -309,7 +315,10 @@ export default function AdminDashboard() {
                   </span>
                 </div>
                 <Progress
-                  color="success"
+                  classNames={{
+                    indicator: "bg-emerald-600",
+                    track: "bg-emerald-100",
+                  }}
                   size="sm"
                   value={getPercent(distribucion_estados.resueltos)}
                 />
@@ -322,7 +331,10 @@ export default function AdminDashboard() {
                   </span>
                 </div>
                 <Progress
-                  color="default"
+                  classNames={{
+                    indicator: "bg-slate-700",
+                    track: "bg-slate-200",
+                  }}
                   size="sm"
                   value={getPercent(distribucion_estados.cerrados)}
                 />
