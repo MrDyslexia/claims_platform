@@ -44,6 +44,15 @@ interface ResolutionTime {
     cantidad: number;
 }
 
+interface ReportClaimSummary {
+    numero: string;
+    fechaCreacion: string;
+    asunto: string;
+    estado: string;
+    tipo: string;
+    empresa: string;
+}
+
 interface DashboardReportResponse {
     reportPeriod: ReportPeriod;
     summary: ReportSummary;
@@ -51,6 +60,7 @@ interface DashboardReportResponse {
     claimsByType: ClaimsByType[];
     claimsByCompany: ClaimsByCompany[];
     resolutionTime: ResolutionTime[];
+    claimsSummary: ReportClaimSummary[];
 }
 
 // Tipos para dashboard de analista
@@ -199,6 +209,26 @@ const getInvolvedOrganizations = (claim: any): NormalizedInvolvedParty[] => {
 
 const getInvolvedCompanies = (claim: any): string[] => {
     return getInvolvedOrganizations(claim).map((party) => party.name);
+};
+
+const getReportClaimCompany = (claim: any): string => {
+    const organizations = Array.from(
+        new Set(getInvolvedOrganizations(claim).map((party) => party.name))
+    );
+
+    if (organizations.length > 0) {
+        return organizations.join(', ');
+    }
+
+    return claim['empresa.nombre'] || claim.empresa?.nombre || 'Sin empresa';
+};
+
+const serializeReportDate = (value: unknown): string => {
+    if (!value) return '';
+
+    const date = value instanceof Date ? value : new Date(String(value));
+
+    return Number.isNaN(date.getTime()) ? String(value) : date.toISOString();
 };
 
 interface DashboardAnalistaResponse {
@@ -826,13 +856,34 @@ export const generateReports = async (req: Request, res: Response) => {
                     [Op.between]: [startDate, endDate],
                 },
             },
-            attributes: ['involved_parties', 'descripcion'],
-            include: [{
-                model: models.Empresa,
-                as: 'empresa',
-                attributes: ['nombre'],
-                required: false,
-            }],
+            attributes: [
+                'numero',
+                'created_at',
+                'asunto',
+                'involved_parties',
+                'descripcion',
+            ],
+            include: [
+                {
+                    model: models.Empresa,
+                    as: 'empresa',
+                    attributes: ['nombre'],
+                    required: false,
+                },
+                {
+                    model: models.TipoDenuncia,
+                    as: 'tipo_denuncia',
+                    attributes: ['nombre'],
+                    required: false,
+                },
+                {
+                    model: models.EstadoDenuncia,
+                    as: 'estado_denuncia',
+                    attributes: ['nombre'],
+                    required: false,
+                },
+            ],
+            order: [['created_at', 'DESC']],
             raw: true
         });
 
@@ -848,6 +899,21 @@ export const generateReports = async (req: Request, res: Response) => {
             .map(([empresa, cantidad]) => ({ empresa, cantidad }))
             .sort((a, b) => b.cantidad - a.cantidad)
             .slice(0, 10);
+
+        const claimsSummary: ReportClaimSummary[] = allClaimsInPeriod.map(
+            (claim: any) => ({
+                numero: String(claim.numero || ''),
+                fechaCreacion: serializeReportDate(claim.created_at),
+                asunto:
+                    typeof claim.asunto === 'string' && claim.asunto.trim()
+                        ? claim.asunto.trim()
+                        : 'Sin asunto',
+                estado:
+                    claim['estado_denuncia.nombre'] || 'Sin estado',
+                tipo: claim['tipo_denuncia.nombre'] || 'Sin tipo',
+                empresa: getReportClaimCompany(claim),
+            })
+        );
 
         // ===== RESOLUTION TIME =====
         const rangos = [
@@ -910,6 +976,7 @@ export const generateReports = async (req: Request, res: Response) => {
             claimsByType,
             claimsByCompany,
             resolutionTime,
+            claimsSummary,
         };
 
         res.status(200).json(response);
