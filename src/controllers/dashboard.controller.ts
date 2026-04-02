@@ -108,14 +108,65 @@ interface CompanySummary {
 // HELPERS
 // ==========================================
 
-const getInvolvedCompanies = (claim: any): string[] => {
+type InvolvedPartyType = 'person' | 'company' | 'entity';
+
+interface NormalizedInvolvedParty {
+    id?: number;
+    name: string;
+    type: InvolvedPartyType;
+    rut?: string;
+}
+
+const normalizeInvolvedParties = (claim: any): NormalizedInvolvedParty[] => {
     if (claim.involved_parties) {
         try {
             const parties = typeof claim.involved_parties === 'string' 
                 ? JSON.parse(claim.involved_parties) 
                 : claim.involved_parties;
             if (Array.isArray(parties) && parties.length > 0) {
-                return parties.map((p: any) => p.name || (typeof p === 'string' ? p : 'Sin nombre'));
+                const normalized = parties
+                    .map((p: any): NormalizedInvolvedParty | null => {
+                        if (!p) return null;
+
+                        if (typeof p === 'string') {
+                            const name = p.trim();
+                            return name ? { name, type: 'company' } : null;
+                        }
+
+                        const name =
+                            typeof p.name === 'string' ? p.name.trim() : '';
+                        if (!name) return null;
+
+                        const rawType =
+                            typeof p.type === 'string'
+                                ? p.type.trim().toLowerCase()
+                                : '';
+
+                        const type: InvolvedPartyType =
+                            rawType === 'person'
+                                ? 'person'
+                                : rawType === 'entity'
+                                  ? 'entity'
+                                  : 'company';
+
+                        return {
+                            id:
+                                typeof p.id === 'number' ? p.id : undefined,
+                            name,
+                            type,
+                            rut:
+                                typeof p.rut === 'string' && p.rut.trim()
+                                    ? p.rut.trim()
+                                    : undefined,
+                        };
+                    })
+                    .filter(
+                        (
+                            party
+                        ): party is NormalizedInvolvedParty => Boolean(party)
+                    );
+
+                if (normalized.length > 0) return normalized;
             }
         } catch (e) {}
     }
@@ -131,11 +182,24 @@ const getInvolvedCompanies = (claim: any): string[] => {
                 if (name && !companies.includes(name)) companies.push(name);
             }
         }
-        if (companies.length > 0) return companies;
+        if (companies.length > 0) {
+            return companies.map((name) => ({ name, type: 'company' }));
+        }
     }
 
-    const empresaNombre = claim['empresa.nombre'] || (claim.empresa?.nombre) || 'Sin empresa';
-    return [empresaNombre];
+    const empresaNombre =
+        claim['empresa.nombre'] || claim.empresa?.nombre || 'Sin empresa';
+    return empresaNombre ? [{ name: empresaNombre, type: 'company' }] : [];
+};
+
+const getInvolvedOrganizations = (claim: any): NormalizedInvolvedParty[] => {
+    return normalizeInvolvedParties(claim).filter(
+        (party) => party.type === 'company' || party.type === 'entity'
+    );
+};
+
+const getInvolvedCompanies = (claim: any): string[] => {
+    return getInvolvedOrganizations(claim).map((party) => party.name);
 };
 
 interface DashboardAnalistaResponse {
@@ -455,7 +519,8 @@ export const getDashboardStats = async (req: Request & { user?: any }, res: Resp
                 estado_nombre:
                     claimData.estado_denuncia?.nombre || 'Sin estado',
                 empresa_nombre: claimData.empresa?.nombre || 'Sin empresa',
-                involved_parties: getInvolvedCompanies(claimData),
+                involved_parties: normalizeInvolvedParties(claimData),
+                involved_organizations: getInvolvedOrganizations(claimData),
             };
         });
 
@@ -1355,7 +1420,8 @@ export const getDashboardSupervisor = async (
                 tipo: plain.tipo_denuncia,
                 tipo_denuncia: plain.tipo_denuncia,
                 empresa: plain.empresa,
-                involved_parties: getInvolvedCompanies(plain)
+                involved_parties: normalizeInvolvedParties(plain),
+                involved_organizations: getInvolvedOrganizations(plain)
             };
         });
 
@@ -1442,7 +1508,8 @@ export const getAllSupervisorClaims = async (
                 created_at: plain.created_at,
                 tipo: plain.tipo_denuncia,
                 estadoObj: plain.estado_denuncia,
-                involved_parties: getInvolvedCompanies(plain)
+                involved_parties: normalizeInvolvedParties(plain),
+                involved_organizations: getInvolvedOrganizations(plain)
             };
         });
 
@@ -1524,7 +1591,8 @@ export const getPendingSupervisorClaims = async (
                 created_at: plain.created_at,
                 tipo: plain.tipo_denuncia,
                 estadoObj: plain.estado_denuncia,
-                involved_parties: getInvolvedCompanies(plain)
+                involved_parties: normalizeInvolvedParties(plain),
+                involved_organizations: getInvolvedOrganizations(plain)
             };
         });
 
@@ -1606,7 +1674,8 @@ export const getResolvedSupervisorClaims = async (
                 created_at: plain.created_at,
                 tipo: plain.tipo_denuncia,
                 estadoObj: plain.estado_denuncia,
-                involved_parties: getInvolvedCompanies(plain)
+                involved_parties: normalizeInvolvedParties(plain),
+                involved_organizations: getInvolvedOrganizations(plain)
             };
         });
 
