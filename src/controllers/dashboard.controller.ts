@@ -1,7 +1,6 @@
 import type { Request, Response } from 'express';
 import { models } from '../db/sequelize';
 import { Op, fn, col, literal } from 'sequelize';
-import { generateDashboardReportPdf } from '../utils/dashboard-report-pdf';
 
 // ==========================================
 // TYPES & DTOs
@@ -912,18 +911,6 @@ export const generateReports = async (req: Request, res: Response) => {
             claimsByCompany,
             resolutionTime,
         };
-
-        if (String(req.query.format || '').toLowerCase() === 'pdf') {
-            const pdf = generateDashboardReportPdf(response);
-            const filename = `reporte_${period}_${new Date().toISOString().slice(0, 10)}.pdf`;
-
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader(
-                'Content-Disposition',
-                `attachment; filename="${filename}"`
-            );
-            return res.status(200).send(pdf);
-        }
 
         res.status(200).json(response);
     } catch (error) {
