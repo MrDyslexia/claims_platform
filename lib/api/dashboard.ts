@@ -140,6 +140,15 @@ export interface ResolutionTime {
   cantidad: number;
 }
 
+export interface ReportClaimSummary {
+  numero: string;
+  fechaCreacion: string;
+  asunto: string;
+  estado: string;
+  tipo: string;
+  empresa: string;
+}
+
 export interface DashboardReportResponse {
   reportPeriod: string;
   summary: ReportSummary;
@@ -147,6 +156,7 @@ export interface DashboardReportResponse {
   claimsByType: ClaimsByType[];
   claimsByCompany: ClaimsByCompany[];
   resolutionTime: ResolutionTime[];
+  claimsSummary: ReportClaimSummary[];
 }
 
 export async function fetchDashboardReports(
