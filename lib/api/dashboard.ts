@@ -174,6 +174,49 @@ export async function fetchDashboardReports(
   return response.json();
 }
 
+export async function exportDashboardReportPdf(
+  period: string = "monthly",
+): Promise<void> {
+  const token = localStorage.getItem("auth_token");
+
+  if (!token) {
+    throw new Error("No hay token de autenticación");
+  }
+
+  const response = await fetch(
+    `${API_URL}/dashboard/reports?period=${period}&format=pdf`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.error || `Error ${response.status}: ${response.statusText}`,
+    );
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const filename =
+    response.headers
+      .get("content-disposition")
+      ?.match(/filename=\"?([^"]+)\"?/)?.[1] ||
+    `reporte_${period}.pdf`;
+
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 // ==========================================
 // DASHBOARD ANALISTA (GET /dashboard/analista)
 // ==========================================

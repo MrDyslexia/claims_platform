@@ -27,6 +27,7 @@ import {
 
 import {
   fetchDashboardReports,
+  exportDashboardReportPdf,
   type DashboardReportResponse,
 } from "@/lib/api/dashboard";
 
@@ -37,6 +38,7 @@ export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState("executive");
   const [reportData, setReportData] = useState<DashboardReportResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadReportData = async (period: string) => {
@@ -55,6 +57,17 @@ export default function ReportsPage() {
   useEffect(() => {
     loadReportData(reportPeriod);
   }, [reportPeriod]);
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      await exportDashboardReportPdf(reportPeriod);
+    } catch (err: any) {
+      setError(err.message || "Error al exportar el reporte");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   if (loading && !reportData) {
     return (
@@ -120,8 +133,9 @@ export default function ReportsPage() {
           </div>
           <Button
             color="primary"
-            isLoading={loading}
+            isLoading={exporting}
             startContent={<Download className="h-4 w-4" />}
+            onPress={handleExport}
           >
             Exportar Reporte
           </Button>
