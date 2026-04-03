@@ -108,6 +108,7 @@ router.put(
 router.post(
     '/:id/informe-resolucion',
     authMiddleware,
+    requirePermission('denuncias:editar'),
     requireRoles('ADMIN', 'SUPERVISOR'),
     uploadResolutionReportMiddleware,
     subirInformeResolucion

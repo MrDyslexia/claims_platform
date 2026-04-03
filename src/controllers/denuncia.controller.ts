@@ -1926,7 +1926,7 @@ export const uploadResolutionReportMiddleware = resolutionReportUpload.single('p
  * POST /api/denuncias/:id/informe-resolucion
  * Content-Type: multipart/form-data
  * 
- * Solo supervisores asignados o admins pueden subir
+ * Solo administradores con permiso de edición o supervisores asignados con permiso pueden subir
  * Solo cuando el estado es RESUELTO o CERRADO
  * Solo 1 archivo PDF (reemplaza el anterior si existe)
  */
@@ -1958,13 +1958,12 @@ export const subirInformeResolucion = async (
         const estado = await models.EstadoDenuncia.findByPk(Number(estadoId));
         const estadoCodigo = (estado?.get('codigo') as string)?.toUpperCase();
 
-        // if (!['RESUELTO', 'CERRADO'].includes(estadoCodigo)) {
-        //     // Eliminar archivo subido si el estado no es válido
-        //     await fs.unlink(file.path).catch(() => {});
-        //     return res.status(400).json({
-        //         error: 'Solo se puede subir informe de resolución cuando la denuncia está en estado RESUELTO o CERRADO',
-        //     });
-        // }
+        if (!['RESUELTO', 'CERRADO'].includes(estadoCodigo)) {
+            await fs.unlink(file.path).catch(() => {});
+            return res.status(400).json({
+                error: 'Solo se puede subir informe de resolución cuando la denuncia está en estado RESUELTO o CERRADO',
+            });
+        }
 
         // Verificar permisos: supervisor asignado o admin
         const userRoles = req.user?.get('roles') || [];
@@ -1987,7 +1986,7 @@ export const subirInformeResolucion = async (
             if (!asignacion) {
                 await fs.unlink(file.path).catch(() => {});
                 return res.status(403).json({
-                    error: 'Solo el supervisor asignado o un administrador puede subir el informe de resolución',
+                    error: 'Se requiere permiso para editar denuncias y ser administrador o supervisor asignado para subir el informe de resolución',
                 });
             }
         }
