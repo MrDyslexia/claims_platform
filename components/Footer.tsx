@@ -64,28 +64,17 @@ export default function Footer() {
                   </button>
                 </li>
                 <li>
-                  <Link
-                    className="text-blue-200 hover:text-white transition-colors text-sm"
-                    href="/about"
-                  >
+                  <span className="text-blue-200 text-sm">
                     Acerca del Canal
-                  </Link>
+                  </span>
                 </li>
                 <li>
-                  <Link
-                    className="text-blue-200 hover:text-white transition-colors text-sm"
-                    href="/about/faq"
-                  >
+                  <span className="text-blue-200 text-sm">
                     Preguntas Frecuentes
-                  </Link>
+                  </span>
                 </li>
                 <li>
-                  <Link
-                    className="text-blue-200 hover:text-white transition-colors text-sm"
-                    href="/about/legal"
-                  >
-                    Aviso Legal
-                  </Link>
+                  <span className="text-blue-200 text-sm">Aviso Legal</span>
                 </li>
               </ul>
             </div>
@@ -106,7 +95,9 @@ export default function Footer() {
                 </li>
                 <li className="flex items-start gap-2">
                   <MapPin className="w-4 h-4 text-blue-300 mt-0.5 shrink-0" />
-                  <span className="text-blue-200 text-sm">12 Norte 840, Viña del Mar, Chile</span>
+                  <span className="text-blue-200 text-sm">
+                    12 Norte 840, Viña del Mar, Chile
+                  </span>
                 </li>
               </ul>
             </div>
@@ -120,18 +111,10 @@ export default function Footer() {
                 reservados.
               </p>
               <div className="flex items-center gap-6">
-                <Link
-                  className="text-blue-200 hover:text-white transition-colors text-xs"
-                  href="/about/privacy"
-                >
+                <span className="text-blue-200 text-xs">
                   Política de Privacidad
-                </Link>
-                <Link
-                  className="text-blue-200 hover:text-white transition-colors text-xs"
-                  href="/about/terms"
-                >
-                  Términos de Uso
-                </Link>
+                </span>
+                <span className="text-blue-200 text-xs">Términos de Uso</span>
               </div>
             </div>
           </div>
