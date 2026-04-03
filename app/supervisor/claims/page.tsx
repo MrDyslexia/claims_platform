@@ -398,55 +398,6 @@ export default function SupervisorClaims() {
     setStatusChangeError(null);
 
     try {
-      if (reportFile && selectedState?.codigo === "CERRADO") {
-        const formData = new FormData();
-
-        formData.append("pdf", reportFile);
-
-        const uploadResponse = await fetch(
-          `${API_BASE_URL}/denuncias/${selectedClaim.id}/informe-resolucion`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            body: formData,
-          },
-        );
-
-        if (!uploadResponse.ok) {
-          const errorData = await uploadResponse.json();
-
-          throw new Error(
-            errorData.error ||
-              "Error al subir el informe antes de cambiar el estado",
-          );
-        }
-      }
-
-      if (reportFile && selectedState?.codigo === "RESUELTO") {
-        const formData = new FormData();
-
-        formData.append("pdf", reportFile);
-
-        const uploadResponse = await fetch(
-          `${API_BASE_URL}/denuncias/${selectedClaim.id}/informe-resolucion`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            body: formData,
-          },
-        );
-
-        if (!uploadResponse.ok) {
-          const errorData = await uploadResponse.json();
-
-          throw new Error(errorData.error || "Error al subir el informe");
-        }
-      }
-
       const response = await fetch(
         `${API_BASE_URL}/denuncias/${selectedClaim.id}/estado`,
         {
@@ -466,6 +417,35 @@ export default function SupervisorClaims() {
         const errorData = await response.json();
 
         throw new Error(errorData.error || "Error al cambiar el estado");
+      }
+
+      if (
+        reportFile &&
+        selectedState &&
+        ["RESUELTO", "CERRADO"].includes(selectedState.codigo)
+      ) {
+        const formData = new FormData();
+
+        formData.append("pdf", reportFile);
+
+        const uploadResponse = await fetch(
+          `${API_BASE_URL}/denuncias/${selectedClaim.id}/informe-resolucion`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: formData,
+          },
+        );
+
+        if (!uploadResponse.ok) {
+          const errorData = await uploadResponse.json();
+
+          throw new Error(
+            errorData.error || "Error al subir el informe después de actualizar el estado",
+          );
+        }
       }
 
       // Recargar todos los reclamos para obtener los datos completos
