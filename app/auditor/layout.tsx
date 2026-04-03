@@ -5,13 +5,13 @@ import type React from "react";
 import { ProtectedRoute } from "@/components/protected-route";
 import { Sidebar } from "@/components/SideBar";
 
-export default function AdminLayout({
+export default function AuditorLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute allowedRoles={["auditor"]}>
       <div className="flex h-screen overflow-hidden">
         {/* Sidebar */}
         <aside className="w-64 flex-shrink-0">
