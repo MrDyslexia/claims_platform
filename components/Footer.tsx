@@ -5,6 +5,8 @@ import { ExternalLink, Mail, Phone, MapPin } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
 export default function Footer() {
   const { setIsLoginDrawerOpen } = useAuth();
+  const informationalLinkClass = "text-white/55 transition-colors text-sm";
+  const informationalLinkClassSmall = "text-white/55 transition-colors text-xs";
 
   return (
     <footer className="bg-[#202e5e] text-white">
@@ -65,7 +67,7 @@ export default function Footer() {
                 </li>
                 <li>
                   <Link
-                    className="text-blue-200 hover:text-white transition-colors text-sm"
+                    className={informationalLinkClass}
                     href="/about"
                   >
                     Acerca del Canal
@@ -73,7 +75,7 @@ export default function Footer() {
                 </li>
                 <li>
                   <Link
-                    className="text-blue-200 hover:text-white transition-colors text-sm"
+                    className={informationalLinkClass}
                     href="/about/faq"
                   >
                     Preguntas Frecuentes
@@ -81,7 +83,7 @@ export default function Footer() {
                 </li>
                 <li>
                   <Link
-                    className="text-blue-200 hover:text-white transition-colors text-sm"
+                    className={informationalLinkClass}
                     href="/about/legal"
                   >
                     Aviso Legal
@@ -121,13 +123,13 @@ export default function Footer() {
               </p>
               <div className="flex items-center gap-6">
                 <Link
-                  className="text-blue-200 hover:text-white transition-colors text-xs"
+                  className={informationalLinkClassSmall}
                   href="/about/privacy"
                 >
                   Política de Privacidad
                 </Link>
                 <Link
-                  className="text-blue-200 hover:text-white transition-colors text-xs"
+                  className={informationalLinkClassSmall}
                   href="/about/terms"
                 >
                   Términos de Uso
