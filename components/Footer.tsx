@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ExternalLink, Mail, Phone, MapPin } from "lucide-react";
 
 import { useAuth } from "@/lib/auth/auth-context";
+
 export default function Footer() {
   const { setIsLoginDrawerOpen } = useAuth();
   const informationalLinkClass = "text-white/55 transition-colors text-sm";
@@ -13,7 +14,7 @@ export default function Footer() {
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-4 gap-8 mb-10">
-            {/* Logo y descripción */}
+            {/* Logo y descripcion */}
             <div className="md:col-span-2">
               <div className="flex items-center gap-3 mb-4">
                 <div className="bg-white p-2 rounded-lg">
@@ -27,7 +28,7 @@ export default function Footer() {
                 <span className="text-xl font-bold">Grupo Belator</span>
               </div>
               <p className="text-blue-200 text-sm leading-relaxed mb-4">
-                Comprometidos con la transparencia, la ética empresarial y el
+                Comprometidos con la transparencia, la etica empresarial y el
                 cumplimiento normativo. Nuestra canal de denuncias es una
                 plataforma segura y confidencial para reportar irregularidades.
               </p>
@@ -44,9 +45,9 @@ export default function Footer() {
               </div>
             </div>
 
-            {/* Enlaces rápidos */}
+            {/* Enlaces rapidos */}
             <div>
-              <h4 className="font-semibold mb-4 text-white">Enlaces Rápidos</h4>
+              <h4 className="font-semibold mb-4 text-white">Enlaces Rapidos</h4>
               <ul className="space-y-2">
                 <li>
                   <Link
@@ -62,32 +63,21 @@ export default function Footer() {
                     type="button"
                     onClick={() => setIsLoginDrawerOpen(true)}
                   >
-                    Panel de administración
+                    Panel de administracion
                   </button>
                 </li>
                 <li>
-                  <Link
-                    className={informationalLinkClass}
-                    href="/about"
-                  >
+                  <span className={informationalLinkClass}>
                     Acerca del Canal
-                  </Link>
+                  </span>
                 </li>
                 <li>
-                  <Link
-                    className={informationalLinkClass}
-                    href="/about/faq"
-                  >
+                  <span className={informationalLinkClass}>
                     Preguntas Frecuentes
-                  </Link>
+                  </span>
                 </li>
                 <li>
-                  <Link
-                    className={informationalLinkClass}
-                    href="/about/legal"
-                  >
-                    Aviso Legal
-                  </Link>
+                  <span className={informationalLinkClass}>Aviso Legal</span>
                 </li>
               </ul>
             </div>
@@ -108,7 +98,9 @@ export default function Footer() {
                 </li>
                 <li className="flex items-start gap-2">
                   <MapPin className="w-4 h-4 text-blue-300 mt-0.5 shrink-0" />
-                  <span className="text-blue-200 text-sm">12 Norte 840, Viña del Mar, Chile</span>
+                  <span className="text-blue-200 text-sm">
+                    12 Norte 840, Vina del Mar, Chile
+                  </span>
                 </li>
               </ul>
             </div>
@@ -122,18 +114,12 @@ export default function Footer() {
                 reservados.
               </p>
               <div className="flex items-center gap-6">
-                <Link
-                  className={informationalLinkClassSmall}
-                  href="/about/privacy"
-                >
-                  Política de Privacidad
-                </Link>
-                <Link
-                  className={informationalLinkClassSmall}
-                  href="/about/terms"
-                >
-                  Términos de Uso
-                </Link>
+                <span className={informationalLinkClassSmall}>
+                  Politica de Privacidad
+                </span>
+                <span className={informationalLinkClassSmall}>
+                  Terminos de Uso
+                </span>
               </div>
             </div>
           </div>

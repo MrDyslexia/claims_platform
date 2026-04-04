@@ -40,14 +40,60 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+type CanonicalRole = "admin" | "supervisor" | "analista" | "auditor";
+
+const CANONICAL_ROLE_ROUTES: Record<CanonicalRole, string> = {
+  admin: "/admin",
+  supervisor: "/supervisor",
+  analista: "/analyst",
+  auditor: "/auditor",
+};
+
+const ARCHETYPE_CODE_TO_ROLE: Record<string, CanonicalRole> = {
+  ADMIN: "admin",
+  SUPERSU: "admin",
+  SUPERVISOR: "supervisor",
+  ANALISTA: "analista",
+  AUDITOR: "auditor",
+};
+
+const ROLE_ALIASES: Record<string, CanonicalRole> = {
+  admin: "admin",
+  administrador: "admin",
+  supervisor: "supervisor",
+  analista: "analista",
+  auditor: "auditor",
+};
+
+const normalizeRoleValue = (value?: string | null): string =>
+  value?.toLowerCase().trim() || "";
+
+const getCanonicalRoleFromValue = (
+  value?: string | null,
+): CanonicalRole | null => {
+  const normalizedValue = normalizeRoleValue(value);
+
+  if (ROLE_ALIASES[normalizedValue]) {
+    return ROLE_ALIASES[normalizedValue];
+  }
+
+  const normalizedCode = value?.toUpperCase().trim() || "";
+
+  return ARCHETYPE_CODE_TO_ROLE[normalizedCode] || null;
+};
+
+const getCanonicalRoleFromRole = (role: any): CanonicalRole | null =>
+  getCanonicalRoleFromValue(role?.arquetipo?.codigo) ||
+  getCanonicalRoleFromValue(role?.arquetipo?.nombre) ||
+  getCanonicalRoleFromValue(role?.nombre);
+
 // Jerarquía de roles (mayor prioridad = índice menor)
 const ROLE_HIERARCHY = [
   "admin",
-  "administrador",
   "supervisor",
   "analista",
   "auditor",
-];
+] as const satisfies readonly CanonicalRole[];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -163,54 +209,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // Mapeo de arquetipos a rutas (por código de arquetipo)
-    const arquetipoRoutes: Record<string, string> = {
-      ADMIN: "/admin",
-      SUPERSU: "/admin",
-      SUPERVISOR: "/supervisor",
-      ANALISTA: "/analyst",
-      AUDITOR: "/auditor",
-    };
-
-    // Mapeo por nombre de rol (fallback)
-    const roleRoutes: Record<string, string> = {
-      administrador: "/admin",
-      admin: "/admin",
-      analista: "/analyst",
-      supervisor: "/supervisor",
-      auditor: "/auditor",
-    };
-
-    // Primero intentar con arquetipo.codigo
-    for (const role of roles) {
-      if (role.arquetipo?.codigo) {
-        const route = arquetipoRoutes[role.arquetipo.codigo.toUpperCase()];
-
-        if (route) {
-          return route;
-        }
-      }
-    }
-
-    // Fallback: buscar el rol de mayor prioridad por nombre
+    // Buscar el rol canÃ³nico de mayor prioridad usando el arquetipo como fuente principal
     for (const priorityRole of ROLE_HIERARCHY) {
       const foundRole = roles.find(
-        (r) => r.nombre.toLowerCase().trim() === priorityRole,
+        (role) => getCanonicalRoleFromRole(role) === priorityRole,
       );
 
       if (foundRole) {
-        const route = roleRoutes[priorityRole];
-
-        return route;
+        return CANONICAL_ROLE_ROUTES[priorityRole];
       }
     }
 
     // Si no se encuentra ningún rol en la jerarquía, usar el primero
-    const firstRole = roles[0];
-    const arquetipoNombre = firstRole.arquetipo?.nombre?.toLowerCase().trim();
-    const rolNombre = firstRole.nombre?.toLowerCase().trim();
-    const route = roleRoutes[arquetipoNombre] || roleRoutes[rolNombre] || "/";
+    const fallbackRole = roles
+      .map((role) => getCanonicalRoleFromRole(role))
+      .find((role): role is CanonicalRole => !!role);
 
-    return route;
+    return fallbackRole ? CANONICAL_ROLE_ROUTES[fallbackRole] : "/";
   };
   const login = async (email: string, password: string): Promise<AuthUser> => {
     setIsLoading(true);
@@ -298,19 +313,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasRole = (roleName: string): boolean => {
     if (!user || !user.roles) return false;
 
-    const normalizedRoleName = roleName.toLowerCase().trim();
+    const normalizedRoleName = normalizeRoleValue(roleName);
+    const canonicalRequestedRole = getCanonicalRoleFromValue(roleName);
 
     return user.roles.some((role: any) => {
+      const canonicalRole = getCanonicalRoleFromRole(role);
+
+      if (canonicalRequestedRole && canonicalRole === canonicalRequestedRole) {
+        return true;
+      }
+
       // Verificar por nombre de rol exacto
-      if (role.nombre.toLowerCase().trim() === normalizedRoleName) {
+      if (normalizeRoleValue(role.nombre) === normalizedRoleName) {
         return true;
       }
       // Verificar por código de arquetipo
-      if (role.arquetipo?.codigo?.toLowerCase().trim() === normalizedRoleName) {
+      if (normalizeRoleValue(role.arquetipo?.codigo) === normalizedRoleName) {
         return true;
       }
       // Verificar por nombre de arquetipo
-      if (role.arquetipo?.nombre?.toLowerCase().trim() === normalizedRoleName) {
+      if (normalizeRoleValue(role.arquetipo?.nombre) === normalizedRoleName) {
         return true;
       }
 
@@ -325,25 +347,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Si solo hay un rol, retornarlo
     if (user.roles.length === 1) {
-      return user.roles[0].nombre.toLowerCase();
+      return getCanonicalRoleFromRole(user.roles[0]);
     }
 
     // Si hay múltiples roles, retornar el de mayor prioridad según la jerarquía
-    let highestPriorityRole = user.roles[0];
-    let highestPriorityIndex = ROLE_HIERARCHY.length;
+    let highestPriorityRole: CanonicalRole | null = null;
+    let highestPriorityIndex: number = ROLE_HIERARCHY.length;
 
     for (const role of user.roles) {
-      const normalizedRoleName = role.nombre.toLowerCase().trim();
-      const priorityIndex = ROLE_HIERARCHY.indexOf(normalizedRoleName);
+      const canonicalRole = getCanonicalRoleFromRole(role);
+
+      if (!canonicalRole) {
+        continue;
+      }
+
+      const priorityIndex = ROLE_HIERARCHY.indexOf(canonicalRole);
 
       // Si el rol está en la jerarquía y tiene mayor prioridad
       if (priorityIndex !== -1 && priorityIndex < highestPriorityIndex) {
         highestPriorityIndex = priorityIndex;
-        highestPriorityRole = role;
+        highestPriorityRole = canonicalRole;
       }
     }
 
-    return highestPriorityRole.nombre.toLowerCase();
+    return highestPriorityRole;
   };
 
   return (

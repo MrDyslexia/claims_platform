@@ -19,10 +19,18 @@ export const roleBaseRoutes: Record<string, string> = {
 
 // Helper para obtener la ruta base según el rol principal del usuario
 export function getBaseRouteForRole(primaryRole: string | null): string {
-  if (!primaryRole) return "/auditor"; // fallback
+  if (!primaryRole) return "/";
   const normalizedRole = primaryRole.toLowerCase().trim();
 
-  return roleBaseRoutes[normalizedRole] || "/auditor";
+  return roleBaseRoutes[normalizedRole] || "/";
+}
+
+function buildModuleRoute(baseRoute: string, path = ""): string {
+  if (!path) {
+    return baseRoute;
+  }
+
+  return baseRoute === "/" ? `/${path}` : `${baseRoute}/${path}`;
 }
 
 // Helper para generar menú con rutas dinámicas
@@ -38,56 +46,56 @@ export function getMenuItemsForRole(primaryRole: string | null) {
     },
     {
       label: "Reclamos",
-      href: `${baseRoute}/claims`,
+      href: buildModuleRoute(baseRoute, "claims"),
       icon: FileText,
       permission: "denuncias:ver",
     },
     {
       label: "Usuarios",
-      href: `${baseRoute}/users`,
+      href: buildModuleRoute(baseRoute, "users"),
       icon: Users,
       permission: "usuarios:ver",
       submenu: [
         {
           label: "Lista de Usuarios",
-          href: `${baseRoute}/users`,
+          href: buildModuleRoute(baseRoute, "users"),
           permission: "usuarios:ver",
         },
         {
           label: "Roles y Permisos",
-          href: `${baseRoute}/users/roles`,
+          href: buildModuleRoute(baseRoute, "users/roles"),
           permission: "roles:ver",
         },
       ],
     },
     {
       label: "Empresas",
-      href: `${baseRoute}/companies`,
+      href: buildModuleRoute(baseRoute, "companies"),
       icon: Building2,
       permission: "empresas:ver",
     },
     {
       label: "Reportes",
-      href: `${baseRoute}/reports`,
+      href: buildModuleRoute(baseRoute, "reports"),
       icon: BarChart3,
       permission: "reportes:ver",
     },
     {
       label: "Auditoría",
-      href: `${baseRoute}/audit`,
+      href: buildModuleRoute(baseRoute, "audit"),
       icon: Shield,
       permission: "auditoria:ver",
     },
     {
       label: "Configuración",
-      href: `${baseRoute}/settings`,
+      href: buildModuleRoute(baseRoute, "settings"),
       icon: Settings,
       permission: "configuracion:ver",
     },
   ];
 }
 
-// Export por defecto para compatibilidad (usa auditor como fallback)
-const menuItems = getMenuItemsForRole("auditor");
+// Export por defecto para compatibilidad sin asumir un módulo incorrecto
+const menuItems = getMenuItemsForRole(null);
 
 export default menuItems;
